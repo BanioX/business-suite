@@ -11,14 +11,14 @@ Landkarte aller Branchen der Suite. Je Branche gibt es einen **Steckbrief** (ver
 | Maler, Gipser, Innenausbau | [maler](maler.md) | `painting` | Vor Ort | W2 | 4.5 |
 | Umzug, Räumung, Entsorgung, Kleintransport | [umzug](umzug.md) | `moving` | Vor Ort | W2 | 4 |
 | Dachdecker, Spengler, Fassade, Gerüst | [gebaeudehuelle](gebaeudehuelle.md) | `envelope` | Vor Ort | W3 | 4 |
-| Elektro, Sanitär, Heizung, Schreiner, Zimmerei | [haustechnik-holz](haustechnik-holz.md) | `building-services`, `carpentry` | Vor Ort | W3 | folgt |
-| Gartenbau, Kaminfeger, Schädlingsbekämpfung | [aussen](aussen.md) | `garden`, `chimney`, `pest-control` | Vor Ort | W3 | folgt |
-| Coiffeur, Kosmetik, Fusspflege, Massage, Hundesalon | [termine](termine.md) | `salon` | Studio | W4 | folgt |
+| Elektro, Sanitär, Heizung, Schreiner, Zimmerei | [haustechnik-holz](haustechnik-holz.md) | `building-services`, `carpentry` | Vor Ort | W3 | 4 |
+| Gartenbau, Kaminfeger, Schädlingsbekämpfung | [aussen](aussen.md) | `garden`, `chimney`, `pest-control` | Vor Ort | W3 | 4 |
+| Coiffeur, Kosmetik, Fusspflege, Massage, Hundesalon | [termine](termine.md) | `salon` | Studio | W4 | 4 |
 | Fitness, Studios, Kurse, Musik- und Hundeschulen | [kurse](kurse.md) | `courses` | Studio | W4 | 4 |
-| Kleine Hotels, B&B, Ferienwohnungen, Gasthof | [beherbergung](beherbergung.md) | `lodging` | Haus | W5 | folgt |
+| Kleine Hotels, B&B, Ferienwohnungen, Gasthof | [beherbergung](beherbergung.md) | `lodging` | Haus | W5 | 4 |
 | Weitere Branchen und Abgrenzung | [weitere](weitere.md) | – | – | Screening | – |
 
-«folgt»: Recherche läuft noch; der Steckbrief kommt mit dem nächsten Stand.
+Die Eignung stammt aus der Recherche (Nutzen für den Betrieb × Wiederverwendung der Plattform × geringe Rechtsrisiken). Die Wellen folgen der Plattform, nicht der Eignung: Eine Branche beginnt, sobald die Pakete ihres MVP stehen.
 
 ## Was die Branchen gemeinsam haben
 
