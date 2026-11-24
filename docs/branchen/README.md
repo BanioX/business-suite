@@ -39,7 +39,11 @@ Aus den Recherchen, übereinstimmend:
 | Maler | Besichtigung mit Ausmass je Raum, Farbbuch, Schadstoff-Abklärung vor Arbeitsbeginn |
 | Gebäudehülle | Dachaufnahme, Ausmass mit Neigung, Wetterentscheid, Sicherheit in der Höhe, Asbest-Ablauf |
 | Umzug | Umzugsgutliste mit Volumen, Halteverbot, Fahrzeuge über 3.5 t, Schadenprotokoll, Räumung mit Fundsachen, Einlagerung |
+| Haustechnik, Holz | Anlagen mit Wartungsintervall, Störung und Pikett, Fahrzeuglager, Nachweise nach NIV und für die Gebäudetechnik, Stück- und Holzliste |
+| Garten, Kaminfeger, Schädlingsbekämpfung | Gartenaufnahme, Pflegeplan mit Saisonfenstern, Grüngut, Pflanzenschutz-Journal, Stationsplan und Kontrollbericht, Feuerungsanlagen mit Tour |
+| Termine | Terminbuch mit Phasen (Einwirkzeit), Kartei mit Rezepturen, Trinkgeld getrennt, Stuhlmiete als eigener Betrieb |
 | Kurse | Mitgliedschaften mit Fristen, Mehrfachkarten, Kursplan mit Plätzen, Check-in an der Theke |
+| Beherbergung | Belegungsplan, Meldeschein, Kurtaxe, Beherbergungsstatistik, Zimmerstatus ohne Gästenamen, Gästerechnung mit Sondersatz |
 
 ## Neue Branche aufnehmen
 

@@ -19,6 +19,7 @@ W1  ───── Rechte · Kundschaft · Objekte · Katalog ─ Facility (Rei
           Aufträge · Pläne · Checklisten · Heute                                         R2 Register aus der Suite
 W2  ───── Offerten und Rechnungen · Kasse und ───── Maler und Gipser · Umzug           R3 Zeit, Kasse, Dokumente
           Belege · Team und Zeit · Dokument-Ansicht  Pilot Facility                      als Plattform-Pakete
+          Verträge (Kern) · Fahrzeuge (Kern)
 W3  ───── Kopplung und Abgleich · Material ──────── Gebäudehülle · Haustechnik, Holz   R3 Kopplung
           Fahrzeuge · Sprachen der Mitarbeitenden    Garten, Kaminfeger
 W4  ───── Termine · Verträge und Mitgliedschaften · Kurse ───── Termine (Coiffeur …) · Fitness,    R4 UI-Kit, Shell, Marke
@@ -54,7 +55,7 @@ W7  ───── Stufe 2 nur nach Albans JA ───────────
 
 **Ziel:** Von der Offerte bis zur bezahlten Rechnung ohne Anbindung: Offerte als PDF, Annahme, Rapporte, Rechnung mit QR-Zahlteil, Zahlungseingang aus der Bankdatei, Mahnung.
 
-- Plattform: P-29 Offerten und Rechnungen, P-30 Kasse und Belege (Ernte Randen AP-16), P-31 Team und Zeit (Ernte Randen AP-3 bis AP-6), P-11 Dokument-Ansicht (Ernte Randen AP-15).
+- Plattform: P-29 Offerten und Rechnungen, P-30 Kasse und Belege (Ernte Randen AP-16), P-31 Team und Zeit (Ernte Randen AP-3 bis AP-6), P-11 Dokument-Ansicht (Ernte Randen AP-15); dazu der **Kern von P-51 Verträge** (wiederkehrende Rechnung je Objekt, für Facility, Gebäudehülle, Haustechnik, Garten) und der **Kern von P-42 Fahrzeuge** (für Umzug), beides vorgezogen auf Antrag der Steckbriefe.
 - Branchen parallel: **Maler und Gipser** (Besichtigung mit Ausmass, Offerte nach Positionen, Regie, Farbbuch, Abnahme) und **Umzug und Räumung** (Umzugsgutliste mit Volumen, Einsatzplan mit Fahrzeugen und Halteverbot, Schäden, Entsorgung).
 - **Pilot Facility** mit einem Betrieb von 1 bis 10 Personen, sobald Rechnung und Zeit stehen, nach Albans Freigabe von Adresse und Name ([S-04](entscheide.md), [S-05](entscheide.md)).
 
@@ -71,7 +72,7 @@ W7  ───── Stufe 2 nur nach Albans JA ───────────
 
 **Ziel:** Ein Coiffeur und ein kleines Fitnesscenter arbeiten einen Tag mit Terminen, Check-in, Theke und Tagesabschluss auf dem iPad am Empfang.
 
-- Plattform: P-50 Termine, P-51 Verträge und Mitgliedschaften (auch für Hauswartung, Wartungsverträge, Gartenpflege), P-52 Kurse mit Plätzen.
+- Plattform: P-50 Termine, P-51 Mitgliedschaften und Mehrfachkarten (der Kern der Verträge steht seit W2), P-52 Kurse mit Plätzen.
 - Branchen parallel: **Termine** (Coiffeur, Kosmetik, Fusspflege, Massage, Hundesalon) und **Kurse und Fitness** (Mitgliedschaften, Mehrfachkarten, Kursplan, Check-in); Ausgabe «Studio».
 
 ## Welle 5: Haus

@@ -94,7 +94,7 @@ Den ganzen Katalog mit Inhalt, Herkunft und Welle führt [`plattform.md`](plattf
         │
 Module (je «.» rein TS und «./web» React):
   business · customers · sites · catalog · jobs · plans · checks · calendar
-  invoicing · books · team-time · contracts · scheduling · courses · stock · assets · pairing · today
+  invoicing · books · team-time · contracts · scheduling · classes · stock · assets · pairing · today
         │
 Browser: web-data (IndexedDB) · web-device (Teilen, Drucken, Kamera, QR, Unterschrift) · pdf
 React:   ui (Kit, Tokens) ─ shell (Rahmen, Navigation, Arbeitsplätze, Hooks)

@@ -12,11 +12,16 @@ Fertige Aufträge zum Weitergeben an Agenten. Jeder Auftrag nennt Ziel, Lesestof
 | W1-00 | [Verträge des Auftragskerns (alpha)](w1-auftragskern.md#w1-00) | Kopf oder Plattform-Agent | W0-03 | offen |
 | W1-01 bis W1-06 | [Pakete des Auftragskerns](w1-auftragskern.md) | je ein Plattform-Agent, parallel | W1-00 | offen |
 | Facility | [Branche Facility](branche-facility.md) | Branchen-Agent | W1-00 | offen |
-| Maler | [Branche Maler und Gipser](branche-maler.md) | Branchen-Agent | Welle 2 | offen |
-| Umzug | [Branche Umzug und Räumung](branche-umzug.md) | Branchen-Agent | Welle 2 | offen |
-| weitere | je Branche `branche-<id>.md` | Branchen-Agent | Welle nach [Fahrplan](../fahrplan.md) | offen |
+| Maler | [Branche Maler und Gipser](branche-maler.md) | Branchen-Agent | W1, Rechnung aus W2 | offen |
+| Umzug | [Branche Umzug und Räumung](branche-umzug.md) | Branchen-Agent | W1, Fahrzeuge und Rechnung aus W2 | offen |
+| Gebäudehülle | [Branche Dach, Spengler, Fassade, Gerüst](branche-gebaeudehuelle.md) | Branchen-Agent | W2 | offen |
+| Haustechnik, Holz | [Branche Haustechnik und Holz](branche-haustechnik-holz.md) | Branchen-Agent | W2, Lager aus W3 | offen |
+| Garten und Aussendienste | [Branche Garten, Kaminfeger, Schädlingsbekämpfung](branche-aussen.md) | Branchen-Agent | W2 | offen |
+| Termine | [Branche Coiffeur, Kosmetik und Co.](branche-termine.md) | Branchen-Agent | W4 (Termine) | offen |
+| Kurse und Fitness | [Branche Fitness, Studios, Kurse](branche-kurse.md) | Branchen-Agent | W4 (Termine, Mitgliedschaften, Kurse) | offen |
+| Beherbergung | [Branche Hotels und Ferienwohnungen](branche-beherbergung.md) | Branchen-Agent | W4 (Termine), W5 | offen |
 
-Aufträge für Welle 2 und später schreibt der Kopf, wenn die Welle beginnt, damit sie zum gebauten Stand passen. Die Branchen-Aufträge stehen schon, weil sie vom Steckbrief abhängen, nicht vom Code.
+Aufträge für die Plattform-Pakete ab Welle 2 schreibt der Kopf, wenn die Welle beginnt, damit sie zum gebauten Stand passen. Die Branchen-Aufträge stehen schon, weil sie vom Steckbrief abhängen, nicht vom Code; eine Branche beginnt, sobald die Plattform-Pakete ihres ersten Pakets mindestens als Vertrag «alpha» stehen.
 
 ## So startest du einen Agenten
 
