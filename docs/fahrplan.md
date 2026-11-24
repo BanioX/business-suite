@@ -55,7 +55,7 @@ W7  ───── Stufe 2 nur nach Albans JA ───────────
 
 **Ziel:** Von der Offerte bis zur bezahlten Rechnung ohne Anbindung: Offerte als PDF, Annahme, Rapporte, Rechnung mit QR-Zahlteil, Zahlungseingang aus der Bankdatei, Mahnung.
 
-- Plattform: P-29 Offerten und Rechnungen, P-30 Kasse und Belege (Ernte Randen AP-16), P-31 Team und Zeit (Ernte Randen AP-3 bis AP-6), P-11 Dokument-Ansicht (Ernte Randen AP-15); dazu der **Kern von P-51 Verträge** (wiederkehrende Rechnung je Objekt, für Facility, Gebäudehülle, Haustechnik, Garten) und der **Kern von P-42 Fahrzeuge** (für Umzug), beides vorgezogen auf Antrag der Steckbriefe.
+- Plattform: P-29 Offerten und Rechnungen, P-30 Kasse und Belege (Ernte Randen AP-16), P-31 Team und Zeit (Ernte Randen AP-3 bis AP-6), P-11 Dokument-Ansicht (Ernte Randen AP-15); **Arbeitsplatz der Mitarbeitenden in Deutsch, Französisch, Italienisch, Englisch und den Sprachen des Pilot-Teams**, vor dem ersten Pilot ([ADR-0007](adr/0007-sprachen.md)); dazu der **Kern von P-51 Verträge** (wiederkehrende Rechnung je Objekt, für Facility, Gebäudehülle, Haustechnik, Garten) und der **Kern von P-42 Fahrzeuge** (für Umzug), beides vorgezogen auf Antrag der Steckbriefe.
 - Branchen parallel: **Maler und Gipser** (Besichtigung mit Ausmass, Offerte nach Positionen, Regie, Farbbuch, Abnahme) und **Umzug und Räumung** (Umzugsgutliste mit Volumen, Einsatzplan mit Fahrzeugen und Halteverbot, Schäden, Entsorgung).
 - **Pilot Facility** mit einem Betrieb von 1 bis 10 Personen, sobald Rechnung und Zeit stehen, nach Albans Freigabe von Adresse und Name ([S-04](entscheide.md), [S-05](entscheide.md)).
 
@@ -65,7 +65,7 @@ W7  ───── Stufe 2 nur nach Albans JA ───────────
 
 **Ziel:** Ein Handy holt morgens im Werkhof die Mappe und bringt abends Rapporte, Stunden und Fotos zurück; doppelt senden ändert nichts.
 
-- Plattform: P-40 Kopplung und Abgleich (Ernte Randen AP-19 und Vermittler W15; Ausweitung nur nach Albans JA, [S-06](entscheide.md)), P-41 Material und Lager, P-42 Fahrzeuge und Geräte, Arbeitsplatz der Mitarbeitenden in den Pilot-Sprachen ([S-07](entscheide.md)).
+- Plattform: P-40 Kopplung und Abgleich (Ernte Randen AP-19 und Vermittler W15; Ausweitung nur nach Albans JA, [S-06](entscheide.md)), P-41 Material und Lager, P-42 Fahrzeuge und Geräte; weitere Sprachen nach den Angaben der Teams ([S-07](entscheide.md)).
 - Branchen parallel: **Gebäudehülle** (Dachaufnahme, Ausmass mit Neigung, Wetterentscheid, Sicherheit in der Höhe, Asbest-Ablauf), **Haustechnik und Holz** (Service- und Wartungsaufträge, Anlagen beim Objekt, Pikett, Werkstatt), **Garten, Kaminfeger, Schädlingsbekämpfung** (Pflegeabo, Touren, Pflicht-Dokumentation).
 
 ## Welle 4: Termine und Kurse
