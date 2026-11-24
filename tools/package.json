@@ -1,0 +1,17 @@
+{
+  "name": "@onestrand/tooling",
+  "version": "0.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@onestrand/contract": "workspace:*",
+    "@onestrand/core": "workspace:*",
+    "@onestrand/ledger": "workspace:*",
+    "@onestrand/storage": "workspace:*",
+    "@onestrand/testing": "workspace:*"
+  }
+}
