@@ -28,7 +28,7 @@ Gemeint sind Register (AP-1), Rollen und Rechte (AP-2), Zeit (AP-3 bis AP-6), Er
 - (b) Die Suite baut sie zuerst mit Vertrag; Randen übernimmt sie als Kopie.
 - (c) Randen baut sie für die Küche; die Suite baut sie später neu.
 
-**Empfehlung: (a)** für alles, woran Randen schon arbeitet oder als Nächstes arbeitet. Was nicht in Randens Plan steht (Kundschaft, Objekte, Aufträge, Rapporte, Rechnungen, Abos, Termine, Kurse), baut die Suite. (c) gäbe zwei Kerne. Dafür bitte die Nachricht aus [`randen.md`](randen.md), Abschnitt 4, an die Randen-Sitzung weitergeben.
+**Empfehlung: (a)** für alles, woran Randen schon arbeitet oder als Nächstes arbeitet. Was nicht in Randens Plan steht (Kundschaft, Objekte, Aufträge, Rapporte, Rechnungen, Verträge, Termine, Kurse), baut die Suite. (c) gäbe zwei Kerne. Dafür bitte die Nachricht aus [`randen.md`](randen.md), Abschnitt 4, an die Randen-Sitzung weitergeben.
 
 ### S-04 Adressen unter onestrand.ch [vor dem ersten Pilot von Randen]
 

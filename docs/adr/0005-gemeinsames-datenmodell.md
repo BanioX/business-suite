@@ -10,7 +10,7 @@ Neun der zehn untersuchten Branchengruppen arbeiten mit Kundschaft, Objekten, Au
 
 ## Entscheid
 
-1. **Die Plattform besitzt:** Betrieb, Person, Rollenprofil, Kundschaft mit Kontakten, Objekt (hierarchisch, mit Bereichen, Anlagen und Zugangshinweisen), Leistung und Material, Auftrag, Offerte, Nachtrag, Einsatz, Rapport, Abnahme mit Mängeln, Leistungsplan, Checkliste mit Durchgang, Rechnung, Zahlungseingang, Mahnung, Vertrag und Abo, Termin, Kurs und Teilnahme, Zeitbuchung, Abwesenheit, Beleg, Kassenbuch, Monatspaket, Material und Lagerbewegung, Fahrzeug und Gerät, Datei.
+1. **Die Plattform besitzt:** Betrieb, Person, Rollenprofil, Kundschaft mit Kontakten, Objekt (hierarchisch, mit Bereichen, Anlagen und Zugangshinweisen), Leistung und Material, Auftrag, Offerte, Nachtrag, Einsatz, Rapport, Abnahme mit Mängeln, Leistungsplan, Checkliste mit Durchgang, Rechnung, Zahlungseingang, Mahnung, Vertrag und Mitgliedschaft, Termin, Kurs und Teilnahme, Zeitbuchung, Abwesenheit, Beleg, Kassenbuch, Monatspaket, Material und Lagerbewegung, Fahrzeug und Gerät, Datei.
 2. **Ledger statt Zustand** für Geld, Zeit, Bestand, Status von Aufträgen, Schlüssel und Mehrfachkarten: nur anfügen, Korrektur als neue Zeile, Zustand berechnet.
 3. **Gesperrt, was Dritte unterschrieben oder erhalten haben:** Rapport nach Unterschrift, ausgestellte Offerte, ausgestellte Rechnung. Korrektur nur als Nachtrag, neue Fassung oder Gutschrift.
 4. **Ein Schreiber je Nummernkreis:** Rechnungs- und Offertennummern und die Kasse vergibt genau ein Gerät, das Hauptgerät des Betriebs.

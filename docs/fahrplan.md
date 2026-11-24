@@ -21,7 +21,7 @@ W2  ───── Offerten und Rechnungen · Kasse und ───── Maler u
           Belege · Team und Zeit · Dokument-Ansicht  Pilot Facility                      als Plattform-Pakete
 W3  ───── Kopplung und Abgleich · Material ──────── Gebäudehülle · Haustechnik, Holz   R3 Kopplung
           Fahrzeuge · Sprachen der Mitarbeitenden    Garten, Kaminfeger
-W4  ───── Termine · Verträge und Abos · Kurse ───── Termine (Coiffeur …) · Fitness,    R4 UI-Kit, Shell, Marke
+W4  ───── Termine · Verträge und Mitgliedschaften · Kurse ───── Termine (Coiffeur …) · Fitness,    R4 UI-Kit, Shell, Marke
                                                      Kurse; Ausgabe «Studio»
 W5  ───── (Steckplätze für Nachbar-Module) ──────── Beherbergung; Ausgabe «Haus»       R5 Umzug ins Monorepo
 W6  ───── Dokumente fr-CH, it-CH ────────────────── Romandie, Tessin                   –
@@ -34,11 +34,12 @@ W7  ───── Stufe 2 nur nach Albans JA ───────────
 
 - **W0-00 Kopf (erledigt mit diesem Stand):** Plan, Architektur, ADR-Entwürfe, Steckbriefe aller Branchen, Fakten, Aufträge, Entscheide für Alban.
 - **W0-01 Werkzeuge und Fundament** ([Auftrag](auftraege/w0-01-fundament.md)): pnpm-Monorepo, TypeScript strict, ESLint mit Importgrenzen, Vitest, Vite, Playwright mit axe, `pnpm check` mit `ALL=`, CI, Lizenzprüfung, Wächter für das öffentliche Repo, `LICENSE`; P-01 bis P-05, P-12, P-13 aus Randen herausgelöst (Kopie mit Herkunftsvermerk, Stand des Randen-Commits).
-- **W0-02 Zusammensetzen** ([Auftrag](auftraege/w0-02-zusammensetzen.md)): `defineIndustry`, `defineIndustryWeb`, `defineEdition`, Tabellen-Register, `composeContract`, Steckplätze der Shell, Namensregister, Pfad-Eigentum, P-06 Register, P-07 Sprachen, P-08 UI-Kit neutral, P-09 Shell, P-10, P-11; Referenz-Branche `muster`; Ausgabe «Vor Ort» als leerer Rahmen mit Demo, nur als Vorschau.
+- **W0-02 Zusammensetzen** ([Auftrag](auftraege/w0-02-zusammensetzen.md)): `defineIndustry`, `defineEdition`, `composeContract`, Hülle für Rechte, P-06 Register, P-07 Sprachen, P-20 Betrieb, IndexedDB aus dem Tabellen-Register mit Schema-Ledger; Referenz-Branche `muster` (rein TS); Generator für neue Branchen.
+- **W0-03 Oberfläche und erste Ausgabe** ([Auftrag](auftraege/w0-03-oberflaeche.md)): P-08 UI-Kit neutral, P-09 Shell mit Arbeitsplätzen je Rolle, P-10 Gerät, P-11 PDF, P-32 Heute; `muster` mit Seiten; Ausgabe «Vor Ort» als leerer Rahmen mit Demo, nur als Vorschau.
 
 **Abnahme:** `pnpm check` ist grün; die Referenz-Branche `muster` legt eine Tabelle, eine Operation, eine Seite, einen Eintrag in «Heute» und eine Funktion im Register an, ohne eine Datei der Plattform zu ändern; die Sicherung geht hin und zurück; zwei Betriebe auf einem Gerät sind getrennt; ein Text auf Portugiesisch erscheint, wo der Schlüssel übersetzt ist, sonst Deutsch.
 
-**Parallel möglich:** Nein, W0-01 vor W0-02. Ein Agent nach dem andern. Daneben dürfen Fakten-Agenten Quellen nachprüfen (nur `docs/fakten/`).
+**Parallel möglich:** Nein, W0-01, dann W0-02, dann W0-03. Ein Agent nach dem andern. Daneben dürfen Fakten-Agenten Quellen nachprüfen (nur `docs/fakten/`).
 
 ## Welle 1: Auftragskern
 
@@ -70,7 +71,7 @@ W7  ───── Stufe 2 nur nach Albans JA ───────────
 
 **Ziel:** Ein Coiffeur und ein kleines Fitnesscenter arbeiten einen Tag mit Terminen, Check-in, Theke und Tagesabschluss auf dem iPad am Empfang.
 
-- Plattform: P-50 Termine, P-51 Verträge und Abos (auch für Hauswartung, Wartungsverträge, Gartenpflege), P-52 Kurse mit Plätzen.
+- Plattform: P-50 Termine, P-51 Verträge und Mitgliedschaften (auch für Hauswartung, Wartungsverträge, Gartenpflege), P-52 Kurse mit Plätzen.
 - Branchen parallel: **Termine** (Coiffeur, Kosmetik, Fusspflege, Massage, Hundesalon) und **Kurse und Fitness** (Mitgliedschaften, Mehrfachkarten, Kursplan, Check-in); Ausgabe «Studio».
 
 ## Welle 5: Haus

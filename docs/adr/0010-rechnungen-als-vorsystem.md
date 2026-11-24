@@ -10,7 +10,7 @@ Für Handwerk, Unterhalt, Umzug, Termine und Kurse ist das Geld hereinholen die 
 
 ## Entscheid
 
-1. Die Plattform baut **Offerte, Auftragsbestätigung, Nachtrag, Rechnung, Gutschrift, Erinnerung und Mahnung** als Dokumente aus den Daten des Auftrags (Katalog, Ausmass, Rapporte, Abo).
+1. Die Plattform baut **Offerte, Auftragsbestätigung, Nachtrag, Rechnung, Gutschrift, Erinnerung und Mahnung** als Dokumente aus den Daten des Auftrags (Katalog, Ausmass, Rapporte, Vertrag).
 2. **QR-Zahlteil nach den Swiss Implementation Guidelines** der Herausgeberin; Regeln und Fassung stehen mit Quelle in [`../fakten/`](../fakten/README.md). Eine Bibliothek dafür nur mit permissiver Lizenz und nach Prüfung.
 3. **MWST je Satz**; Betriebe mit Saldosteuersatz sehen einen Hinweis, keine Berechnung der Abrechnung. Sätze mit Gültigkeit als Regelwerk.
 4. **Nummernkreis auf genau einem Gerät;** ausgestellte Dokumente sind gesperrt; Korrektur als Gutschrift oder neue Fassung.

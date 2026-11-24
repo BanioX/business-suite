@@ -30,7 +30,7 @@ M = Muss für das MVP der Branche, S = Soll, K = Kann, – = nicht nötig. Quell
 | P-41 Material und Lager | M | S | S | S | K | M | S | S | S | S |
 | P-42 Fahrzeuge und Geräte | K | S | K | S | M | S | M | K | – | S |
 | P-50 Termine | – | K | K | K | S | S | K | K | M | M |
-| P-51 Verträge und Abos | – | M | – | S | K | M | M | – | K | M |
+| P-51 Verträge und Mitgliedschaften | – | M | – | S | K | M | M | – | K | M |
 | P-52 Kurse mit Plätzen | – | – | – | – | – | – | – | – | K | M |
 
 Die Tabelle ist die Grundlage für die Reihenfolge: Was fast jede Spalte als M hat, kommt zuerst.
@@ -68,7 +68,7 @@ Ohne diese Pakete beginnt keine Branche. Grösstenteils in Randen gebaut und bra
 | P-26 | `@onestrand/plans` | Leistungspläne und Wiederkehr: Leistungsverzeichnis mit Intervallen je Objekt, Rhythmus (täglich, wöchentlich, monatlich, saisonal), erzeugt Einsätze, Soll-Zeit, Aushang als PDF | neu, Muster aus Randens Reinigungsplan | W1 |
 | P-27 | `@onestrand/checks` | Checklisten und Nachweise: Vorlage, Wiederkehr, Durchgang mit Nachweis (abgehakt, Foto, Messwert mit Grenzen, Unterschrift), Übergabe, Schulungs- und Unterweisungsnachweise, Stopp-Meldung, Bericht | Randen gebaut (Selbstkontrolle), Randen AP-7 | W1 |
 | P-28 | `@onestrand/calendar` | Betriebskalender, Saison, Feiertage je Kanton, Abwesenheiten, Erinnerungen ohne Server (Liste, Kalenderdatei, Zahl am Symbol), Fristen | Randen AP-8, AP-17; Rettich (Kalenderdatei) | W1 |
-| P-29 | `@onestrand/invoicing` | Offerte und Rechnung: Nummernkreis auf einem Gerät, Positionen aus Katalog, Ausmass, Rapport oder Abo; MWST je Satz; Akonto und Schlussrechnung; **QR-Zahlteil** nach den Swiss Implementation Guidelines; Gutschrift; offene Posten; Erinnerung und Mahnstufen; Zahlungseingang von Hand, bar oder **aus einer Bankdatei** mit Referenz; Barquittung | neu | W2 |
+| P-29 | `@onestrand/invoicing` | Offerte und Rechnung: Nummernkreis auf einem Gerät, Positionen aus Katalog, Ausmass, Rapport oder Vertrag; MWST je Satz; Akonto und Schlussrechnung; **QR-Zahlteil** nach den Swiss Implementation Guidelines; Gutschrift; offene Posten; Erinnerung und Mahnstufen; Zahlungseingang von Hand, bar oder **aus einer Bankdatei** mit Referenz; Barquittung | neu | W2 |
 | P-30 | `@onestrand/books` | Kassenbuch und Tagesabschluss, Belege per Foto mit Texterkennung auf dem Gerät, Ausgaben, MWST-Vorschau, **Monatspaket für die Treuhand** (PDF, CSV, Belege als ZIP), Fahrer- und Equipenkasse; Verkauf an der Theke als Option | Randen AP-16 (ADR-0029), Rettich (Texterkennung) | W2 |
 | P-31 | `@onestrand/team-time` | Zeit-Ledger, Stempeln (Gerät des Betriebs, eigenes Handy als Option, **QR am Objekt statt Standort**), Einsatz- und Dienstplan, Abwesenheiten, Saldi, Monatsblatt, **Lohn-Vorbereitung** mit Regelwerken als Daten (GAV, Zuschläge, Ferienanteil) für die Treuhand, Arbeitszeit-Nachweis für Kontrollen | Randen AP-3 bis AP-6 (ADR-0023, ADR-0030) | W2 |
 | P-32 | `@onestrand/today` | Startseite «Heute» aus Steckplätzen: Einsätze, fällige Aufgaben, offene Rechnungen, Fristen, Erinnerungen, «Wie steht es» mit höchstens fünf Zahlen | Randen gebaut (Cockpit) | W1 |
@@ -87,7 +87,7 @@ Ohne diese Pakete beginnt keine Branche. Grösstenteils in Randen gebaut und bra
 | ID | Paket | Inhalt | Herkunft |
 | --- | --- | --- | --- |
 | P-50 | `@onestrand/scheduling` | Termine mit Ressourcen (Person, Raum, Stuhl, Fahrzeug), Dauer je Leistung, Pausen, Erinnerung zum Weitergeben, Ausfall und Verschieben | neu |
-| P-51 | `@onestrand/contracts` | **Verträge und Abos**, für jede Branche: Laufzeit, Verlängerung, Kündigungsfrist, Pause, Preisänderung, erzeugt wiederkehrende Rechnungen (Hauswartung pauschal, Wartungsvertrag, Gartenpflege, Mitgliedschaft) und Einsätze; **Mehrfachkarten** als Ledger | neu |
+| P-51 | `@onestrand/contracts` | **Verträge und Mitgliedschaften** (in der App nie «Abo»), für jede Branche: Laufzeit, Verlängerung, Kündigungsfrist, Pause, Preisänderung, erzeugt wiederkehrende Rechnungen (Hauswartung pauschal, Wartungsvertrag, Gartenpflege, Mitgliedschaft) und Einsätze; **Mehrfachkarten** als Ledger | neu |
 | P-52 | `@onestrand/courses` | Kurse mit Plätzen: Kursreihen und Lektionen, Kapazität, Warteliste, Nachrücken, Anwesenheit, Auslastung, Semester | neu |
 
 ## Stufe 2 (Welle 7, nur nach Albans JA)

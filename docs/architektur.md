@@ -18,7 +18,7 @@ Stand 24.11.2026, Entwurf des Kopfs, zur Bestätigung durch Alban. Die verbindli
                 ┌───────┴───────────────┴──────────────┴──────────────┴────────┐
  Plattform      │ Rückgrat: Betrieb · Personen · Rechte · Kundschaft · Objekte   │
  (@onestrand/*) │ Aufträge · Einsätze · Rapporte · Checklisten · Pläne · Zeit    │
-                │ Offerten und Rechnungen · Kasse und Belege · Verträge und Abos │
+                │ Offerten und Rechnungen · Kasse und Belege · Verträge und Mitgliedschaften │
                 │ Termine · Kurse · Material · Fahrzeuge · Kopplung · Dokumente  │
                 │ Fundament: Kern · Schnittstelle · Speicher · Ledger · Register │
                 │ Sprachen · Sicherung · UI-Kit · Rahmen · Gerät · Werkzeuge     │
@@ -153,7 +153,7 @@ Betrieb ─┬─ Person ── Rollenprofil (je Betrieb, W16)
          │      ├─ Einsatz ── Rapport (gesperrt nach Unterschrift) ── Foto · Checkliste · Mangel
          │      └─ Abnahme ── Mangel ── Frist
          ├─ Rechnung (Nummernkreis, MWST je Satz, QR-Zahlteil) ── Zahlungseingang (Ledger) ── Mahnung
-         ├─ Vertrag/Abo (Laufzeit, Verlängerung, Kündigung, Pause; erzeugt Rechnungen und Einsätze)
+         ├─ Vertrag, Mitgliedschaft (Laufzeit, Verlängerung, Kündigung, Pause; erzeugt Rechnungen und Einsätze)
          ├─ Termin · Kurs ── Teilnahme
          ├─ Zeitbuchung (Ledger; optional Verweis auf Einsatz) · Abwesenheit · Monatsblatt
          ├─ Beleg (Bild als Datei mit Prüfsumme) · Kassenbuch (Ledger) · Monatspaket
