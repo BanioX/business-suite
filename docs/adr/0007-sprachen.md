@@ -26,7 +26,7 @@ Anlass: Der Klickentwurf zeigte für die Mitarbeiterin nur Portugiesisch. Alban,
 
 10. **Die Person wählt.** Die Sprache der Bedienung stellt jede Person selbst ein, jederzeit, in jeder Ansicht erreichbar. Beim ersten Start schlägt die App die Sprache des Geräts vor. Die App schliesst nie aus Name, Herkunft, Nationalität, Ausweis, Rolle oder Branche auf eine Sprache; ein Test prüft, dass die Sprache nur aus der Einstellung der Person kommt.
 11. **Keine Sprache gehört zu einer Branche.** Vorlagen, Demo-Daten und Bilder zeigen nie eine Sprache als «die Sprache» einer Branche oder Rolle. Demo-Personen haben keine zugeschriebene Herkunft; wer die Demo anschaut, wählt die Sprache selbst.
-12. **Welche Sprachen, entscheiden Daten:** der Grundsatz Deutsch, Französisch, Italienisch und Englisch; dazu die Sprachen, die Pilot-Teams angeben, und die Sprachen, in denen Behörden und Sozialpartner informieren (mit Quelle in [`../fakten/`](../fakten/README.md)). Nie eine Annahme über Gruppen als Grund.
+12. **Welche Sprachen, entscheiden Daten:** der Grundsatz Deutsch, Französisch, Italienisch, Englisch und Albanisch (Albanisch nach Albans Angabe vom 24.11.2026: «Albanisch ist auch ganz gross in diesem Bereich»); dazu die Sprachen, die Pilot-Teams angeben, und die Sprachen, in denen Behörden und Sozialpartner informieren (mit Quelle in [`../fakten/`](../fakten/README.md)). Nie eine Annahme über Gruppen als Grund.
 13. **Gleiche Sorgfalt in jeder Sprache:** dieselben Funktionen, keine gekürzten Texte, ein Glossar der Fachwörter je Sprache; jede Übersetzung trägt bis zur Prüfung durch eine Person mit dieser Muttersprache den Vermerk «Vorschau».
 14. **Einfache Sprache und Symbole** auf dem Arbeitsplatz der Mitarbeitenden für alle, auch auf Deutsch.
 
