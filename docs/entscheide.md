@@ -12,6 +12,8 @@ Was nur Alban entscheiden kann, mit Optionen und Empfehlung des Kopfs. Stand 24.
 
 **Empfehlung: (a).** Gemischte Betriebe sind häufig (Hauswartung mit Reinigung und Garten, Umzug mit Endreinigung, Hotel mit Restaurant), und ein Betrieb kann nur in einer App leben, weil die Daten an der Adresse hängen. Werbung darf trotzdem je Branche sprechen. Ob es später mehr Ausgaben werden, kostet wenig, solange keine Adresse im Pilot steht. Details: [`architektur.md`](architektur.md), Abschnitt 2.
 
+**Rückfrage Albans, 24.11.2026, wörtlich:** «Was empfiehlst du bezüglich Wartung Abgrenzung und monetarisierung orientiere dich an grosse wie microsoft suite / adobe / sap etc». Die Antwort zu Wartung und Abgrenzung steht in [`architektur.md`](architektur.md), Abschnitt 10; was Geld betrifft, steht nach [ADR-0011](adr/0011-oeffentliches-repo.md) nicht hier, sondern in Albans privater Ablage. S-01 bleibt offen bis zu Albans Antwort.
+
 ### S-02 Wo liegt der Code?
 
 - (a) **Monorepo `business-suite`** für Plattform, neue Branchen und Ausgaben; Randen bleibt vorerst in seinem Repo und bekommt die Plattform als gestempelte Kopie; Umzug von Randen später.
@@ -54,7 +56,9 @@ Gemeint sind Register (AP-1), Rollen und Rechte (AP-2), Zeit (AP-3 bis AP-6), Er
 - (c) dazu ein **verschlüsseltes Päckli** über das Teilen-Menü, wenn sich das Team selten trifft.
 - (d) Relais über einen Server (Stufe 2) [Geld].
 
-**Empfehlung: (a) ab Welle 1, (b) und (c) ab Welle 3 mit eigenem ADR und fester Liste der Datentypen, (d) nach den Zeichen aus dem Pilot.** Ohne (b) oder (c) ist ein Betrieb mit Team im Feld nur halb versorgt; das zeigt die Recherche bei Reinigung, Dach und Umzug übereinstimmend.
+**Empfehlung: (a) ab Welle 1, (b) und (c) ab Welle 3 mit eigenem ADR und fester Liste der Datentypen, (d) nach den Zeichen aus dem Pilot.**
+
+**Entscheid Albans, 24.11.2026:** «Ja, ab Welle 3 mit ADR (Recommended)»: Kopplung im WLAN des Betriebs und verschlüsseltes Päckli für Einsätze, Rapporte, Stunden, Fotos und Mängel ab Welle 3, mit eigenem ADR und fester Liste der Datentypen; bis dahin Papier und PDF. Ein Relais über einen Server (d) bleibt offen. Ohne (b) oder (c) ist ein Betrieb mit Team im Feld nur halb versorgt; das zeigt die Recherche bei Reinigung, Dach und Umzug übereinstimmend.
 
 ### S-07 Sprachen und Anrede [Geld bei der Prüfung]
 
@@ -78,9 +82,14 @@ Gemeint sind Register (AP-1), Rollen und Rechte (AP-2), Zeit (AP-3 bis AP-6), Er
 - (a) **Facility** (Reinigung, Hauswartung) zuerst, dann **Maler und Umzug**, dann **Gebäudehülle, Haustechnik und Holz, Garten**, dann **Termine und Fitness**, dann **Beherbergung**.
 - (b) Nach deinen ersten Kunden ausserhalb der Gastronomie, wie bei Randen (W7).
 
+**Entscheid Albans, 24.11.2026:** «Facility zuerst (Recommended)». Die Reihenfolge danach gilt als Arbeitsannahme, bis Alban erste Kunden ausserhalb der Gastronomie nennt.
+
 **Empfehlung: (a), solange du keine ersten Kunden nennst.** Facility hat wiederkehrende Arbeit und Putzplan, viele kleine Betriebe, ein kleines Rechtsrisiko und prüft Objekte, Pläne, Teams und Monatsrechnungen. **Frage an dich:** Kennst du schon Betriebe ausserhalb der Gastronomie, die mitmachen würden? Dann richten wir die Reihenfolge nach ihnen.
 
 ### S-10 «Main zieht mit» in der Suite
+
+**Teilentscheid Albans, 24.11.2026:** Der Plan liegt auch auf `main` («Ja, auch auf main»); `main` und Arbeits-Branch stehen auf demselben Commit. Ob Plattform-Änderungen später über PR landen (b), bleibt offen.
+
 
 - (a) Wie in Randen: Jeder grüne Stand geht direkt auf `main`, auch für die Plattform.
 - (b) **Direkt auf `main` für Branchen und Doku; Plattform nur über PR** mit der CI aller Ausgaben; Production je Ausgabe aus `live/<ausgabe>`, erst ab ihrem Pilot.

@@ -203,3 +203,28 @@ Die neuen Branchen arbeiten draussen: im Keller, auf dem Dach, in der Wohnung de
 - Keine Anbindungen: kein E-Banking, keine Lastschrift, keine Buchungsplattformen, keine Zutrittssysteme, keine Krankenkassen-Schnittstellen.
 - Keine Beurteilung von Gefahren (Asbest, Absturz) und keine Rechtsberatung: Die App erinnert und dokumentiert.
 - Keine Gesundheitsberufe (Physio, Spitex, Praxen) und keine Kinderbetreuung ([`branchen/weitere.md`](branchen/weitere.md)).
+
+## 10. Wartung und Abgrenzung
+
+Antwort auf Albans Rückfrage vom 24.11.2026 ([S-01](entscheide.md)), soweit sie Technik betrifft; was Geld betrifft, steht nach [ADR-0011](adr/0011-oeffentliches-repo.md) nicht im öffentlichen Repo.
+
+### 10.1 Wartung: ein Produkt, das gepflegt wird, nicht zehn
+
+1. **Ausgaben sind Konfiguration, nicht Code.** Alle Ausgaben bauen aus demselben Stand von `main`: eine Version der Plattform, eine Testmatrix, ein Weg für Fehlerbehebungen. Eine neue Ausgabe kostet eine Adresse, einen Namen und eine Zeile in der CI, keinen eigenen Code.
+2. **Wenige Ausgaben, viele Branchen.** Jede Ausgabe ist eine Adresse, die nie mehr ändern darf, und eine Zeile mehr in jeder Prüfung. Darum Ausgaben nach Arbeitsweise; Branchen dürfen dagegen zahlreich sein, weil sie Pakete auf derselben Plattform sind.
+3. **Kanäle für Updates:** `main` ist Vorschau; jede Ausgabe mit Pilot bekommt `live/<ausgabe>`, den der Kopf nach dem Anschauen der Vorschau nachzieht. Installierte Apps aktualisieren sich selbst; ein Fehler darf nie alle Betriebe am selben Morgen treffen ([S-10](entscheide.md)).
+4. **Jahrespflege der Regelwerke:** Der grösste laufende Aufwand liegt nicht im Code, sondern in Daten mit Gültigkeit: MWST-Sätze (Abstimmung vom 29.11.2026), Jahrespaket der Sozialversicherungen, Mindestlöhne der GAV, Feiertage je Kanton, Kurtaxen, Intervalle der Kaminfeger. Jeden Januar und nach jeder Abstimmung prüft ein Fakten-Agent die Liste in [`fakten/`](fakten/README.md) und führt die Regelwerke nach; die App zeigt, ab wann ein Wert gilt.
+5. **Rückwärts lesbar:** Schemas werden nur angefügt; jede Sicherung jeder Version lässt sich zurückholen (eingefrorene Sicherungen in der CI).
+6. **Plattform vor Branche:** Die Regel der zwei verhindert, dass zehn Branchen zehn Rechnungen, zehn Zeiterfassungen und zehn Abgleiche bauen. Ein Fehler in der Rechnung wird einmal behoben.
+7. **Wenige, freie Abhängigkeiten:** nur permissive Lizenzen, wöchentliche Updates mit grüner CI, Lizenzhinweise in der App.
+
+### 10.2 Abgrenzung: wo die Suite aufhört
+
+| Grenze | Diesseits (Suite) | Jenseits |
+| --- | --- | --- |
+| Zwischen Ausgaben | ein Betrieb lebt in einer Ausgabe; Nachbar-Branchen einschaltbar | zwei Firmen einer Person nutzen zwei Betriebe auf demselben Gerät oder zwei Ausgaben |
+| Zwischen Rückgrat und Branche | Rückgrat in jeder Ausgabe: Betrieb, Personen, Rechte, Kundschaft, Objekte, Aufträge, Rechnungen, Zeit, Belege, Dokumente, Sichern | Abläufe, Wörter, Vorlagen und Regeln einer Branche |
+| Zwischen Suite und Partnern | Vorsystem: erfassen, vorbereiten, als Datei weitergeben (Monatspaket, Bankdatei, Kalenderdatei, Meldedatei) | Buchhaltung und Lohnabrechnung (Treuhand), Banken, Buchungsplattformen, Versicherer, Behörden-Schnittstellen |
+| Zwischen Stufe 1 und Stufe 2 | alles, was auf dem Gerät und im WLAN des Betriebs läuft | was einen Server braucht: Abgleich über Netze, Konten, Online-Buchung und Seiten für Kundschaft, Mitteilungen, Sicherung im Netz, mehrere Standorte; die neutrale Nahtstelle ist das Feld `availability` im Register (Randen-ADR-0022) |
+| Zwischen Erinnern und Beurteilen | Fristen, Richtwerte, Nachweise, Hinweise mit Quelle | Rechtsberatung, Beurteilung von Asbest, Absturz, Lohn, AHV-Status |
+| Pflichten | Arbeitszeit, Aufbewahrung, Selbstkontrolle, Sicherheit, Sichern, Exportieren und Löschen sind immer und überall verfügbar | nie hinter einer Schranke |

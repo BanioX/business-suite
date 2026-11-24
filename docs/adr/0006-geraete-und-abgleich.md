@@ -1,6 +1,6 @@
 # ADR-0006: Geräte und Abgleich zwischen Büro und Aussendienst
 
-- **Status:** Entwurf; Punkte 4 und 5 brauchen Albans JA ([S-06](../entscheide.md)) [Datenfluss]
+- **Status:** Entwurf; Punkt 4 von Alban am 24.11.2026 für Welle 3 freigegeben, mit eigenem ADR und fester Liste der Datentypen ([S-06](../entscheide.md))
 - **Datum:** 2026-11-24
 - **Entscheid von:** Kopf
 - **Betrifft:** Randen-ADR-0006 (Daten bleiben auf dem Gerät), Randen-ADR-0025 (Stufe 2), Randen-ADR-0028 (Kopplung im WLAN), Randen W13 bis W15
