@@ -1,6 +1,6 @@
 # ADR-0003: Monorepo für Plattform, Branchen und Ausgaben; Randen mit gestempelter Kopie
 
-- **Status:** Entwurf, zur Bestätigung durch Alban ([S-02](../entscheide.md))
+- **Status:** angenommen (Claude nach Albans Freigabe, 24.11.2026, [S-02](../entscheide.md)); der Umzug von Randen bleibt ein eigener Entscheid
 - **Datum:** 2026-11-24
 - **Entscheid von:** Kopf
 

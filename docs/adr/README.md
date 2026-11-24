@@ -5,8 +5,8 @@ Jeder Entscheid mit Folgen steht hier als eigene Datei `NNNN-titel.md` ([ADR-000
 | Nr. | Titel | Status | Datum |
 | --- | --- | --- | --- |
 | [0001](0001-entscheide-festhalten.md) | Entscheide festhalten | angenommen | 2026-11-24 |
-| [0002](0002-plattform-branchen-ausgaben.md) | Eine Plattform, Branchen als Pakete, Ausgaben als installierbare Apps | Entwurf, zur Bestätigung durch Alban (S-01) | 2026-11-24 |
-| [0003](0003-monorepo-und-gestempelte-kopie.md) | Monorepo für Plattform, Branchen und Ausgaben; Randen mit gestempelter Kopie | Entwurf, zur Bestätigung durch Alban (S-02) | 2026-11-24 |
+| [0002](0002-plattform-branchen-ausgaben.md) | Eine Plattform, Branchen als Pakete, Ausgaben als installierbare Apps | angenommen (S-01, 24.11.2026) | 2026-11-24 |
+| [0003](0003-monorepo-und-gestempelte-kopie.md) | Monorepo für Plattform, Branchen und Ausgaben; Randen mit gestempelter Kopie | angenommen (S-02, 24.11.2026) | 2026-11-24 |
 | [0004](0004-andocken-einer-branche.md) | Wie eine Branche andockt | Entwurf, wird mit W0-02 gebaut | 2026-11-24 |
 | [0005](0005-gemeinsames-datenmodell.md) | Gemeinsames Datenmodell der Betriebe | Entwurf | 2026-11-24 |
 | [0006](0006-geraete-und-abgleich.md) | Geräte und Abgleich zwischen Büro und Aussendienst | Entwurf; Punkt 4 für Welle 3 freigegeben (S-06, 24.11.2026) | 2026-11-24 |

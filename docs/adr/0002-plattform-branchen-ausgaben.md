@@ -1,6 +1,6 @@
 # ADR-0002: Eine Plattform, Branchen als Pakete, Ausgaben als installierbare Apps
 
-- **Status:** Entwurf, zur Bestätigung durch Alban ([S-01](../entscheide.md))
+- **Status:** angenommen (Claude nach Albans Freigabe, 24.11.2026, [S-01](../entscheide.md)); Namen und Adressen der Ausgaben bleiben offen (S-04, S-05)
 - **Datum:** 2026-11-24
 - **Entscheid von:** Kopf, nach drei unabhängigen Entwürfen ([`../hintergrund/`](../hintergrund/README.md))
 - **Ergänzt:** Randen-ADR-0020 (Suite der Firma), dessen Punkt 9 («kein gemeinsames Code-Paket») mit diesem ADR für die Suite aufgehoben wird

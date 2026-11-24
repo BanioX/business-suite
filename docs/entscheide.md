@@ -14,13 +14,17 @@ Was nur Alban entscheiden kann, mit Optionen und Empfehlung des Kopfs. Stand 24.
 
 **Rückfrage Albans, 24.11.2026, wörtlich:** «Was empfiehlst du bezüglich Wartung Abgrenzung und monetarisierung orientiere dich an grosse wie microsoft suite / adobe / sap etc». Die Antwort zu Wartung und Abgrenzung steht in [`architektur.md`](architektur.md), Abschnitt 10; was Geld betrifft, steht nach [ADR-0011](adr/0011-oeffentliches-repo.md) nicht hier, sondern in Albans privater Ablage. S-01 bleibt offen bis zu Albans Antwort.
 
+**Entscheid Claude nach Albans Freigabe, 24.11.2026** («Tu was du für richtig hältst»): (a), vier Ausgaben nach Arbeitsweise; Arbeitstitel bis zum Pilot jeder Ausgabe (S-05). Ob später eine Ausgabe für Werkstätten dazukommt, entscheidet sich mit dem Screening ([`branchen/weitere.md`](branchen/weitere.md)).
+
 ### S-02 Wo liegt der Code?
 
 - (a) **Monorepo `business-suite`** für Plattform, neue Branchen und Ausgaben; Randen bleibt vorerst in seinem Repo und bekommt die Plattform als gestempelte Kopie; Umzug von Randen später.
 - (b) Ein Repo je Branche, Plattform als Kopie in jedem.
 - (c) Randen zieht sofort ins Monorepo.
 
-**Empfehlung: (a).** Plattform und Branchen ändern sich in einem Schritt, ein Bruch wird sofort rot, und Randens laufender Ausbau bleibt ungestört. (b) lädt jede Branche ein, ihre Kopie anzupassen; (c) hält den Küchenmonitor auf.
+**Empfehlung: (a).** Plattform und Branchen ändern sich in einem Schritt, ein Bruch wird sofort rot, und Randens laufender Ausbau bleibt ungestört.
+
+**Entscheid Claude nach Albans Freigabe, 24.11.2026** («Tu was du für richtig hältst»): (a). Alban hat W0-01 im Repo business-suite gestartet. (b) lädt jede Branche ein, ihre Kopie anzupassen; (c) hält den Küchenmonitor auf.
 
 ### S-03 Wer baut die allgemeinen Teile, die in Randens Masterplan stehen?
 
@@ -31,6 +35,8 @@ Gemeint sind Register (AP-1), Rollen und Rechte (AP-2), Zeit (AP-3 bis AP-6), Er
 - (c) Randen baut sie für die Küche; die Suite baut sie später neu.
 
 **Empfehlung: (a)** für alles, woran Randen schon arbeitet oder als Nächstes arbeitet. Was nicht in Randens Plan steht (Kundschaft, Objekte, Aufträge, Rapporte, Rechnungen, Verträge, Termine, Kurse), baut die Suite. (c) gäbe zwei Kerne. Dafür bitte die Nachricht aus [`randen.md`](randen.md), Abschnitt 4, an die Randen-Sitzung weitergeben.
+
+**Entscheid Claude nach Albans Freigabe, 24.11.2026** («Tu was du für richtig hältst»): (a). Der Kopf hat die Nachricht am 24.11.2026 an die Randen-Sitzung geschickt.
 
 ### S-04 Adressen unter onestrand.ch [vor dem ersten Pilot von Randen]
 
