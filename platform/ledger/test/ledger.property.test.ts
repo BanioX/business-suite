@@ -195,7 +195,7 @@ const historyArb = fc.record({
   corrections: fc.array(fc.nat(), { maxLength: 4 }),
 });
 
-const HEX = '0123456789abcdef';
+const HEX = Array.from('0123456789abcdef');
 const hashArb = fc.string({ unit: fc.constantFrom(...HEX), minLength: 64, maxLength: 64 });
 const freshIds = sequentialIds(800_000);
 
@@ -321,7 +321,9 @@ describe('any sequence of bookings and corrections', () => {
 
           const businesses = [t.one.businessId, t.two.businessId];
           for (const [index, businessId] of businesses.entries()) {
-            const streams = STREAMS.filter((stream) => model.chain(index, stream).written.length > 0);
+            const streams = STREAMS.filter(
+              (stream) => model.chain(index, stream).written.length > 0,
+            );
             expect(await t.account.streams(businessId)).toEqual([...streams].sort());
             for (const stream of STREAMS) {
               const chain = model.chain(index, stream);
@@ -482,12 +484,12 @@ describe('a single changed entry', () => {
             fc.pre(device !== undefined);
             fc.pre(typeof after.businessId === 'string' && typeof after.stream === 'string');
 
-            const left = await device?.account.verify(row.businessId, row.stream);
-            const arrived = await device?.account.verify(
+            const left = await device.account.verify(row.businessId, row.stream);
+            const arrived = await device.account.verify(
               after.businessId ?? row.businessId,
               after.stream ?? row.stream,
             );
-            expect([left?.ok, arrived?.ok]).toContain(false);
+            expect([left.ok, arrived.ok]).toContain(false);
           },
         ),
         { numRuns: 200 },
