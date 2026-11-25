@@ -305,6 +305,27 @@ export function storageConformance(
         expect(await t.storage.table('time_entries').get(note.id)).toBeUndefined();
       });
 
+      it('answers `get` for a row of any business, so a use case compares the business (`requireRow`)', async () => {
+        const t = await createTestStorage(make);
+        const mine = t.note(t.one.business.id, 'Notiz von Betrieb Muster');
+        const gone = t.note(t.one.business.id, 'Entfernt', { deletedAt: t.clock.now() });
+        await t.storage.table('notes').add(mine);
+        await t.storage.table('notes').add(gone);
+        const notes = t.storage.table('notes');
+        // The port itself hands out the row of another business...
+        expect(await notes.get(mine.id)).toEqual(mine);
+        // ...and `requireRow` is what refuses it: another business, a deleted row, no row.
+        expect(await requireRow(notes, t.one.business.id, mine.id, 'Note')).toEqual(mine);
+        for (const [businessId, id] of [
+          [t.two.business.id, mine.id],
+          [t.one.business.id, gone.id],
+          [t.one.business.id, t.ids.next()],
+        ] as const) {
+          await expect(requireRow(notes, businessId, id, 'Note')).rejects.toMatchObject({
+            code: 'not_found',
+          });
+        }
+      });
       it('returns soft-deleted rows; alive filters them', async () => {
         const t = await createTestStorage(make);
         const kept = t.note(t.one.business.id, 'Bleibt');

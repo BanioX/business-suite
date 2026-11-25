@@ -430,6 +430,115 @@ describe('a package is imported by its public entry', () => {
   });
 });
 
+describe('the packages of the layer «Browser»', () => {
+  // `web-data` is the first: it opens the database of the browser. It is held to the same rules as
+  // a pure package, with the globals named for it in `BROWSER_PACKAGES` of `eslint.config.js` as
+  // the one difference. The list is written down here a second time on purpose: opening a
+  // global, or making a second package a browser package, is a decision made in two places.
+  const BROWSER = 'web-data';
+  const REACHES = ['indexedDB', 'localStorage', 'navigator', 'crypto'];
+  const CLOSED = ['window', 'document', 'sessionStorage', 'fetch', 'process', 'Buffer'];
+  const WEB_DATA_LAYERS = ['core', 'contract', 'storage', 'business', 'manifest'];
+  const OTHERS = ['ledger', 'testing', 'features', 'access', 'i18n'];
+
+  it.each(REACHES)('lets %s through in web-data', async (name) => {
+    await expectAccepted(source(BROWSER), reading(name));
+    await expectAccepted(source(BROWSER, 'idb/deep/probe.ts'), reading(name));
+  });
+
+  it.each(CLOSED)('still refuses the global %s in web-data', async (name) => {
+    await expectRefused(source(BROWSER), reading(name), 'no-restricted-globals', name);
+  });
+
+  it.each(REACHES)('still refuses %s in a pure package', async (name) => {
+    for (const pure of [...PACKAGES, 'manifest', 'i18n', 'unlisted']) {
+      await expectRefused(source(pure), reading(name), 'no-restricted-globals', name);
+    }
+  });
+
+  it('lets through the globals of the list and no others, by the rule of the real config', async () => {
+    const path = join(REPO_ROOT, source(BROWSER));
+    const config = (await real.calculateConfigForFile(path)) as {
+      rules?: Record<string, unknown[]>;
+    };
+    const [severity, ...refused] = config.rules?.['no-restricted-globals'] ?? [];
+    expect(severity).toBe(2);
+    expect([...refused].sort()).toEqual([...CLOSED].sort());
+  });
+
+  it.each(['react', 'react-dom', 'react-dom/client', 'dexie', 'node:fs', 'node:crypto'])(
+    'refuses %s: no UI, no other database, no Node',
+    async (specifier) => {
+      await expectNoImport(source(BROWSER), specifier);
+      await expectNoImport(source(BROWSER, 'deep/probe.ts'), specifier);
+    },
+  );
+
+  it('refuses the React part of a package and import() in any form', async () => {
+    await expectNoImport(source(BROWSER), '@onestrand/storage/web');
+    await expectNoImport(source(BROWSER), '@onestrand/manifest/web');
+    await expectRefusedBy(source(BROWSER), loading('./idb'), DYNAMIC);
+    await expectRefusedBy(source(BROWSER), typeOf('react'), TYPE_FORM);
+    await expectRefusedBy(source(BROWSER), requiring('node:fs'), REQUIRE);
+  });
+
+  it('refuses an industry and an edition, by path and by name', async () => {
+    await expectNoImport(source(BROWSER), '../../../industries/facility/core/index');
+    await expectNoImport(source(BROWSER), '../../../editions/field/edition');
+    await expectNoImport(source(BROWSER), '@onestrand/facility');
+    await expectRefusedBy(
+      source(BROWSER),
+      loading('../../../industries/facility/core/index'),
+      DYNAMIC,
+    );
+  });
+
+  it.each(WEB_DATA_LAYERS)('may import %s', async (layer) => {
+    await expectAccepted(source(BROWSER), importing(`@onestrand/${layer}`));
+  });
+
+  it.each([...OTHERS, BROWSER])('may not import %s', async (layer) => {
+    await expectNoImport(source(BROWSER), `@onestrand/${layer}`);
+  });
+
+  it('is imported by no package below it: the layers stay as they were', async () => {
+    for (const lower of [...PACKAGES, 'manifest', 'business']) {
+      await expectNoImport(source(lower), `@onestrand/${BROWSER}`);
+    }
+  });
+
+  it('gives a package with no line of its own no global of the list', async () => {
+    await expectRefused(
+      source('unlisted'),
+      reading('indexedDB'),
+      'no-restricted-globals',
+      'indexedDB',
+    );
+    await expectRefused(
+      source('unlisted'),
+      reading('localStorage'),
+      'no-restricted-globals',
+      'localStorage',
+    );
+  });
+
+  it('leaves the tests of web-data alone, as it does for every package', async () => {
+    await expectAccepted(test(BROWSER), reading('indexedDB'));
+    await expectAccepted(test(BROWSER), importing('fake-indexeddb'));
+    await expectAccepted(test(BROWSER), importing('@onestrand/testing'));
+  });
+
+  it('keeps the boundary rules of the real config for web-data, with and without types', async () => {
+    const path = join(REPO_ROOT, source(BROWSER));
+    const [before, after] = (await Promise.all([
+      real.calculateConfigForFile(path),
+      linter.calculateConfigForFile(path),
+    ])) as { rules?: Record<string, unknown> }[];
+    for (const rule of BOUNDARY_RULES) {
+      expect(after?.rules?.[rule], rule).toEqual(before?.rules?.[rule]);
+    }
+  });
+});
 describe('the tests of a package', () => {
   it.each(['node:fs', 'node:crypto', 'node:path', 'vitest', 'fast-check'])(
     'may import %s',

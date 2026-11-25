@@ -21,6 +21,7 @@ import {
 } from '@onestrand/storage';
 import fc from 'fast-check';
 import { z } from 'zod';
+import type { SchemaStep } from '../src';
 
 /**
  * Helpers for the tests of this package. `@onestrand/testing` offers the same clock and ids, and
@@ -124,6 +125,38 @@ export const deviceSettingsTable = defineTable({
 /** The register of the tests: an ordinary table, an append-only one, one outside the backup. */
 export const REGISTRY = createTableRegistry([notesTable, timeEntriesTable, deviceSettingsTable]);
 export type Registry = typeof REGISTRY;
+
+/** A table the sample register gains in its second release. */
+export const extraTable = defineTable({
+  name: 'extra_things',
+  schema: z.object({ ...syncFields, label: z.string() }),
+  indexes: ['label'],
+  sensitivity: 'normal',
+  sync: 'device',
+});
+
+/** The register of the second release: one table more, and one index more on `notes`. */
+export const EXTENDED = createTableRegistry([
+  { ...notesTable, indexes: ['text', 'updatedAt'] },
+  timeEntriesTable,
+  deviceSettingsTable,
+  extraTable,
+]);
+
+/** The first step of the schema ledger of the sample register: all three tables, with their indexes. */
+export const FIRST_STEP: SchemaStep = {
+  tables: [
+    { name: 'notes', indexes: ['text'] },
+    { name: 'time_entries', indexes: [['personId', 'at']] },
+    { name: 'device_settings', indexes: ['key'] },
+  ],
+};
+
+/** The second step: the table and the index the second release brings. */
+export const SECOND_STEP: SchemaStep = {
+  tables: [{ name: 'extra_things', indexes: ['label'] }],
+  indexes: [{ table: 'notes', index: 'updatedAt' }],
+};
 
 /** What a storage under test is built from. */
 export interface StoragePorts {
