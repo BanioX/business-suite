@@ -1,0 +1,26 @@
+{
+  "name": "@onestrand/manifest",
+  "version": "0.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.src.json && tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@onestrand/access": "workspace:*",
+    "@onestrand/business": "workspace:*",
+    "@onestrand/contract": "workspace:*",
+    "@onestrand/core": "workspace:*",
+    "@onestrand/features": "workspace:*",
+    "@onestrand/i18n": "workspace:*",
+    "@onestrand/storage": "workspace:*"
+  },
+  "devDependencies": {
+    "@onestrand/testing": "workspace:*",
+    "zod": "^4.6.7"
+  }
+}
