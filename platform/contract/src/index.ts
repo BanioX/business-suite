@@ -6,3 +6,4 @@ export * from './events';
 export * from './errors';
 export * from './ports';
 export * from './command';
+export * from './compose';

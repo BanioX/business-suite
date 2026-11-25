@@ -10,7 +10,9 @@ describe('@onestrand/contract', () => {
   it('exports exactly these values', () => {
     expect(Object.keys(contract).sort()).toEqual([
       'ACCESS_LEVELS',
+      'COMPOSE_PROBLEM_CODES',
       'CommandError',
+      'ComposeError',
       'DomainEventSchema',
       'FEATURE_ID_PATTERN',
       'NAMESPACED_ERROR_CODE_PATTERN',
@@ -20,6 +22,8 @@ describe('@onestrand/contract', () => {
       'assertOperation',
       'command',
       'commandBase',
+      'composeContract',
+      'composeProblems',
       'contractJsonSchemas',
       'createCommandKit',
       'fragmentProblems',
