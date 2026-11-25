@@ -105,14 +105,14 @@ describe('defineEdition', () => {
       ).toEqual(['invalid_entry id Sample']);
     });
 
-    it('is the one place that fixes the format and the prefix of Randen, which it never renames', () => {
+    it('takes the names of an edition that has shipped as they are, and checks them the same way', () => {
       expect(
         editionInputProblems({
           ...sampleInput(),
-          id: 'randen',
-          database: 'randen',
-          storagePrefix: 'randen:',
-          backupFormat: 'randen-backup',
+          id: 'legacy',
+          database: 'legacy',
+          storagePrefix: 'legacy:',
+          backupFormat: 'legacy-backup',
         }),
       ).toEqual([]);
     });

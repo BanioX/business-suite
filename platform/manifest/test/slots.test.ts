@@ -60,13 +60,15 @@ describe('the slots', () => {
     expectTypeOf<SlotEntries['routes']>().toEqualTypeOf<readonly SlotEntry[] | undefined>();
     const probe = () => {
       // @ts-expect-error an unknown slot
-      const wrong: SlotEntries = { menu: [] };
+      const wrong: SlotEntries = { unknown_slot: [] };
       // @ts-expect-error a section needs the page it belongs to
       const noPage: SlotEntries = { sections: [{ id: 'alpha.s', feature: 'alpha.visits' }] };
       // @ts-expect-error an entry needs the function it belongs to
       const noFeature: SlotEntries = { routes: [{ id: 'alpha.r' }] };
       // @ts-expect-error a page the platform does not have
-      const wrongPage: SlotEntries = { sections: [{ id: 'alpha.s', feature: 'x', page: 'menu' }] };
+      const wrongPage: SlotEntries = {
+        sections: [{ id: 'alpha.s', feature: 'x', page: 'unknown_page' }],
+      };
       return [wrong, noPage, noFeature, wrongPage];
     };
     expectTypeOf(probe).toBeFunction();
