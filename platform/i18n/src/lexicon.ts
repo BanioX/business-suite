@@ -1,4 +1,4 @@
-import { I18nError, type I18nErrorCode } from './errors';
+import { I18nError } from './errors';
 import { isLanguageTag, languageChain, SOURCE_LANGUAGE } from './languages';
 
 /**
@@ -226,7 +226,7 @@ export function createLexicon<const TBase extends TermEntries>(
 ): Lexicon<Extract<keyof TBase, string>> {
   const problem = lexiconProblems(input)[0];
   if (problem !== undefined) {
-    throw new I18nError(problem.code as I18nErrorCode, problem.message);
+    throw new I18nError(problem.code, problem.message);
   }
   // A copy that nobody can change afterwards; the strongest layer first.
   const base = frozenTerms(input.base);

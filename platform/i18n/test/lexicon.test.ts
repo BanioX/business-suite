@@ -124,7 +124,7 @@ describe('createLexicon', () => {
       string,
       Record<string, { one: string; many: string }>
     >;
-    const lexicon = createLexicon({ base: base as unknown as TermEntries });
+    const lexicon = createLexicon({ base });
     expect(Object.isFrozen(lexicon)).toBe(true);
     expect(Object.isFrozen(lexicon.terms)).toBe(true);
     const forms = base.object?.['de-CH'];
@@ -306,7 +306,7 @@ describe('lexiconProblems', () => {
 
   it('changes nothing it is given', () => {
     const input = structuredClone({ base: BASE, industries: [SITE, PLACE] });
-    lexiconProblems(input as unknown as LexiconInput);
+    lexiconProblems(input);
     expect(input).toEqual(structuredClone({ base: BASE, industries: [SITE, PLACE] }));
   });
 });

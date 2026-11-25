@@ -91,7 +91,10 @@ describe('resolveCatalogue', () => {
 
   it('keeps a key called __proto__ as a key', () => {
     const source = JSON.parse('{"__proto__": {"a": "A"}, "b": "B"}') as MessageTree;
-    const resolved = resolveCatalogue(source, JSON.parse('{"__proto__": {"a": "X"}}'));
+    const resolved = resolveCatalogue(
+      source,
+      JSON.parse('{"__proto__": {"a": "X"}}') as Translation<MessageTree>,
+    );
     expect(Object.keys(resolved)).toEqual(['__proto__', 'b']);
     expect(Object.getPrototypeOf(resolved)).toBe(Object.prototype);
     expect(Object.getOwnPropertyDescriptor(resolved, '__proto__')?.value).toEqual({ a: 'X' });
@@ -99,9 +102,7 @@ describe('resolveCatalogue', () => {
 
   it('keeps a leaf that is neither text, function nor record as it is', () => {
     const source = { n: 7, list: ['a'] } as unknown as MessageTree;
-    expect(resolveCatalogue(source, { n: 'x' } as unknown as Translation<typeof source>)).toEqual(
-      source,
-    );
+    expect(resolveCatalogue(source, { n: 'x' })).toEqual(source);
   });
 
   it('returns frozen records, all the way down', () => {
@@ -193,12 +194,11 @@ describe('catalogueGaps', () => {
 
   it('names something that is neither text, function nor record', () => {
     const gaps = catalogueGaps(SOURCE, { save: 5, cancel: ['a'] }, 'pt');
-    expect(gaps.filter((gap) => gap.rule === 'wrong_kind')).toEqual([
-      expect.objectContaining({ path: 'save', message: expect.stringContaining('something else') }),
-      expect.objectContaining({
-        path: 'cancel',
-        message: expect.stringContaining('something else'),
-      }),
+    const wrong = gaps.filter((gap) => gap.rule === 'wrong_kind');
+    expect(wrong.map((gap) => gap.path)).toEqual(['save', 'cancel']);
+    expect(wrong.map((gap) => gap.message)).toEqual([
+      'pt has something else here, the source has a text: the text of de-CH is used.',
+      'pt has something else here, the source has a text: the text of de-CH is used.',
     ]);
   });
 
@@ -288,7 +288,9 @@ describe('mergeCatalogues', () => {
   });
 
   it('keeps a key called __proto__ as a key', () => {
-    const merged = mergeCatalogues(JSON.parse('{"__proto__": {"a": "A"}}'), { b: 'B' });
+    const merged = mergeCatalogues(JSON.parse('{"__proto__": {"a": "A"}}') as MessageTree, {
+      b: 'B',
+    });
     expect(Object.keys(merged)).toEqual(['__proto__', 'b']);
     expect(Object.getPrototypeOf(merged)).toBe(Object.prototype);
   });
@@ -299,7 +301,9 @@ describe('mergeCatalogues', () => {
  * list (one of them holds a dot, as ids do).
  */
 const KEYS = ['a', 'b', 'c', 'facility.keys', 'd_e'] as const;
-type Tree = { [key: string]: string | Tree };
+interface Tree {
+  [key: string]: string | Tree;
+}
 
 const treeOf = (leaf: fc.Arbitrary<string>): fc.Arbitrary<Tree> =>
   fc.letrec<{ tree: Tree }>((tie) => ({

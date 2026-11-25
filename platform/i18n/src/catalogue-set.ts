@@ -45,12 +45,14 @@ export function createCatalogueSet<TSource extends MessageTree>(
       `${SOURCE_LANGUAGE} is the source of the catalogue, not a translation.`,
     );
   }
-  const resolved = new Map<string, TSource>([[SOURCE_LANGUAGE, resolveCatalogue(source)]]);
+  const sourceCatalogue = resolveCatalogue(source);
+  const resolved = new Map<string, TSource>([[SOURCE_LANGUAGE, sourceCatalogue]]);
   for (const tag of tags) {
     resolved.set(tag, resolveCatalogue(source, translations[tag]));
   }
-  // `resolve` always names a language of the register, and the map holds each of them.
-  const forLanguage = (language: string) => resolved.get(languages.resolve(language)) as TSource;
+  // The register always names one of its own languages, and the map holds each of them.
+  const forLanguage = (language: string) =>
+    resolved.get(languages.resolve(language)) ?? sourceCatalogue;
   return Object.freeze({
     languages,
     forLanguage,
