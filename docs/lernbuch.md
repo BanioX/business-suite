@@ -31,6 +31,7 @@ Was wir aus Fehlern gelernt haben, mit Beleg. Neue Arbeit liest zuerst diese Lis
 | L-S26 | Reinheit lässt sich auch zur Laufzeit prüfen: die Globalen der Laufzeit auf `undefined` setzen, den Ablauf fahren, zurücksetzen | Neben der Reinheits-Typprüfung ein Laufzeit-Test je Paket mit Verschlüsselung oder Kodierung |
 | L-S27 | Neue Tests für ein fertiges Paket waren beim ersten Lauf grün. Sechs gezielte Änderungen am geprüften Code zeigten eine Lücke: «ja» ohne Wortgrenze blieb grün, weil der Fall nur für gewöhnliche Zeilen stand, nicht für eine Anfrage an einen Server | Nach neuen Tests einige Regeln im geprüften Code von Hand brechen und rot sehen; was grün bleibt, bekommt seinen Fall |
 | L-S28 | `'reduce' in wert` gilt für jede Liste, weil Listen die Methode erben: ein Test, der damit «ist ein Ledger» fragte, hielt drei Listen von Kennungen für Ledger | Fremde Werte an einem Feld erkennen, das nur die gesuchte Form hat, und den Test einmal rot sehen |
+| L-S29 | Die Form einer Kennung stand zweimal: privat im Vertrag (`access.feature`) und im Register der Funktionen. Zwei Muster hätten beim ersten Sonderfall verschieden entschieden, und kein Test hätte es gemerkt | Die Form liegt einmal im unteren Paket (`FEATURE_ID_PATTERN`), das obere baut darauf; ein Eigenschaftstest über beliebigen Text vergleicht beide Wege |
 
 ## Werkzeuge und Wächter
 
@@ -47,6 +48,7 @@ Was wir aus Fehlern gelernt haben, mit Beleg. Neue Arbeit liest zuerst diese Lis
 | L-S38 | Ein Wächter, der nichts zu prüfen findet, einen Fehler schluckt oder die falschen Dateien liest, meldet grün | Jeder Wächter hat einen Test mit einem erfundenen Verstoss, der rot wird, und einen sauberen Fall, der grün bleibt |
 | L-S39 | Ohne `.gitattributes` holt Git unter Windows jede Textdatei mit CRLF, und `prettier --check` meldet 166 Dateien, obwohl nichts geändert wurde | Zeilenenden im Repo festlegen (`* text=auto eol=lf`); bis dahin vor dem Checkout `core.autocrlf false` setzen |
 | L-S40 | `pnpm` nur über `corepack pnpm …` aufzurufen reicht nicht: Skripte, die selbst `pnpm` starten (`typecheck`, `build`), finden es dann nicht | `corepack enable`, wo nötig mit `--install-directory` in einen Ordner im Pfad |
+| L-S41 | Ein Text mit `${…}` über eine Ersetzung in PowerShell in eine Quelldatei geschrieben: pwsh füllte die Ausdrücke aus, die Meldung eines Fehlers wurde `: ` ohne Inhalt. Lint, Typprüfung und alle anderen Tests blieben grün; nur der Test, der die Meldung wörtlich las, wurde rot | Quelltext mit Vorlagen-Zeichenfolgen nie durch Ersetzen in der Shell ändern, sondern mit dem Bearbeiten-Werkzeug; Meldungen wörtlich testen |
 
 ## Arbeit mit Agenten
 

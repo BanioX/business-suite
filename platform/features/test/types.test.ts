@@ -31,7 +31,8 @@ describe('the types of the register', () => {
   it('give results that carry the ids', () => {
     const result = REGISTRY.switchFeature([], 'jobs', true);
     expectTypeOf(result).toEqualTypeOf<SwitchResult<(typeof REGISTRY.ids)[number]>>();
-    expectTypeOf(REGISTRY.extentOf).returns.toEqualTypeOf<Extent | 'custom'>();
+    const extent = REGISTRY.extentOf(REGISTRY.propose({ kinds: [] }), []);
+    expectTypeOf(extent).toEqualTypeOf<Extent | 'custom'>();
     expectTypeOf(REGISTRY).toExtend<FeatureRegistry>();
   });
 

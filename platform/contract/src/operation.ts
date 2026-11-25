@@ -1,4 +1,4 @@
-// Origin: BanioX/Randen packages/core/src/contract/operation.ts @ e0f0907 — adapted: access (feature, level, rights) instead of scopes; one technical summary instead of two languages; base fields required by type; name pattern; import paths
+// Origin: BanioX/Randen packages/core/src/contract/operation.ts @ e0f0907 — adapted: access (feature, level, rights) instead of scopes; one technical summary instead of two languages; base fields required by type; name pattern; feature id pattern; import paths
 import { IdSchema, type Id } from '@onestrand/core';
 import type { z } from 'zod';
 

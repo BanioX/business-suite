@@ -57,4 +57,30 @@ Was gebaut, was geerntet (mit Randen-Commit), was selbst gebaut und von Randen s
 
 ## Stand
 
-offen
+Schritt 1 (Stand von Randen) und Schritt 3 (`@onestrand/features`) erledigt am 25.11.2026; die übrigen Schritte sind offen.
+
+**Schritt 1, Stand von Randen** (gelesen aus `BanioX/Randen` @ `5d016f1`, nur lesen):
+
+- **AP-1 (Register) ist in Randen nicht gebaut.** Der Masterplan (`docs/intern/ausbau.md`, 9.1) führt AP-1 als «offen», ADR-0022 als «Gebaut in: noch nicht». Es gibt keinen Ordner `platform/features/` und kein `feature-catalog.ts`. Vorhanden ist nur der Stand von ADR-0015 in `packages/core/src/domain/business-profiles.ts` (feste Liste `MODULE_IDS`, `MODULE_REQUIRES` mit einer Stufe, `proposeSetup`). Daraus wurde **nichts kopiert**: Das Paket ist nach ADR-0022 (Punkte 1, 3, 7, 9, 11, 13) und Regel R-3 selbst geschrieben und trägt keinen Herkunftsvermerk. Randen übernimmt die Mechanik später aus der Suite (Stempel nach R-3).
+- **AP-2 (Rechte) ist in Randen ebenfalls offen** (Schritt 9 der Reihenfolge, nach AP-1, AP-13, AP-15, AP-14, AP-16, AP-17). Es gibt nichts zu ernten; `@onestrand/access` (Schritt 4) wird nach ADR-0022 Punkt 10 und Regel R-4 selbst gebaut. Verwertbar als Vorlage nur der Text: Rollen-Standard je Modul (Tabelle in ADR-0022, Punkt 10, die Küchenrollen gehören nach Randen), Zeile «Inhaber:in» fest, Person wechseln mit PIN.
+
+**Schritt 3, `@onestrand/features`:** Register mit Branche, Modul, Funktion und Option; `requires` über alle Stufen, abgeschlossen geprüft; Umfang `lean` / `usual` / `all` als Daten (`custom` wird erkannt, nie gespeichert); Einrichten aus Fragen, Antworten und Betriebsarten; Gerätemodi; `availability` mit dem einen Wert `available`; Kern nie schaltbar. Aufbau wie `createTableRegistry`: `createFeatureRegistry(entries)`, `extend`, eingefroren. Siehe `platform/features/api.md`.
+
+Entscheide (klein, selbst getroffen):
+
+1. **Kennung der Funktion:** ein oder zwei Teile (`<name>` Plattform, `<branche>.<name>`), Kleinbuchstaben, Ziffern und einzelne Unterstriche, kein camelCase. `FEATURE_ID_PATTERN` steht in `@onestrand/contract` (`operation.ts`), `conformity.ts` prüft `access.feature` damit, das Register baut darauf; ein Eigenschaftstest vergleicht beide. Das schliesst TD-10 für die Funktion. Für Rechte (`access.rights`) bleibt das private Muster in `conformity.ts`.
+2. **Umfang ohne Text:** Kennungen `lean`, `usual`, `all`; die vier Wörter stehen später in den Katalogen von `@onestrand/i18n`. «Aus» gewinnt vor «an», wenn eine Antwort etwas ausschaltet, samt allem, was darauf baut.
+3. **Betriebsart** (`kinds`, `<branche>.<art>`, Feld `on`) ist eigener Eintrag; Fragen können auf Betriebsarten beschränkt sein. Eine Branche meldet `industries`, `groups`, `features`, `kinds`, `questions`, `deviceModes` als ein `FeatureEntries` an.
+4. **Namensräume werden geprüft:** Eine Funktion trägt den Namensraum ihres Moduls; ein Eintrag einer Branche nennt nur die Plattform und sich selbst; die Plattform nennt nie eine Branche; der Namensraum muss als Branche angemeldet sein.
+5. **Befunde sind Daten** (`featureEntryProblems`, Codes `FEATURE_PROBLEM_CODES`); Bauen und `extend` werfen einen `FeatureError` mit dem Code des ersten Befunds. Fehler im Input des Einrichtens sind Daten in `proposal.problems`.
+6. **Nicht gebaut** (niemand verlangt es heute): `stage`, weiche Abhängigkeiten `uses`, Rollen-Standards `roles` und Teile «Erweitert» (`detailed`) aus Randen-ADR-0022 (TD-30). Rollen gehören nach `@onestrand/access`.
+7. **Namensregister:** Eintrag für das Paket. `NAME_KINDS` und der Wächter sind nicht erweitert, weil das Paket selbst keine Kennung einer Funktion festlegt (TD-52, Text ergänzt).
+
+Was die folgenden Schritte wissen müssen:
+
+- **Manifeste (Schritt 2):** `defineIndustry` nimmt `catalog` als `FeatureEntries` (Branche, Module, Funktionen, Betriebsarten, Fragen, Gerätemodi); `composeContract` und die Ausgabe rufen `createFeatureRegistry(...).extend(...)`. Prüfen, dass jede `access.feature` im Register steht, gibt es noch nicht (TD-31); es gehört in `composeContract` oder in `check:industry`.
+- **Rechte (Schritt 4):** nimmt die Kennungen aus dem Register. Das Muster für `access.rights` ist noch das private in `conformity.ts` (TD-10, Rest); beim Festlegen dort ersetzen. Das Paket darf `@onestrand/features` importieren (Zeile in `PLATFORM_LAYERS` für `access` selbst anlegen).
+- **Sprachen (Schritt 6):** Der Texttest verlangt Name und Satz für jede Funktion und jedes Modul, Name je Option, Text je Frage und Antwort, Name je Betriebsart und Gerätemodus, unter den Kennungen des Registers.
+- **Betrieb (Schritt 5):** speichert die Liste der Funktionen und die Werte der Optionen; `resolve` ergänzt eine unvollständige Liste und gibt unbekannte Kennungen in `unknown` zurück, die beim Speichern wieder mitgeschrieben werden müssen. Der Gerätemodus liegt auf dem Gerät (`deviceKey`, Schritt 7; neue Zeile in `docs/nebenwirkungen.md`, wenn er geschrieben wird).
+- **`muster` (Schritt 8):** eine Funktion mit Option, eine Betriebsart, eine Frage; `featureEntryProblems(...)` muss `[]` sein.
+- Neue Schulden: TD-30, TD-31, TD-32. Neue Lektionen: L-S29, L-S41.
