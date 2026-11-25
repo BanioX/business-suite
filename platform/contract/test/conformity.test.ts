@@ -199,6 +199,16 @@ describe('operationProblems', () => {
       ['a right must be an id such as «export_delete», got «may export»'],
     ],
     [
+      'a list with camel case',
+      ['exportDelete'],
+      ['a right must be an id such as «export_delete», got «exportDelete»'],
+    ],
+    [
+      'a list with four segments',
+      ['facility.keys.moves.assign'],
+      ['a right must be an id such as «export_delete», got «facility.keys.moves.assign»'],
+    ],
+    [
       'a list that names a right three times',
       ['wages', 'export_delete', 'wages', 'wages'],
       ['the right «wages» is listed more than once'],

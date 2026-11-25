@@ -3,6 +3,7 @@ import {
   ACCESS_LEVELS,
   FEATURE_ID_PATTERN,
   OPERATION_NAME_PATTERN,
+  RIGHT_ID_PATTERN,
   type Operation,
 } from './operation';
 
@@ -37,14 +38,6 @@ export interface OperationProblem {
 }
 
 const UNNAMED = '?';
-
-/**
- * An id of a delicate right: words of letters, digits and underscores, each starting with a
- * lower-case letter, joined by dots for a namespace (`export_delete`, `facility.access_notes`).
- * The register of rights decides which ids exist; here only the form is checked. The form of a
- * function is the stricter `FEATURE_ID_PATTERN`, shared with the feature register.
- */
-const RIGHT_ID_PATTERN = /^[a-z][a-zA-Z0-9_]*(?:\.[a-z][a-zA-Z0-9_]*)*$/;
 
 /** The fields `access` may have. An unknown one is a problem: a typo in `rights` would drop a right without a sound. */
 const ACCESS_FIELDS: ReadonlySet<string> = new Set(['feature', 'level', 'rights']);

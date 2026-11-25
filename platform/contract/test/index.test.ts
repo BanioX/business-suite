@@ -16,6 +16,7 @@ describe('@onestrand/contract', () => {
       'NAMESPACED_ERROR_CODE_PATTERN',
       'OPERATION_NAME_PATTERN',
       'PLATFORM_ERROR_CODES',
+      'RIGHT_ID_PATTERN',
       'assertOperation',
       'command',
       'commandBase',

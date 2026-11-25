@@ -41,6 +41,16 @@ export const FEATURE_ID_PATTERN =
   /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*(?:\.[a-z][a-z0-9]*(?:_[a-z0-9]+)*)?$/;
 
 /**
+ * The id of a delicate right: one to three segments, each lower-case letters, digits and single
+ * underscores starting with a letter, joined by dots. One segment is a right of the platform
+ * (`wages`, `export_delete`); more are a right of an industry, the first segment being its
+ * namespace (`facility.access_notes`, `facility.keys.assign`). The register of rights in
+ * `@onestrand/access` builds on this form, so `access.rights` and the register cannot drift apart.
+ */
+export const RIGHT_ID_PATTERN =
+  /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*(?:\.[a-z][a-z0-9]*(?:_[a-z0-9]+)*){0,2}$/;
+
+/**
  * One operation of the contract (suite ADR-0009; ADR-0005 of the origin): a named command or
  * query with Zod schemas for input and output. The app calls exactly these; the same schemas can
  * later generate a REST API and tools for AI assistants.

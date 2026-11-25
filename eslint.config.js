@@ -16,6 +16,7 @@ const PLATFORM_LAYERS = {
   ledger: ['core', 'contract', 'storage'],
   testing: ['core', 'contract', 'storage'],
   features: ['contract'],
+  access: ['contract', 'storage', 'features'],
 };
 
 /** What the pure TypeScript part of a package never imports: UI, databases, Node. */
