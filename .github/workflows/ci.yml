@@ -1,0 +1,81 @@
+name: CI
+
+# Cost (order W0-01, step 9; CLAUDE.md, Arbeitsweise 5): this workflow uses standard
+# GitHub-hosted runners and nothing else. Their minutes are free without a quota for public
+# repositories (checked on 24.11.2026). It uploads no artifacts and uses no cache, so it needs
+# no storage either. A private repository, a larger runner, artifacts or caches would cost money
+# or use up a quota: none of them without Alban's yes.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A newer push to a pull request replaces the run before it: only the last state counts there.
+# A push to main is never cancelled and never waits behind another one (its group is its own
+# run): the ownership guard reads exactly the commits of one push, from the commit before it to
+# its head, so a run that is cancelled would leave its commits unread for good.
+concurrency:
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  # One job. There is no E2E job yet: the foundation has no app to open in a browser.
+  check:
+    name: pnpm check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The whole history: `pnpm check --affected` compares with the merge base of the base
+          # branch, and the ownership guard reads the commits since OWNERSHIP_BASE.
+          fetch-depth: 0
+          # Nothing here pushes, so the token does not stay in the checkout.
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+
+      - name: Enable corepack (pnpm version from package.json)
+        run: corepack enable
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # One step, the same command as on a desk: read the line `ALL=` at the end of its log and,
+      # on RED, every line whose `exit=` is not 0.
+      # - Pull request: what the pull request touches (rules in tools/src/affected.ts). Docs alone
+      #   skip lint, typecheck, tests and build; a change inside some packages checks those and
+      #   every package that depends on them; anything else checks everything.
+      # - Push to main and manual run: everything.
+      # OWNERSHIP_BASE tells the ownership guard from which commit on to read the commits; here
+      # on the CI the guard fails without it (tools/src/ownership.ts, tools/test/agreement.test.ts).
+      # Branch names and commit ids reach the shell through `env`, never through an expression
+      # inside `run`: a name is data, not a piece of the script.
+      - name: Check
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_BRANCH: ${{ github.base_ref }}
+          COMMIT_BEFORE_PUSH: ${{ github.event.before }}
+        run: |
+          case "$EVENT_NAME" in
+            pull_request)
+              export OWNERSHIP_BASE="origin/$BASE_BRANCH"
+              pnpm check --affected="origin/$BASE_BRANCH"
+              ;;
+            push)
+              export OWNERSHIP_BASE="$COMMIT_BEFORE_PUSH"
+              pnpm check
+              ;;
+            *)
+              export OWNERSHIP_BASE="origin/main"
+              pnpm check
+              ;;
+          esac

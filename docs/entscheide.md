@@ -53,6 +53,97 @@ Gemeint sind Register (AP-1), Rollen und Rechte (AP-2), Zeit (AP-3 bis AP-6), Er
 - **Empfehlung: (a)** für neue Ausgaben, weil das Wort sagt, wofür die App ist; Randen nach deiner Wahl, aber vor seinem ersten Pilot.
 - **Onestrand als Marke** prüfen und anmelden lassen, bevor die Suite öffentlich auftritt: kostet Geld, nur auf dein Wort.
 
+### S-23 Erweiterbar von Haus aus: Werkzeug-Schnittstelle für Assistenten, Kommandozeile, Baukasten, Editor [Datenfluss beim Assistenten]
+
+**Wunsch Albans, 25.11.2026, wörtlich:** «Ich hätte gerne von haus aus Mcp und CLI und SDK und IDE Anbindungen das es erweiterbar ist modular».
+
+Was das Fundament dafür schon trägt (W0-01): Jede Operation der Schnittstelle hat einen Namen, eine technische Beschreibung, ihr Recht (`access`) und Schemas für Ein- und Ausgabe; `contractJsonSchemas` liefert daraus JSON Schema. Befehle sind über `commandId` gefahrlos wiederholbar. Der Speicher ist ein Port, dieselbe Logik läuft also auch ausserhalb des Browsers. Branchen, Tabellen, Einheiten und Fehlercodes melden sich in Registern an.
+
+Was «von Haus aus» heisst, je Teil:
+
+| Teil | Bedeutung | Stufe 1 möglich? |
+| --- | --- | --- |
+| **Baukasten (SDK)** | Ein typisierter Client, erzeugt aus der zusammengesetzten Schnittstelle (`client.customers.create(…)`), dazu die öffentlichen Einstiege der Plattform-Pakete (`defineIndustry`, `defineTable`, `command`) | ja, rein TypeScript |
+| **Kommandozeile (CLI)** | Für den Bau: neue Branche anlegen, prüfen, stempeln. Für Daten: eine Sicherungsdatei prüfen, abfragen und als CSV oder JSON ausgeben, auf dem eigenen Rechner | ja; liest nur Dateien, die die Person selbst geladen hat |
+| **Werkzeug-Schnittstelle für Assistenten (MCP)** | Aus jeder Operation entsteht ein Werkzeug mit Schema und Recht; ein lokaler Dienst stellt sie einem KI-Assistenten bereit | der Erzeuger ja; mit **echten Betriebsdaten** verlassen Daten das Gerät an den Anbieter des Assistenten |
+| **Editor (IDE)** | Schemas für Manifeste und Register, damit der Editor prüft und ergänzt; Vorlagen und Generator; `api.md` je Paket | ja |
+
+Optionen:
+
+- (a) **Erzeugt statt gebaut:** Client, Kommandozeile und Werkzeug-Definitionen entstehen aus der zusammengesetzten Schnittstelle. Jede Branche bekommt sie ohne eigenen Code, sobald sie ihre Operationen anmeldet. Der Erzeuger kommt mit W0-02, die Kommandozeile für Sicherungsdateien mit Welle 1; der Assistent arbeitet zuerst nur mit dem Demo-Betrieb.
+- (b) Wie (a), dazu der Assistent mit echten Betriebsdaten: nur lesen, je Betrieb ausdrücklich eingeschaltet und widerrufbar, heikle Tabellen ausgenommen, mit eigenem ADR und Eintrag im Register der Nebenwirkungen.
+- (c) Später, nach dem ersten Pilot.
+
+**Empfehlung: (a) jetzt, (b) als eigener Entscheid vor dem ersten Pilot.** (a) kostet wenig, weil die Schnittstelle schon alles trägt, und hält die Suite offen für Werkzeuge, ohne dass Daten das Gerät verlassen. (b) ist ein neuer Datenfluss und braucht dein JA mit Wortlaut.
+
+**Nachfrage Albans, 25.11.2026, wörtlich:** «Respektive was davon realistisch ist da ich mich nicht auskenne». Einschätzung des Kopfs:
+
+| Teil | Realistisch? | Begründung |
+| --- | --- | --- |
+| Modular und erweiterbar | ja, ist der Kern des Plans | Plattform, Branchen als Pakete, Register und Steckplätze |
+| Baukasten | ja, fast ohne Mehraufwand | Die Agenten bauen jede Branche ohnehin damit |
+| Kommandozeile | ja, klein | Anlegen und Prüfen einer Branche stehen schon in W0-02; das Lesen einer Sicherungsdatei ist ein kleiner Zusatz |
+| Editor | nur der günstige Teil | Typen, Schemas und `api.md` genügen, solange Agenten bauen; eine eigene Erweiterung für einen Editor bringt wenig |
+| Werkzeug-Schnittstelle für Assistenten | vorbereiten ja, als Funktion für Betriebe noch nicht | Die Daten liegen in der App auf dem Gerät, ein Assistent erreicht sie ohne Server nur über eine Sicherungsdatei; dazu gehen die Daten an den Anbieter des Assistenten. Sinnvoll erst mit Stufe 2 und eigenem Entscheid |
+
+Grenzen, die bleiben: Erweiterungen sind Pakete, die mitgebaut werden, keine Plug-ins, die eine installierte App zur Laufzeit nachlädt (CSP nur `'self'`). Die Suite selbst baut weiterhin keine Anbindungen an Partner; die offene Schnittstelle ist die Tür, durch die ein Betrieb seine eigenen Werkzeuge anschliesst.
+
+**Stand, 25.11.2026:** (a) ist nach [S-25](#s-25-freigabe-und-geld-was-ohne-rückfrage-geht) eingeplant: Auftrag [W0-04](auftraege/w0-04-offene-schnittstelle.md), Pakete P-14 bis P-17 in [`plattform.md`](plattform.md). (b) bleibt ein eigener Entscheid vor dem ersten Pilot.
+
+### S-24 Sagen statt klicken: ein Assistent in der App [Geld, Datenfluss]
+
+**Albans Bild, 25.11.2026, im Wortlaut gekürzt:** «Stell dir vor diese Leute haben wenig zeit alles durchzuklicken sondern sagen der KI oder sprechen mit ihr oder nehmen ein video auf […] wäre mein produkt mit AI enhanced in der lage, die betriebe zu entlasten […] oder nicht zeit haben alles selber zusammenzuklicken. Ein AI agent kann das in sekunden».
+
+**Was das heisst:** Die Person sagt, tippt oder fotografiert, was war («Rapport Musterweg 12, drei Stunden zu zweit, Fenster, zwei Liter Reiniger»). Ein Assistent macht daraus Befehle der Schnittstelle und zeigt sie als Vorschlag; ein Tipp bestätigt. Er klickt nicht durch die Oberfläche, er ruft dieselben benannten Befehle wie die Oberfläche, mit Schema, Recht und `commandId`. Das ist schneller und prüfbarer als Durchklicken, und dafür ist das Fundament gebaut.
+
+**Grundsätze, die für jeden Weg gelten:**
+
+1. Der Assistent **schlägt vor, die Person bestätigt.** Was Dritte erhalten oder unterschreiben (Rechnung ausstellen, Rapport abschliessen), geschieht nie ohne ausdrückliche Bestätigung.
+2. Er hat **die Rechte der Person**, die ihn nutzt, nie mehr; jede Handlung ist ein gewöhnlicher Befehl mit Ereignis und bleibt im Ledger nachvollziehbar und korrigierbar.
+3. **Heikle Daten** (Löhne, Gesundheit, Zugangshinweise) sieht er nie; er bekommt nur, was die Aufgabe braucht.
+4. Die App bleibt **ohne Assistent voll bedienbar** und klein: im Keller und auf dem Dach gibt es kein Netz. Eine Sprachnotiz darf warten, bis wieder Netz da ist.
+5. Er **beurteilt nie** (Asbest, Lohn, Recht) und sagt, wenn er unsicher ist.
+
+**Die Hürde:** Ein Modell, das Sprache, Text und Bilder zuverlässig in Befehle übersetzt, läuft heute nicht auf dem Gerät in einer installierten Web-App. Es braucht einen Dienst. Das kostet je Nutzung, und Betriebsdaten verlassen das Gerät an den Anbieter des Modells. Beides ändert Grundsätze der Stufe 1.
+
+Optionen:
+
+- (a) **Assistent über einen Dienst von Onestrand** (Stufe 2 vorgezogen): Text, Sprache und Foto; Video später. Braucht einen Server, einen Vertrag mit dem Anbieter (keine Nutzung der Daten zum Trainieren, Region), Einwilligung je Betrieb, eigenes ADR und Einträge im Register der Nebenwirkungen.
+- (b) **Jetzt vorbereiten, ohne Kosten und ohne Datenfluss:** Werkzeug-Definitionen aus der Schnittstelle (S-23), ein Port für das Modell, die Vorschlags-Ansicht als Baustein der Oberfläche, Diktat über die Tastatur des Geräts; der Assistent wird zuerst nur am Demo-Betrieb vorgeführt.
+- (c) Der Betrieb schliesst seinen eigenen Assistenten an (S-23, Option b).
+
+**Empfehlung: (b) jetzt, (a) als Entscheid am Ende von Welle 1,** wenn die erste Branche steht und sich an echten Abläufen zeigen lässt, was der Assistent abnimmt. Was (a) kostet und wie es verrechnet wird, steht nach [ADR-0011](adr/0011-oeffentliches-repo.md) nicht hier, sondern in Albans privater Ablage. (c) ist für Betriebe, die sich auskennen, und kein Ersatz für (a).
+
+**Stand, 25.11.2026:** (b) ist nach [S-25](#s-25-freigabe-und-geld-was-ohne-rückfrage-geht) eingeplant (Auftrag [W0-04](auftraege/w0-04-offene-schnittstelle.md)). (a) ist gewollt, sobald das Geschäft den Dienst trägt; der Kopf kommt dann mit Zweck und Betrag.
+
+### S-25 Freigabe und Geld: was ohne Rückfrage geht
+
+**Albans Wort, 25.11.2026:** «Also ich erlaube alles sofern zweckdienlich wenn ich ein scalable Business habe investiere ich gerne in server struktur usw. Weisst wie ich meine? Ich bin aktuell einfach noch Indie Entwickler».
+
+**Albans Antwort auf die Lesart, 25.11.2026:** «Also du hast mein Ja praktisch zu allem habe aktuell einfach nicht die Möglichkeit die Kosten zu tragen aber so bauen das es geht kann man doch schon im voraus?»
+
+**Lesart des Kopfs.** Die Regel «Freigabe» in `CLAUDE.md` (Arbeitsweise 5) bleibt im Wortlaut stehen; ändern kann sie nur Alban selbst. Bis dahin gilt bei einem Widerspruch die Regel in `CLAUDE.md`.
+
+1. **Zweckdienlich und kostenlos:** wird ohne Rückfrage geplant und gebaut, auch grössere Ergänzungen des Plans. Darum sind S-23 (a) und S-24 (b) jetzt eingeplant: Auftrag [W0-04](auftraege/w0-04-offene-schnittstelle.md), Pakete P-14 bis P-17 in [`plattform.md`](plattform.md).
+2. **Geld:** heute keine laufenden Kosten. Alles wird so gebaut, dass es ohne Server läuft und ein Server später nur eingesteckt wird (Ports für das Modell, das Relais, die Konten). Lohnt sich eine Ausgabe, kommt der Kopf mit Zweck und Betrag; der Betrag steht in Albans privater Ablage, nicht hier.
+3. **Stufe 2** (Server, Konten, Relais, Assistent über einen Dienst) ist gewollt, sobald das Geschäft sie trägt. Sie ist eine Frage des Zeitpunkts, kein Tabu.
+4. **Echte Betriebsdaten** verlassen ein Gerät weiterhin nur mit eigenem ADR, Eintrag im Register der Nebenwirkungen und einer Meldung an Alban vor dem Einschalten. Vor dem ersten Pilot gibt es keine echten Betriebsdaten.
+5. **Im Voraus bauen:** Was später Geld kostet, wird jetzt als Anschluss gebaut und mit Platzhaltern getestet (Modell, Relais, Konten). Code kostet nichts, erst der Betrieb eines Dienstes. Nicht im Voraus beweisbar sind die Güte eines echten Modells bei echter Sprache, das Verhalten unter Last und die Kosten je Betrieb; das zeigt sich erst mit dem Dienst und wird dann gemessen.
+
+### S-26 Bedienmuster: fünf Punkte unten, Einstellungen oben rechts
+
+**Albans Vorgabe, 25.11.2026, gekürzt um Namen:** «[…] UI/UX. 5 Punkte unten. Einstellungen oben Rechts. Sie müssen für Nutzer die täglich […] nutzen einfach bedienbar sein weil sie dem bekannten muster folgen.» Gemeint sind die verbreiteten Heuristiken der Gebrauchstauglichkeit und das Muster der meistgenutzten Apps auf dem Handy.
+
+**Was gilt, ab der ersten Oberfläche (W0-03):**
+
+1. **Auf dem iPhone eine Leiste unten mit genau fünf Punkten**, mit dem Daumen erreichbar. Die Mitte ist «＋ Erfassen»: Foto, Rapport, Zeit, später auch Sagen ([S-24](#s-24-sagen-statt-klicken-ein-assistent-in-der-app-geld-datenfluss)). Vorschlag für die fünf: im Büro **Heute · Aufträge · ＋ · Kundschaft · Mehr**, für Mitarbeitende **Heute · Einsätze · ＋ · Stunden · Ich**. Die Rolle bestimmt die fünf; eine Branche füllt Steckplätze, fügt aber nie einen sechsten Punkt an. Was nicht in die fünf passt, liegt unter «Mehr».
+2. **Einstellungen oben rechts**, als Zahnrad, auf «Heute» und auf «Mehr» oder «Ich».
+3. **iPad und Web:** dieselben fünf Ziele, als Leiste an der Seite; Einstellungen ebenfalls oben rechts.
+4. **Bekannte Muster ja, Sog nein.** Übernommen wird, was Leute schon können: Leiste unten, Mitte zum Erfassen, Zurück durch das System, Ziehen zum Aktualisieren nur wo es etwas zu holen gibt. Nicht übernommen wird, was Aufmerksamkeit bindet: endlose Listen ohne Ende, Zähler als Lockmittel, Lob und Serien. Das Zielbild bleibt «ruhig».
+5. **Prüfliste für jeden Bildschirm** (die zehn Heuristiken, in eigenen Worten): Der Stand ist sichtbar. Die Wörter sind die der Branche. Jede Handlung lässt sich zurücknehmen oder abbrechen. Gleiches sieht gleich aus und folgt dem Gerät. Fehler werden verhindert, bevor sie gemeldet werden. Erkennen statt erinnern. Geübte kommen schneller ans Ziel. Nichts Überflüssiges auf dem Bildschirm. Eine Fehlermeldung sagt, was war und was jetzt geht. Hilfe steht dort, wo man sie braucht.
+
+Passt zu den Grundsätzen aus Randen ([ADR-0009](adr/0009-grundsaetze-aus-randen.md): eine App für iPhone, iPad und Web, eine Hauptaktion pro Seite, Ziele 44 px) und zu den Prüfsteinen 2 und 5 im [Zielbild](zielbild.md) (unter zehn Sekunden, mit einer Hand). Eingetragen in den Auftrag [W0-03](auftraege/w0-03-oberflaeche.md).
+
 ## Vor Welle 2 und 3
 
 ### S-06 Abgleich zwischen Büro und Aussendienst ohne Server [Datenfluss]

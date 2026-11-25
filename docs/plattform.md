@@ -55,6 +55,17 @@ Ohne diese Pakete beginnt keine Branche. Grösstenteils in Randen gebaut und bra
 | P-12 | `@onestrand/tooling` | `pnpm check` mit `ALL=`, Lizenzen, Kontrast, Vorschaubilder, Wächter (öffentliches Repo, Nebenwirkungen, Sicherheit, Kopfzeilen), **Pfad-Eigentum**, **Namensregister**, **Stempel** für Kopien, Generator für neue Branchen | Randen gebaut (`scripts/`), Rettich (Wächter für private Ideen, Release) | Eigentum, Namen, Stempel, Generator |
 | P-13 | `@onestrand/testing`, `@onestrand/demo-kit` | feste Uhr, fortlaufende IDs, schlanker Seed (Betrieb, zwei Personen), Fabriken für Sprach-, Nebenwirkungs- und Sicherheitstests, Demo-Bausteine | Randen gebaut (`testing/`, `modules/demo`) | ohne Testküche |
 
+## Offen und assistierbar (ab Welle 0)
+
+Was die App kann, können auch Werkzeuge ([S-23](entscheide.md), [S-24](entscheide.md), [S-25](entscheide.md); Auftrag [W0-04](auftraege/w0-04-offene-schnittstelle.md)). Alles entsteht aus der zusammengesetzten Schnittstelle; keine Branche schreibt dafür eigenen Code.
+
+| ID | Paket | Inhalt | Herkunft | Welle |
+| --- | --- | --- | --- | --- |
+| P-14 | `@onestrand/client` | typisierter Client aus der Schnittstelle, Transport als Port (im Prozess; später Relais) | neu | W0 |
+| P-15 | `@onestrand/assistant` | Werkzeug-Definitionen je Operation (Name, Schema, Recht), Vorschlag aus Befehlen, die eine Person bestätigt, Port für ein Modell, Filter nach Heikelkeit | neu | W0; Ansicht «Vorschlag» mit W0-03 und Welle 1; ein Dienst hinter dem Port erst nach [S-24](entscheide.md) |
+| P-16 | `@onestrand/cli` | Kommandozeile auf dem eigenen Rechner: Sicherungsdatei prüfen, abfragen, als CSV oder JSON ausgeben | neu | W0 |
+| P-17 | `@onestrand/mcp` | Dienst auf dem eigenen Rechner, der die Werkzeug-Definitionen einem Assistenten bereitstellt; zuerst nur Demo-Betrieb und Sicherungsdatei, nur lesen | neu | W1; echte Betriebsdaten erst nach [S-23](entscheide.md), Option (b) |
+
 ## Rückgrat der Betriebe (Welle 1 bis 3)
 
 | ID | Paket | Inhalt | Herkunft | Welle |

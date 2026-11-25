@@ -37,13 +37,13 @@ Ein leeres, grünes pnpm-Monorepo mit allen Werkzeugen von Randen und den Fundam
 
 ## Abnahme
 
-- [ ] `pnpm check` lokal und in der CI: `ALL=GREEN`.
-- [ ] Ein absichtlich falscher Import (Plattform importiert React im rein-TS-Teil; Plattform importiert `industries/`) macht Lint rot (Test oder dokumentierter Probelauf).
-- [ ] Kein Wort «randen», keine Wörter der Gastronomie und kein Produktname in `platform/` (Test).
-- [ ] Zwei Betriebe im Speicher sind getrennt; Löschen eines Betriebs lässt den anderen stehen.
-- [ ] Sicherung hin und zurück mit und ohne Passwort; eine Sicherung mit unbekanntem Zusatzfeld verliert das Feld nicht still.
-- [ ] Eigenschaftstest des Ledgers grün; eine veränderte Zeile bricht die Prüfkette.
-- [ ] `docs/herkunft.md` nennt jede kopierte Datei mit Randen-Commit.
+- [x] `pnpm check` lokal und in der CI: `ALL=GREEN`.
+- [x] Ein absichtlich falscher Import (Plattform importiert React im rein-TS-Teil; Plattform importiert `industries/`) macht Lint rot (Test oder dokumentierter Probelauf).
+- [x] Kein Wort «randen», keine Wörter der Gastronomie und kein Produktname in `platform/` (Test).
+- [x] Zwei Betriebe im Speicher sind getrennt; Löschen eines Betriebs lässt den anderen stehen.
+- [x] Sicherung hin und zurück mit und ohne Passwort; eine Sicherung mit unbekanntem Zusatzfeld verliert das Feld nicht still.
+- [x] Eigenschaftstest des Ledgers grün; eine veränderte Zeile bricht die Prüfkette.
+- [x] `docs/herkunft.md` nennt jede kopierte Datei mit Randen-Commit.
 
 ## Testweg
 
@@ -59,4 +59,31 @@ Was gebaut ist (Pakete, Werkzeuge, Tests), was bewusst offen ist (mit Eintrag in
 
 ## Stand
 
-offen
+**Gebaut, Stand 25.11.2026.** Der Stand liegt als Pull Request auf dem Arbeits-Branch; gelandet wird nach der Prüfung durch den Kopf ([S-10](../entscheide.md)).
+
+**Erledigt**
+
+- Schritte 1 und 2: Monorepo, Werkzeuge, `pnpm check` mit `exit=` je Schritt und `ALL=`, dazu `--affected=<ref>`.
+- Schritt 3: Wächter für das öffentliche Repo, Wörter einer Branche in der Plattform, Herkunft, Pfad-Eigentum, **Nebenwirkungen** (`tools/src/side-effects.ts` gegen [`../nebenwirkungen.md`](../nebenwirkungen.md)) und **Namensregister** (`tools/src/names.ts` gegen `registry/names.json`); Lizenzen als eigener Schritt.
+- Schritte 4 bis 8: `@onestrand/core`, `contract`, `storage`, `ledger`, `testing`, jedes mit `api.md`, einem Test der öffentlichen Exporte und Abdeckung über den Schwellen.
+- Schritt 9: CI mit `pnpm check` auf Pull Requests und `main`.
+- Schritt 10: `docs/herkunft.md`, `docs/schulden.md`, `docs/nebenwirkungen.md`, `docs/lernbuch.md`, «Befehle» in `CLAUDE.md`, Stand im Fahrplan.
+
+**Abnahme**
+
+- Punkt 1 (`ALL=GREEN`): **erfüllt.** `pnpm check` lief am 25.11.2026 in einem frischen Klon unter Linux (Container `node:24`) und in der CI auf dem Pull Request: alle sieben Schritte `exit=0`, `ALL=GREEN`. Der erste Versuch der CI war nicht gestartet, solange das Repo privat war (TD-54).
+- Punkte 2 bis 7: durch Tests belegt (`tools/test/lint-boundaries.test.ts`, Wächter «platform-words» und «provenance», `platform/storage/test/`, `platform/ledger/test/ledger.property.test.ts`).
+
+**Bewusst offen** (alle in [`../schulden.md`](../schulden.md))
+
+- Kern, Schnittstelle und Speicher sind von einem zweiten Agenten geprüft. Ledger und Test-Kit hat eine zweite Sitzung gelesen und fertig getestet, aber nicht gezielt geprüft (TD-60).
+- Das Namensregister liest erst Pakete, Tabellen des Speichers und Einheiten (TD-52); die Schlüssel im Speicher des Browsers prüft der Wächter erst mit einer Ausgabe (TD-50).
+- Die Liste der verbotenen Namen für die Branchen der Suite fehlt (TD-40).
+- Die Karte in `AGENTS.md` («Stand: nur Plan») und die Tabelle in `docs/auftraege/README.md` gehören dem Kopf und sind nicht nachgeführt.
+
+**Was W0-02 wissen muss**
+
+- Jedes neue Plattform-Paket braucht seine Zeile in `PLATFORM_LAYERS` (`eslint.config.js`), im Auftrag in `registry/owners.json` und im Namensregister; jede neue Art von Kennung (Operation, Ereignis, Funktion, Tabelle eines Moduls) eine Zeile in `NAME_KINDS`.
+- `@onestrand/web-data` bringt die erste Nebenwirkung (`indexedDB`): Zeile `SE-01` im selben Schritt.
+- Offene Entscheide an der Schnittstelle: Abfrage über das Gerät (TD-11), `get` mit Betrieb (TD-23), Speicher des Geräts (TD-28), Kennungen von Funktion und Recht (TD-10).
+- Der Hasher eines Ledgers wird in der Transaktion abgewartet (`platform/ledger/api.md`, Regel 8): Der Adapter für IndexedDB muss das aushalten.

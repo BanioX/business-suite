@@ -1,0 +1,25 @@
+{
+  "name": "@onestrand/business",
+  "version": "0.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.src.json && tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@onestrand/access": "workspace:*",
+    "@onestrand/contract": "workspace:*",
+    "@onestrand/core": "workspace:*",
+    "@onestrand/features": "workspace:*",
+    "@onestrand/storage": "workspace:*",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@onestrand/testing": "workspace:*",
+    "fast-check": "^4.10.2"
+  }
+}

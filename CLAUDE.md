@@ -42,7 +42,26 @@ Dieses Repo ist der **Kopf** der Suite: Hier wird geplant und gebaut, was alle B
 - Kamera nur nach Nutzeraktion, mit Fallback auf Datei-Upload. Kein Standort-Tracking von Mitarbeitenden.
 
 ## Befehle
-Noch kein Code. Das Fundament (Auftrag [W0-01](docs/auftraege/w0-01-fundament.md)) richtet Node 24, pnpm 10, `pnpm check` und die CI nach dem Muster von Randen ein.
+Node 24 und pnpm 10 (über `packageManager`/Corepack). Vor jedem Push `pnpm check` und die Zeile `ALL=` lesen; bei `RED` jede Zeile mit `exit=` ungleich 0.
+
+```
+pnpm install
+pnpm check                      # alles unten, mit exit= je Schritt und der Zeile ALL=GREEN|RED
+pnpm check --affected=<ref>     # nur was sich gegen <ref> geändert hat (CI auf PRs); Exit 2 = konnte nicht starten
+pnpm licenses:check             # nur permissive Lizenzen im ausgelieferten Code, nirgends starkes Copyleft
+pnpm format:check               # pnpm format zum Korrigieren
+pnpm lint                       # mit den Importgrenzen der Plattform
+pnpm typecheck                  # inkl. Reinheits-Check von platform/*/src
+pnpm test                       # pnpm test:coverage für Abdeckung mit Schwellen
+pnpm build
+pnpm guards                     # Wächter: öffentliches Repo, Wörter in der Plattform, Herkunft, Nebenwirkungen, Namen, Pfad-Eigentum
+pnpm ownership                  # nur Pfad-Eigentum; OWNERSHIP_BASE=<ref> setzt den Anfang (sonst origin/main)
+pnpm names                      # nur das Namensregister
+node tools/provenance.mjs       # docs/herkunft.md aus den Herkunftsvermerken neu schreiben
+node tools/hash-name.mjs <wort> # Prüfsumme für die Liste der verbotenen Namen
+```
+
+Jeder Commit endet mit `Order: <Auftrag>` und `Role: <head|platform|industry:<id>|facts>`; `registry/owners.json` sagt, welcher Auftrag wo schreiben darf. Ein einzelnes Paket prüfen: `pnpm exec vitest run --project <ordner>` und `pnpm --filter @onestrand/<paket> typecheck`.
 
 ## Definition of Done
 - [ ] Abnahme des Auftrags erfüllt, nur in den eigenen Pfaden geändert

@@ -1,0 +1,27 @@
+{
+  "name": "@onestrand/web-data",
+  "version": "0.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.src.json && tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@onestrand/business": "workspace:*",
+    "@onestrand/contract": "workspace:*",
+    "@onestrand/core": "workspace:*",
+    "@onestrand/manifest": "workspace:*",
+    "@onestrand/storage": "workspace:*",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@onestrand/ledger": "workspace:*",
+    "@onestrand/testing": "workspace:*",
+    "fake-indexeddb": "^6.2.8",
+    "fast-check": "^4.10.2"
+  }
+}
