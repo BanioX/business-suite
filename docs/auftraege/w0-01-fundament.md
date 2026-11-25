@@ -37,13 +37,13 @@ Ein leeres, grünes pnpm-Monorepo mit allen Werkzeugen von Randen und den Fundam
 
 ## Abnahme
 
-- [ ] `pnpm check` lokal und in der CI: `ALL=GREEN`.
-- [ ] Ein absichtlich falscher Import (Plattform importiert React im rein-TS-Teil; Plattform importiert `industries/`) macht Lint rot (Test oder dokumentierter Probelauf).
-- [ ] Kein Wort «randen», keine Wörter der Gastronomie und kein Produktname in `platform/` (Test).
-- [ ] Zwei Betriebe im Speicher sind getrennt; Löschen eines Betriebs lässt den anderen stehen.
-- [ ] Sicherung hin und zurück mit und ohne Passwort; eine Sicherung mit unbekanntem Zusatzfeld verliert das Feld nicht still.
-- [ ] Eigenschaftstest des Ledgers grün; eine veränderte Zeile bricht die Prüfkette.
-- [ ] `docs/herkunft.md` nennt jede kopierte Datei mit Randen-Commit.
+- [x] `pnpm check` lokal und in der CI: `ALL=GREEN`.
+- [x] Ein absichtlich falscher Import (Plattform importiert React im rein-TS-Teil; Plattform importiert `industries/`) macht Lint rot (Test oder dokumentierter Probelauf).
+- [x] Kein Wort «randen», keine Wörter der Gastronomie und kein Produktname in `platform/` (Test).
+- [x] Zwei Betriebe im Speicher sind getrennt; Löschen eines Betriebs lässt den anderen stehen.
+- [x] Sicherung hin und zurück mit und ohne Passwort; eine Sicherung mit unbekanntem Zusatzfeld verliert das Feld nicht still.
+- [x] Eigenschaftstest des Ledgers grün; eine veränderte Zeile bricht die Prüfkette.
+- [x] `docs/herkunft.md` nennt jede kopierte Datei mit Randen-Commit.
 
 ## Testweg
 
@@ -71,7 +71,7 @@ Was gebaut ist (Pakete, Werkzeuge, Tests), was bewusst offen ist (mit Eintrag in
 
 **Abnahme**
 
-- Punkt 1 (`ALL=GREEN`): **lokal erfüllt, in der CI offen.** `pnpm check` lief am 25.11.2026 in einem frischen Klon unter Linux (Container `node:24`, `pnpm install --frozen-lockfile`, `OWNERSHIP_BASE=origin/main`): alle sieben Schritte `exit=0`, `ALL=GREEN`. Die CI hat den Lauf nicht gestartet: GitHub meldet für das Konto eine fehlgeschlagene Zahlung oder ein erreichtes Ausgabenlimit. Das Repo ist zurzeit privat, und dort zählen die Minuten der Actions zum Kontingent; die Annahme im Workflow («öffentlich, ohne Kontingent») trifft so nicht zu. Das ist ein Fall der Stopp-Regel «Geld» und liegt bei Alban.
+- Punkt 1 (`ALL=GREEN`): **erfüllt.** `pnpm check` lief am 25.11.2026 in einem frischen Klon unter Linux (Container `node:24`) und in der CI auf dem Pull Request: alle sieben Schritte `exit=0`, `ALL=GREEN`. Der erste Versuch der CI war nicht gestartet, solange das Repo privat war (TD-54).
 - Punkte 2 bis 7: durch Tests belegt (`tools/test/lint-boundaries.test.ts`, Wächter «platform-words» und «provenance», `platform/storage/test/`, `platform/ledger/test/ledger.property.test.ts`).
 
 **Bewusst offen** (alle in [`../schulden.md`](../schulden.md))
