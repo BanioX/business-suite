@@ -411,10 +411,10 @@ function checkRights(sink: Sink, role: Role, id: string | undefined, rights: unk
       sink,
       'wrong_namespace',
       'rights',
-      String(rights.industry),
+      typeof rights.industry === 'string' ? rights.industry : '?',
       role === 'module'
         ? 'a module of the platform enters rights of the platform; it names no industry'
-        : `an industry enters only its own rights; "${String(rights.industry)}" is not "${id ?? '?'}", and the industry is entered for you`,
+        : `an industry enters only its own rights; ${describe(rights.industry)} is not "${id ?? '?'}", and the industry is entered for you`,
     );
   }
   for (const entry of idsOfEntries(sink, 'rights', rights.rights, 'rights')) {
@@ -594,7 +594,9 @@ function checkDemo(sink: Sink, kinds: readonly string[], demo: unknown): void {
     }
   }
   if (isList(demo.people)) {
-    demo.people.forEach((person) => checkNames(sink, person, 'the name of a person of the demo'));
+    for (const person of demo.people) {
+      checkNames(sink, person, 'the name of a person of the demo');
+    }
   }
   if (isList(demo.kinds)) {
     for (const kind of demo.kinds) {
