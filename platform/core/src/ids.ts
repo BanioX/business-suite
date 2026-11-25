@@ -1,9 +1,9 @@
-// Origin: BanioX/Randen packages/core/src/ids.ts @ e0f0907 — unchanged
+// Origin: BanioX/Randen packages/core/src/ids.ts @ e0f0907 — adapted: comments
 import { z } from 'zod';
 
 /**
  * Entity IDs are UUIDv7 (RFC 9562): generated on the device, offline, collision-free in practice
- * and roughly sortable by creation time. See ADR-0003.
+ * and roughly sortable by creation time (suite ADR-0009; ADR-0003 of the origin).
  */
 export const UUID_V7_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;

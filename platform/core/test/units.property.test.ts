@@ -331,6 +331,42 @@ describe('what is shown reads back', () => {
     );
   });
 
+  /** `rounded / 10^digits` written out by hand: the whole part, then the decimals without closing zeros. */
+  const written = (rounded: bigint, digits: number): string => {
+    const scale = 10n ** BigInt(digits);
+    const decimals = (rounded % scale).toString().padStart(digits, '0').replace(/0+$/, '');
+    return `${(rounded / scale).toString()}${decimals === '' ? '' : `.${decimals}`}`;
+  };
+  const shownIn = (thousandths: number, digits: number): string =>
+    formatQuantity(quantityOf(thousandths), PLATFORM_UNITS.get('h'), { digits }).replaceAll(
+      '’',
+      '',
+    );
+
+  it('shows fewer decimals as the thousandths rounded once, halves away from zero', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: -1_000_000_000_000, max: 1_000_000_000_000 }),
+        fc.constantFrom(0, 1, 2),
+        (thousandths, digits) => {
+          const step = 10n ** BigInt(3 - digits);
+          const rounded = (abs(BigInt(thousandths)) * 2n + step) / (2n * step);
+          const sign = thousandths < 0 && rounded !== 0n ? '-' : '';
+          expect(shownIn(thousandths, digits)).toBe(`${sign}${written(rounded, digits)} h`);
+        },
+      ),
+    );
+  });
+
+  it('rounds every half of the second decimal away from zero, up to 200 units', () => {
+    // One in twenty of these falls short as a float product: 1.005 × 100 is 100.49999999999999.
+    for (let thousandths = 5; thousandths < 200_000; thousandths += 10) {
+      const hundredths = BigInt((thousandths + 5) / 10);
+      expect(shownIn(thousandths, 2)).toBe(`${written(hundredths, 2)} h`);
+      expect(shownIn(-thousandths, 2)).toBe(`-${written(hundredths, 2)} h`);
+    }
+  });
+
   it('reads a formatted quantity back to the same quantity', () => {
     fc.assert(
       fc.property(fc.integer({ min: 0, max: 1_000_000_000_000 }), kinds, (thousandths, id) => {

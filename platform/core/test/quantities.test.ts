@@ -88,6 +88,20 @@ describe('formatQuantity', () => {
     expect(formatQuantity(2.555, G)).toBe('2.555 g');
     expect(formatQuantity(2.555, G, { digits: 1 })).toBe('2.6 g');
     expect(formatQuantity(0.5, PCS, { digits: 0 })).toBe('1 pcs');
+    expect(formatQuantity(2.555, G, { digits: 3 })).toBe('2.555 g');
+    expect(formatQuantity(1250.5, M, { digits: 0 })).toBe('1’251 m');
+  });
+
+  it('rounds to fewer decimals without float noise, halves away from zero', () => {
+    // As floats, 1.005 × 100 is 100.49999999999999 and 1.15 × 10 is 11.499999999999998.
+    expect(formatQuantity(1.005, H, { digits: 2 })).toBe('1.01 h');
+    expect(formatQuantity(1.15, H, { digits: 1 })).toBe('1.2 h');
+    expect(formatQuantity(8.325, H, { digits: 2 })).toBe('8.33 h');
+    expect(formatQuantity(-1.005, H, { digits: 2 })).toBe('-1.01 h');
+    expect(formatQuantity(-0.5, PCS, { digits: 0 })).toBe('-1 pcs');
+    expect(formatQuantity(1.004, H, { digits: 2 })).toBe('1 h');
+    expect(formatQuantity(-0.004, H, { digits: 2 })).toBe('0 h');
+    expect(formatQuantity(0, H, { digits: 1 })).toBe('0 h');
   });
 
   it('takes the word of a language from the definition', () => {
@@ -144,6 +158,48 @@ describe('parseQuantityInput', () => {
     expect(parseQuantityInput('7,5', ML, { fallback: 'dl', also: [DECILITRE] })).toBe(750);
   });
 
+  it('reads the id and the symbol of a unit of an industry, whatever they are made of', () => {
+    const personHour: UnitDefinition = {
+      id: 'moving_person_hour',
+      dimension: 'moving_person_time',
+      factor: 1,
+      symbol: 'pers.-h',
+    };
+    expect(parseQuantityInput('2.5 moving_person_hour', personHour)).toBe(2.5);
+    expect(parseQuantityInput('2.5 pers.-h', personHour)).toBe(2.5);
+    expect(parseQuantityInput('2,5 Pers.-H', personHour)).toBe(2.5);
+    expect(parseQuantityInput('2.5 pers', personHour)).toBeNull();
+
+    const areaWeek: UnitDefinition = {
+      id: 'scaffold_m2_week',
+      dimension: 'scaffold_area_time',
+      factor: 1,
+      symbol: 'm² × wk',
+    };
+    expect(parseQuantityInput('120 m² × wk', areaWeek)).toBe(120);
+    expect(parseQuantityInput('120 m2  ×  WK', areaWeek)).toBe(120);
+    expect(parseQuantityInput('120 scaffold_m2_week', areaWeek)).toBe(120);
+    expect(parseQuantityInput('120 m²', areaWeek)).toBeNull();
+
+    const share: UnitDefinition = { id: 'share', dimension: 'share', factor: 1, symbol: '%' };
+    expect(parseQuantityInput('12.5 %', share)).toBe(12.5);
+    expect(parseQuantityInput('12.5%', share)).toBe(12.5);
+
+    // Shown, but not typed: after a number, a symbol that starts with a digit reads as more digits.
+    const pack: UnitDefinition = { id: 'pack', dimension: 'pack', factor: 1, symbol: '6x' };
+    expect(formatQuantity(2, pack)).toBe('2 6x');
+    expect(parseQuantityInput('2 6x', pack)).toBeNull();
+    expect(parseQuantityInput('2 pack', pack)).toBe(2);
+  });
+
+  it('reads back whatever formatQuantity writes for such a unit', () => {
+    for (const symbol of ['pers.-h', 'm² × wk', '%', 'm/s', 'm³', 'd.', "h'", '°']) {
+      const unit: UnitDefinition = { id: 'made_up', dimension: 'made_up', factor: 1, symbol };
+      expect(parseQuantityInput(formatQuantity(1234.5, unit), unit)).toBe(1234.5);
+      expect(parseQuantityInput(formatQuantity(0.125, unit), unit)).toBe(0.125);
+    }
+  });
+
   it('lets the first definition of a spelling win', () => {
     const other: UnitDefinition = { id: 'other', dimension: 'time', factor: 1, symbol: 'h' };
     expect(parseQuantityInput('2 h', MIN, { also: [H, other] })).toBe(120);
@@ -170,6 +226,12 @@ describe('parseQuantityInput', () => {
     expect(parseQuantityInput('1 250', G)).toBeNull();
     expect(parseQuantityInput('2 kg net', G)).toBeNull();
     expect(parseQuantityInput('1e3', G)).toBeNull();
+    expect(parseQuantityInput('12 .', G)).toBeNull();
+    expect(parseQuantityInput('12 ,5', G)).toBeNull();
+    expect(parseQuantityInput('12 5 g', G)).toBeNull();
+    expect(parseQuantityInput('2 g\n3 g', G)).toBeNull();
+    expect(parseQuantityInput('kg', G)).toBeNull();
+    expect(parseQuantityInput('１２', G)).toBeNull();
   });
 
   it('refuses amounts beyond what the model keeps', () => {
@@ -274,6 +336,17 @@ describe('values', () => {
     expect(unitPriceFromTotal(rappen(1), 0.002)).toBe(500_000);
   });
 
+  it('takes float noise beside zero as no quantity', () => {
+    // (0.1 + 0.2) - 0.3 is 5.6 × 10^-17: more than nothing as a float, nothing as a quantity.
+    expect(0.1 + 0.2 - 0.3).toBeGreaterThan(0);
+    expect(unitPriceFromTotal(rappen(1350), 0.1 + 0.2 - 0.3)).toBe(0);
+    expect(unitPriceFromTotal(rappen(1350), 0.0000004)).toBe(0);
+    expect(unitPriceFromTotal(rappen(1350), 0.0000004, { quantityUnit: MIN, priceUnit: H })).toBe(
+      0,
+    );
+    expect(Object.is(unitPriceFromTotal(rappen(-1350), 0), 0)).toBe(true);
+  });
+
   it('keeps quantities free of float noise', () => {
     expect(roundQuantity(0.1 + 0.2)).toBe(0.3);
     expect(Object.is(roundQuantity(-0.0001), 0)).toBe(true);
@@ -301,6 +374,18 @@ describe('values', () => {
     expect(
       codeOf(() => unitPriceFromTotal(rappen(1), 1, { quantityUnit: PCS, priceUnit: FLAT })),
     ).toBe('dimension_mismatch');
+  });
+
+  it('refuses such units whatever the quantity: a wrong set-up never hides behind a zero', () => {
+    const units = { quantityUnit: H, priceUnit: M };
+    expect(codeOf(() => lineValue(0, 1000, units))).toBe('dimension_mismatch');
+    expect(codeOf(() => valueMilli(0, 1000, units))).toBe('dimension_mismatch');
+    expect(codeOf(() => unitPriceFromTotal(rappen(1), 0, units))).toBe('dimension_mismatch');
+    expect(codeOf(() => unitPriceFromTotal(rappen(1), -1, units))).toBe('dimension_mismatch');
+    const broken: UnitDefinition = { id: 'broken', dimension: 'time', factor: 0, symbol: 'b' };
+    expect(
+      codeOf(() => unitPriceFromTotal(rappen(1), 0, { quantityUnit: broken, priceUnit: H })),
+    ).toBe('invalid_definition');
   });
 
   it('refuses a unit with a broken factor instead of computing a wrong amount', () => {

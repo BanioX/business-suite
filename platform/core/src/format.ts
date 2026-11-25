@@ -1,12 +1,12 @@
-// Origin: BanioX/Randen packages/core/src/format.ts @ e0f0907 — unchanged
+// Origin: BanioX/Randen packages/core/src/format.ts @ e0f0907 — adapted: comments
 /** Groups the integer part with the Swiss thousands separator (’). */
 export function groupThousands(digits: string): string {
   return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '’');
 }
 
 /**
- * Formats a number the Swiss way (ADR-0018): decimal point like in francs, ’ between thousands,
- * at most `digits` decimals without trailing zeros, e.g. `1.5`, `0.25`, `1’250`. Deterministic and
+ * Formats a number the Swiss way: decimal point like in francs, ’ between thousands, at most
+ * `digits` decimals without trailing zeros, e.g. `1.5`, `0.25`, `1’250`. Deterministic and
  * independent of the runtime's Intl data, like `formatChf`. `group: false` gives a plain number for
  * input fields (`1250`).
  */

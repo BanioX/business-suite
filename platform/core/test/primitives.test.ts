@@ -83,6 +83,17 @@ describe('quantities', () => {
     expect(QuantityDeltaSchema.parse(-(0.1 + 0.2))).toBe(-0.3);
   });
 
+  it('stores zero without a sign', () => {
+    // -0 survives a database but not a file written as JSON: the row would differ from itself.
+    expect(Object.is(QuantitySchema.parse(-0), 0)).toBe(true);
+    expect(Object.is(QuantityDeltaSchema.parse(-0), 0)).toBe(true);
+    // 0.3 - (0.1 + 0.2) is noise below zero.
+    expect(0.3 - (0.1 + 0.2)).toBeLessThan(0);
+    expect(Object.is(QuantityDeltaSchema.parse(0.3 - (0.1 + 0.2)), 0)).toBe(true);
+    expect(Object.is(QuantityDeltaSchema.parse(-0.0000004), 0)).toBe(true);
+    expect(QuantityDeltaSchema.parse(-0.001)).toBe(-0.001);
+  });
+
   it('accepts large quantities with decimals', () => {
     // Both failed a check that multiplied by 1000 first: the product is itself a rounded float.
     expect(QuantitySchema.parse(544_525_079.379)).toBe(544_525_079.379);
@@ -95,7 +106,7 @@ describe('quantities', () => {
       fc.property(fc.integer({ min: 0, max: 1_000_000_000_000 }), (thousandths) => {
         const quantity = thousandths / 1000;
         expect(QuantitySchema.parse(quantity)).toBe(quantity);
-        expect(QuantityDeltaSchema.parse(-quantity)).toBe(quantity === 0 ? -0 : -quantity);
+        expect(QuantityDeltaSchema.parse(-quantity)).toBe(quantity === 0 ? 0 : -quantity);
       }),
     );
   });

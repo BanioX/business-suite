@@ -292,6 +292,33 @@ describe('extend', () => {
     >();
   });
 
+  it('infers the ids from definitions that went through defineUnit', () => {
+    const tonne = defineUnit({ id: 't', dimension: 'mass', factor: 1_000_000, symbol: 't' });
+    const day = defineUnit({ id: 'day', dimension: 'time', factor: 1440, symbol: 'd' });
+    const extended = PLATFORM_UNITS.extend([tonne, day]);
+    expectTypeOf(extended).toEqualTypeOf<UnitRegistry<PlatformUnitId | 't' | 'day'>>();
+    expectTypeOf<z.infer<typeof extended.schema>>().toEqualTypeOf<PlatformUnitId | 't' | 'day'>();
+    expect(extended.convert(1.5, 'day', 'h')).toBe(36);
+    // @ts-expect-error -- a week was never registered
+    expect(() => extended.convert(1, 'week', 'h')).toThrow(UnitError);
+
+    const own = createUnitRegistry([tonne, day]);
+    expectTypeOf(own).toEqualTypeOf<UnitRegistry<'t' | 'day'>>();
+    // The literal is inferred without `as const` and without defineUnit, too.
+    const inline = createUnitRegistry([{ id: 'mm', dimension: 'fine', factor: 1, symbol: 'mm' }]);
+    expectTypeOf(inline).toEqualTypeOf<UnitRegistry<'mm'>>();
+  });
+
+  it('takes definitions that are known only as data', () => {
+    const fromData: UnitDefinition[] = [{ ...TONNE }, { ...PERSON_HOUR }];
+    const registry = createUnitRegistry(fromData);
+    expectTypeOf(registry).toEqualTypeOf<UnitRegistry>();
+    expect(registry.has('t')).toBe(true);
+    // A register of known ids is a register of strings wherever one is asked for.
+    const anyRegistry: UnitRegistry = PLATFORM_UNITS;
+    expect(anyRegistry.ids).toContain('flat');
+  });
+
   it('can be extended again', () => {
     const twice = PLATFORM_UNITS.extend([TONNE]).extend([PERSON_HOUR]);
     expect(twice.ids).toEqual([...PLATFORM_UNITS.ids, 't', 'moving_person_hour']);

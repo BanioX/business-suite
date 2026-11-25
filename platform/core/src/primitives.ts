@@ -1,6 +1,6 @@
-// Origin: BanioX/Randen packages/core/src/model/primitives.ts @ e0f0907 — adapted: closed unit enum, temperature, date kind and photo left out; three-decimals rule shared with the arithmetic and exact for large quantities; import paths, comments
+// Origin: BanioX/Randen packages/core/src/model/primitives.ts @ e0f0907 — adapted: closed unit enum, temperature, date kind and photo left out; three-decimals rule shared with the arithmetic and exact for large quantities; zero stored without a sign; import paths, comments
 import { z } from 'zod';
-import { hasAtMostThreeDecimals } from './exact';
+import { fromThousandths, hasAtMostThreeDecimals } from './exact';
 import { IdSchema } from './ids';
 
 /** A calendar day in Europe/Zurich, `YYYY-MM-DD`. Used for due dates, work days and periods. */
@@ -18,8 +18,12 @@ export const YearMonthSchema = z
   .brand<'YearMonth'>();
 export type YearMonth = z.infer<typeof YearMonthSchema>;
 
-/** 0.1 + 0.2 is stored as 0.3: sums of quantities never carry float noise into the data. */
-const withoutFloatNoise = (value: number) => Math.round(value * 1000) / 1000;
+/**
+ * 0.1 + 0.2 is stored as 0.3: sums of quantities never carry float noise into the data. Noise
+ * below zero is stored as 0, never as -0: a file written as JSON would read it back as 0, and the
+ * row would differ from itself.
+ */
+const withoutFloatNoise = (value: number) => fromThousandths(Math.round(value * 1000));
 
 /**
  * A quantity in a registered unit (`units.ts`) with at most three decimals: 2.5 g, 0.25 h,

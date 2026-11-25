@@ -1,10 +1,11 @@
-// Origin: BanioX/Randen packages/core/src/currency.ts @ e0f0907 — unchanged
+// Origin: BanioX/Randen packages/core/src/currency.ts @ e0f0907 — adapted: an amount with misplaced thousands marks is refused; comments
 import { z } from 'zod';
 import { formatChf, parseChf, rappen, type Rappen } from './money';
 
 /**
- * One currency per business (ADR-0004): amounts are integers in the smallest unit of that
- * currency (CHF: Rappen, EUR: cents, JPY: yen). The type is called `Rappen` after the pilot currency.
+ * One currency per business (suite ADR-0009; ADR-0004 of the origin): amounts are integers in the
+ * smallest unit of that currency (CHF: Rappen, EUR: cents, JPY: yen). The type is called `Rappen`
+ * after the pilot currency.
  * Formatting is deterministic and independent of the runtime's Intl data, like `formatChf`.
  */
 export const CurrencyCodeSchema = z
@@ -57,7 +58,7 @@ function styleOf(currency: CurrencyCode): MoneyStyle {
   return STYLES[currency] ?? { symbol: currency, after: false, decimal: '.', group: '’' };
 }
 
-/** The symbol shown with amounts, e.g. `CHF` or `€`, for labels like «Preis in CHF». */
+/** The symbol shown with amounts, e.g. `CHF` or `€`, for the label of a price field. */
 export function currencySymbol(currency: CurrencyCode): string {
   return styleOf(currency).symbol;
 }
@@ -89,11 +90,16 @@ export function formatMoney(
   return style.after ? `${number} ${style.symbol}` : `${style.symbol} ${number}`;
 }
 
+/** Thousands in groups of three, all behind the same mark: «1.234.567» or «1,234,567». */
+const GROUPED_THOUSANDS = /^\d{1,3}([.,])\d{3}(?:\1\d{3})*$/;
+
 /**
  * Reads a typed or printed amount in the business currency. CHF uses the Swiss receipt parser;
- * other currencies accept `.` or `,` as decimal mark: the last mark followed by exactly the
+ * other currencies accept `.` or `,` as decimal mark: the last mark followed by at most the
  * currency's decimals is the decimal mark, every other mark groups thousands («1.234,50»,
- * «1,234.50», «3,95», «12»). Returns null for anything ambiguous.
+ * «1,234.50», «3,95», «12»). Thousands stand in groups of three behind one and the same mark,
+ * which is not the decimal mark. Returns null for anything else: «1.23.45» and «1234,567» are
+ * typing mistakes, not amounts.
  */
 export function parseMoney(input: string, currency: CurrencyCode): Rappen | null {
   if (currency === DEFAULT_CURRENCY) {
@@ -114,11 +120,13 @@ export function parseMoney(input: string, currency: CurrencyCode): Rappen | null
   const last = Math.max(text.lastIndexOf('.'), text.lastIndexOf(','));
   const tail = last === -1 ? '' : text.slice(last + 1);
   const isDecimal = last !== -1 && digits > 0 && tail.length >= 1 && tail.length <= digits;
-  const wholeText = (isDecimal ? text.slice(0, last) : text).replace(/[.,]/g, '');
-  const fractionText = isDecimal ? tail.padEnd(digits, '0') : '';
-  if (!isDecimal && last !== -1 && tail.length !== 3) {
+  const wholePart = isDecimal ? text.slice(0, last) : text;
+  const grouped = GROUPED_THOUSANDS.exec(wholePart);
+  if (/[.,]/.test(wholePart) && (grouped === null || (isDecimal && grouped[1] === text[last]))) {
     return null;
   }
+  const wholeText = wholePart.replace(/[.,]/g, '');
+  const fractionText = isDecimal ? tail.padEnd(digits, '0') : '';
   const total =
     Number.parseInt(wholeText === '' ? '0' : wholeText, 10) * 10 ** digits +
     (fractionText === '' ? 0 : Number.parseInt(fractionText, 10));

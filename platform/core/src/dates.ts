@@ -1,4 +1,4 @@
-// Origin: BanioX/Randen packages/core/src/dates.ts @ e0f0907 — adapted: import path, comments
+// Origin: BanioX/Randen packages/core/src/dates.ts @ e0f0907 — adapted: the years 0 to 99 are no longer counted as 1900 to 1999; import path, comments
 import { LocalDateSchema, type LocalDate } from './primitives';
 
 /** All calendar logic of the suite runs in Swiss local time. */
@@ -38,10 +38,18 @@ export function toLocalDate(instant: Date | string | number, timeZone = HOME_TIM
   return localDate(`${part('year')}-${part('month')}-${part('day')}`);
 }
 
+/**
+ * Midnight UTC of a calendar day (month 1–12; day 0 is the last day of the month before).
+ * `Date.UTC` reads the years 0 to 99 as 1900 to 1999; `setUTCFullYear` takes them as written.
+ */
+function utcMidnight(year: number, month: number, day: number): number {
+  return new Date(0).setUTCFullYear(year, month - 1, day);
+}
+
 /** Days since 1970-01-01 for a calendar day; pure date arithmetic without time zones. */
 function dayNumber(date: LocalDate): number {
   const [year = 0, month = 1, day = 1] = date.split('-').map(Number);
-  return Date.UTC(year, month - 1, day) / MS_PER_DAY;
+  return utcMidnight(year, month, day) / MS_PER_DAY;
 }
 
 function fromDayNumber(days: number): LocalDate {
@@ -69,7 +77,7 @@ export function addMonths(date: LocalDate, months: number): LocalDate {
   const index = year * 12 + (month - 1) + months;
   const targetYear = Math.floor(index / 12);
   const targetMonth = (index % 12) + 1;
-  const lastDay = new Date(Date.UTC(targetYear, targetMonth, 0)).getUTCDate();
+  const lastDay = lastDayOfMonth(targetYear, targetMonth);
   return localDate(
     `${String(targetYear).padStart(4, '0')}-${String(targetMonth).padStart(2, '0')}-${String(Math.min(day, lastDay)).padStart(2, '0')}`,
   );
@@ -85,7 +93,7 @@ export function minLocalDate(a: LocalDate, b: LocalDate): LocalDate {
 
 /** Last day of a month (month 1–12). */
 function lastDayOfMonth(year: number, month: number): number {
-  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return new Date(utcMidnight(year, month + 1, 0)).getUTCDate();
 }
 
 function buildDate(year: number, month: number, day: number): LocalDate | null {

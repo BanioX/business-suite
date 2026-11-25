@@ -38,9 +38,20 @@ export function priceUnitLabel(unit: UnitDefinition): string {
 }
 
 /**
+ * A quantity rounded to fewer than its three decimals, halves away from zero. Rounded as a whole
+ * number of thousandths: as a float, 1.005 lies just below the half and would lose it.
+ */
+function roundToDigits(value: number, digits: number): number {
+  const step = 10 ** (3 - digits);
+  const thousandths = Math.round(Math.abs(value) * 1000);
+  const rounded = Math.floor((2 * thousandths + step) / (2 * step)) * step;
+  return (Math.sign(value) * rounded) / 1000;
+}
+
+/**
  * A quantity as people write it: `750 g`, `2.5 kg`, `1.2 l`, `1.5 h`, `12.345 m²`. From 1000 on,
- * a unit with a name for its thousand switches to it. `digits` limits the decimals of the plain
- * form (default: all three a quantity can have).
+ * a unit with a name for its thousand switches to it. `digits` (0 to 3) limits the decimals of
+ * the plain form, rounded halves away from zero (default: all three a quantity can have).
  */
 export function formatQuantity(
   quantity: number,
@@ -53,7 +64,9 @@ export function formatQuantity(
     const whole = Math.sign(value) * Math.round(Math.abs(value));
     return `${formatDecimal(whole / 1000, { digits: 3 })} ${unit.thousandSymbol}`;
   }
-  return `${formatDecimal(value, { digits: options.digits ?? 3 })} ${unit.symbol}`;
+  const digits = options.digits ?? 3;
+  const shown = digits === 0 || digits === 1 || digits === 2 ? roundToDigits(value, digits) : value;
+  return `${formatDecimal(shown, { digits })} ${unit.symbol}`;
 }
 
 /** How large a typed unit is, in the unit of the field: `numerator / denominator`. */
@@ -62,9 +75,21 @@ interface Ratio {
   readonly denominator: bigint;
 }
 
-/** A typed unit compares without case, a closing dot and the difference between `m2` and `m²`. */
+/** What people put between thousands: apostrophes and thin spaces. Never part of a number. */
+const THOUSANDS_MARKS = /[’'\u2009\u202f]/g;
+
+/**
+ * A typed unit compares without case, a closing dot, the width of the spaces inside it, the
+ * marks that are taken out of the number, and the difference between `m2` and `m²`.
+ */
 function typedName(text: string): string {
-  return text.toLowerCase().replace(/\.+$/, '').replaceAll('²', '2').replaceAll('³', '3');
+  return text
+    .toLowerCase()
+    .replace(THOUSANDS_MARKS, '')
+    .replace(/\s+/g, ' ')
+    .replace(/\.+$/, '')
+    .replaceAll('²', '2')
+    .replaceAll('³', '3');
 }
 
 /** Every spelling a person may type for a quantity of `unit`; the first definition of a name wins. */
@@ -88,8 +113,13 @@ function typedUnits(unit: UnitDefinition, also: readonly UnitDefinition[]): Map<
   return names;
 }
 
-/** A number with `.` or `,` as decimal mark, then an optional unit that starts with a letter. */
-const TYPED_QUANTITY = /^(?:(\d+)(?:[.,](\d+))?|[.,](\d+))\s*(\p{L}[\p{L}\p{N}.]*)?$/u;
+/**
+ * A number with `.` or `,` as decimal mark, then an optional unit: the rest of the text, which
+ * starts with neither a digit nor a decimal mark. Whether the rest is a unit is decided by the
+ * spellings of the field, not here: an id carries underscores (`moving_person_hour`), a symbol
+ * dots, hyphens or spaces.
+ */
+const TYPED_QUANTITY = /^(?:(\d+)(?:[.,](\d+))?|[.,](\d+))\s*([^\d.,\s].*)?$/u;
 
 /** The largest quantity the model keeps (1_000_000_000), in thousandths. */
 const MAX_QUANTITY_THOUSANDTHS = 1_000_000_000_000n;
@@ -109,7 +139,9 @@ export interface ParseQuantityOptions {
 
 /**
  * Reads a quantity typed by a person into the unit of the field: `2.5 kg`, `750`, `7,5 h`, `12 m2`.
- * A typed unit is the id, the symbol or the name of the thousand of the unit or of one in `also`.
+ * A typed unit is the id, the symbol or the name of the thousand of the unit or of one in `also`,
+ * so what `formatQuantity` writes reads back; only a symbol that starts with a digit or a decimal
+ * mark can be shown but not typed.
  * What does not fit three decimals is rounded, halves away from zero («50 min» in hours is 0.833).
  * Returns null for anything that is not a non-negative amount of this unit. A wrong set-up of the
  * field (a fallback that is no spelling, a unit of another dimension in `also`) throws a
@@ -128,7 +160,7 @@ export function parseQuantityInput(
       `The fallback ${JSON.stringify(options.fallback)} is not a spelling of ${unit.id}`,
     );
   }
-  const match = TYPED_QUANTITY.exec(input.trim().replace(/[’'\u2009\u202f]/g, ''));
+  const match = TYPED_QUANTITY.exec(input.trim().replace(THOUSANDS_MARKS, ''));
   if (match === null) {
     return null;
   }
@@ -211,17 +243,23 @@ export function lineValue(quantity: number, pricePer1000: number, units?: PriceU
 }
 
 /**
- * The unit price that makes `quantity` cost `total`; 0 if there is no quantity. With `units` the
- * quantity is in `quantityUnit` and the result is quoted per 1000 `priceUnit`.
+ * The unit price that makes `quantity` cost `total`; 0 if there is no quantity (zero, less than
+ * zero, or float noise beside zero). With `units` the quantity is in `quantityUnit` and the
+ * result is quoted per 1000 `priceUnit`; units that do not measure the same are an error whatever
+ * the quantity.
  */
 export function unitPriceFromTotal(total: Rappen, quantity: number, units?: PriceUnits): Rappen {
+  const ratio = priceRatio(units);
   if (quantity <= 0) {
     return rappen(0);
   }
-  const ratio = priceRatio(units);
+  const thousandths = BigInt(toThousandths(quantity));
+  if (thousandths === 0n) {
+    return rappen(0);
+  }
   const price = divideRounded(
     BigInt(assertWholeAmount(total, 'total')) * 1_000_000n * ratio.denominator,
-    BigInt(toThousandths(quantity)) * ratio.numerator,
+    thousandths * ratio.numerator,
   );
   return rappen(toSafeNumber(price, 'The unit price'));
 }
