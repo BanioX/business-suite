@@ -1,5 +1,10 @@
 import { z } from 'zod';
-import { ACCESS_LEVELS, OPERATION_NAME_PATTERN, type Operation } from './operation';
+import {
+  ACCESS_LEVELS,
+  FEATURE_ID_PATTERN,
+  OPERATION_NAME_PATTERN,
+  type Operation,
+} from './operation';
 
 /**
  * Checks of an operation at runtime. The types catch most mistakes where a contract is written;
@@ -34,12 +39,12 @@ export interface OperationProblem {
 const UNNAMED = '?';
 
 /**
- * An id of the feature register or of a delicate right: words of letters, digits and
- * underscores, each starting with a lower-case letter, joined by dots for a namespace
- * (`customers`, `facility.keys`, `export_delete`). The registers themselves decide which ids
- * exist; here only the form is checked.
+ * An id of a delicate right: words of letters, digits and underscores, each starting with a
+ * lower-case letter, joined by dots for a namespace (`export_delete`, `facility.access_notes`).
+ * The register of rights decides which ids exist; here only the form is checked. The form of a
+ * function is the stricter `FEATURE_ID_PATTERN`, shared with the feature register.
  */
-const ACCESS_ID_PATTERN = /^[a-z][a-zA-Z0-9_]*(?:\.[a-z][a-zA-Z0-9_]*)*$/;
+const RIGHT_ID_PATTERN = /^[a-z][a-zA-Z0-9_]*(?:\.[a-z][a-zA-Z0-9_]*)*$/;
 
 /** The fields `access` may have. An unknown one is a problem: a typo in `rights` would drop a right without a sound. */
 const ACCESS_FIELDS: ReadonlySet<string> = new Set(['feature', 'level', 'rights']);
@@ -107,10 +112,10 @@ function accessProblems(access: unknown, kind: unknown): PartProblem[] {
       problems.push(['access', `access has the unknown field «${field}»`]);
     }
   }
-  if (typeof access.feature !== 'string' || !ACCESS_ID_PATTERN.test(access.feature)) {
+  if (typeof access.feature !== 'string' || !FEATURE_ID_PATTERN.test(access.feature)) {
     problems.push([
       'access.feature',
-      `feature must be an id of the feature register such as «customers», got ${describe(access.feature)}`,
+      `feature must be an id of the feature register such as «customers» or «facility.keys», got ${describe(access.feature)}`,
     ]);
   }
   if (typeof access.level !== 'string' || !LEVELS.includes(access.level)) {
@@ -137,7 +142,7 @@ function rightsProblems(rights: unknown): PartProblem[] {
   const problems: PartProblem[] = [];
   const counts = new Map<string, number>();
   for (const right of rights) {
-    if (typeof right !== 'string' || !ACCESS_ID_PATTERN.test(right)) {
+    if (typeof right !== 'string' || !RIGHT_ID_PATTERN.test(right)) {
       problems.push([
         'access.rights',
         `a right must be an id such as «export_delete», got ${describe(right)}`,

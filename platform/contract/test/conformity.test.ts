@@ -133,12 +133,17 @@ describe('operationProblems', () => {
     ['with an upper-case start', 'Customers'],
     ['with a dot at the end', 'facility.'],
     ['with a hyphen', 'team-time'],
+    ['in camel case', 'teamTime'],
+    ['with a double underscore', 'team__time'],
+    ['with an underscore at the end', 'team_'],
+    ['with three segments', 'jobs.reports.sign'],
+    ['with a segment that starts with a digit', 'facility.2keys'],
   ])('reports a feature that is %s', (_what, feature) => {
     const access = feature === undefined ? { level: 'operate' } : { feature, level: 'operate' };
     expect(parts(operationProblems(broken({ access })))).toEqual(['access.feature']);
   });
 
-  it.each([['customers'], ['facility.keys'], ['team_time'], ['teamTime'], ['jobs.reports.sign2']])(
+  it.each([['customers'], ['facility.keys'], ['team_time'], ['facility.key_moves'], ['jobs2']])(
     'accepts the feature %s',
     (feature) => {
       expect(operationProblems(broken({ access: { feature, level: 'operate' } }))).toEqual([]);

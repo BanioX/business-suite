@@ -12,6 +12,7 @@ describe('@onestrand/contract', () => {
       'ACCESS_LEVELS',
       'CommandError',
       'DomainEventSchema',
+      'FEATURE_ID_PATTERN',
       'NAMESPACED_ERROR_CODE_PATTERN',
       'OPERATION_NAME_PATTERN',
       'PLATFORM_ERROR_CODES',

@@ -59,6 +59,19 @@ importers:
         specifier: ^4.10.2
         version: 4.10.3
 
+  platform/features:
+    dependencies:
+      '@onestrand/contract':
+        specifier: workspace:*
+        version: link:../contract
+    devDependencies:
+      fast-check:
+        specifier: ^4.10.2
+        version: 4.10.3
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+
   platform/ledger:
     dependencies:
       '@onestrand/contract':

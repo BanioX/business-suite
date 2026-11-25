@@ -31,6 +31,16 @@ export interface OperationAccess {
 export const OPERATION_NAME_PATTERN = /^[a-z][a-zA-Z0-9]*(?:\.[a-z][a-zA-Z0-9]*){1,3}$/;
 
 /**
+ * The id of a function in the feature register: one or two segments, each lower-case letters,
+ * digits and single underscores starting with a letter, joined by a dot. One segment is a
+ * function of the platform (`customers`, `team_time`); two are a function of an industry, the
+ * first segment being its namespace (`facility.keys`, suite ADR-0004). `@onestrand/features`
+ * builds its register on this form, so `access.feature` and the register cannot drift apart.
+ */
+export const FEATURE_ID_PATTERN =
+  /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*(?:\.[a-z][a-z0-9]*(?:_[a-z0-9]+)*)?$/;
+
+/**
  * One operation of the contract (suite ADR-0009; ADR-0005 of the origin): a named command or
  * query with Zod schemas for input and output. The app calls exactly these; the same schemas can
  * later generate a REST API and tools for AI assistants.
