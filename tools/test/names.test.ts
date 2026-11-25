@@ -1,5 +1,7 @@
+import { DomainEventSchema } from '@onestrand/contract';
 import { describe, expect, it } from 'vitest';
 import {
+  EVENT_TYPE_PATTERN,
   NAME_KINDS,
   NAME_STATUSES,
   NAMES_PATH,
@@ -38,7 +40,16 @@ describe('readNames', () => {
   });
 
   it('knows these kinds and these states', () => {
-    expect(NAME_KINDS).toEqual(['package', 'table', 'unit']);
+    expect(NAME_KINDS).toEqual([
+      'package',
+      'table',
+      'unit',
+      'operation',
+      'event',
+      'feature',
+      'module',
+      'right',
+    ]);
     expect(NAME_STATUSES).toEqual(['active', 'reserved']);
   });
 
@@ -70,8 +81,10 @@ describe('readNames', () => {
     ],
     [
       'an unknown kind',
-      { ...CORE, kind: 'operation' },
-      ['names[0]: kind must be one of package, table, unit'],
+      { ...CORE, kind: 'record' },
+      [
+        'names[0]: kind must be one of package, table, unit, operation, event, feature, module, right',
+      ],
     ],
     ['a name that is no text', { ...CORE, name: 7 }, ['names[0]: name must be a text']],
     [
@@ -94,7 +107,7 @@ describe('readNames', () => {
       'an entry without anything',
       {},
       [
-        'names[0]: kind must be one of package, table, unit',
+        'names[0]: kind must be one of package, table, unit, operation, event, feature, module, right',
         'names[0]: name must be a text',
         'names[0]: owner must be head, platform or industry:<id>',
         'names[0]: status must be one of active, reserved',
@@ -115,6 +128,18 @@ describe('readNames', () => {
     ['table', 'keys_'],
     ['unit', 'm²'],
     ['unit', '2m'],
+    ['operation', 'business'],
+    ['operation', 'Business.create'],
+    ['operation', 'business.people.add.again.more'],
+    ['operation', 'business.create_new'],
+    ['event', 'business.created.again'],
+    ['event', 'business.Created'],
+    ['event', 'business'],
+    ['feature', 'business.keys.assign'],
+    ['feature', 'Business'],
+    ['module', 'team-time'],
+    ['right', 'a.b.c.d'],
+    ['right', 'Settings'],
   ])('wants a %s in its form, not «%s»', (kind, name) => {
     const [message, ...rest] = messagesOf(registerOf([{ ...CORE, kind, name }]));
     expect(message).toContain(`"${name}" has not the form of a ${kind}`);
@@ -125,6 +150,37 @@ describe('readNames', () => {
     expect(messagesOf(registerOf([CORE, BUSINESSES, { ...CORE, status: 'reserved' }]))).toEqual([
       'the package "@onestrand/core" stands twice',
     ]);
+  });
+
+  it.each([
+    ['operation', 'business.features.setOption'],
+    ['operation', 'facility.keys.issue'],
+    ['event', 'facility_key.issued'],
+    ['event', 'feature.option_set'],
+    ['feature', 'business'],
+    ['feature', 'team_time'],
+    ['feature', 'facility.keys'],
+    ['module', 'muster.visits'],
+    ['right', 'export_delete'],
+    ['right', 'facility.keys.assign'],
+  ])('takes a %s in the form of the contract: %s', (kind, name) => {
+    expect(readNames(registerOf([{ ...CORE, kind, name }])).problems).toEqual([]);
+  });
+
+  it('takes the form of an event the contract takes, no other', () => {
+    for (const type of [
+      'business.created',
+      'person.option_set',
+      'business.created.again',
+      'Business.created',
+      'business.created2',
+      'business',
+      '',
+    ]) {
+      expect(EVENT_TYPE_PATTERN.test(type), type).toBe(
+        DomainEventSchema.shape.type.safeParse(type).success,
+      );
+    }
   });
 
   it('lets one word stand under two kinds: a table and a unit are told apart', () => {

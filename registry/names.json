@@ -8,12 +8,14 @@
     { "kind": "package", "name": "@onestrand/ledger", "owner": "platform", "status": "active" },
     { "kind": "package", "name": "@onestrand/features", "owner": "platform", "status": "active" },
     { "kind": "package", "name": "@onestrand/access", "owner": "platform", "status": "active" },
+    { "kind": "package", "name": "@onestrand/business", "owner": "platform", "status": "active" },
     { "kind": "package", "name": "@onestrand/testing", "owner": "platform", "status": "active" },
     { "kind": "package", "name": "@onestrand/tooling", "owner": "head", "status": "active" },
     { "kind": "table", "name": "businesses", "owner": "platform", "status": "active" },
     { "kind": "table", "name": "events", "owner": "platform", "status": "active" },
     { "kind": "table", "name": "commands", "owner": "platform", "status": "active" },
     { "kind": "table", "name": "files", "owner": "platform", "status": "active" },
+    { "kind": "table", "name": "people", "owner": "platform", "status": "active" },
     { "kind": "unit", "name": "g", "owner": "platform", "status": "active" },
     { "kind": "unit", "name": "ml", "owner": "platform", "status": "active" },
     { "kind": "unit", "name": "pcs", "owner": "platform", "status": "active" },
@@ -23,6 +25,52 @@
     { "kind": "unit", "name": "m2", "owner": "platform", "status": "active" },
     { "kind": "unit", "name": "m3", "owner": "platform", "status": "active" },
     { "kind": "unit", "name": "km", "owner": "platform", "status": "active" },
-    { "kind": "unit", "name": "flat", "owner": "platform", "status": "active" }
+    { "kind": "unit", "name": "flat", "owner": "platform", "status": "active" },
+    { "kind": "operation", "name": "business.create", "owner": "platform", "status": "active" },
+    { "kind": "operation", "name": "business.get", "owner": "platform", "status": "active" },
+    { "kind": "operation", "name": "business.update", "owner": "platform", "status": "active" },
+    {
+      "kind": "operation",
+      "name": "business.features.switch",
+      "owner": "platform",
+      "status": "active"
+    },
+    {
+      "kind": "operation",
+      "name": "business.features.setOption",
+      "owner": "platform",
+      "status": "active"
+    },
+    { "kind": "operation", "name": "business.people.add", "owner": "platform", "status": "active" },
+    {
+      "kind": "operation",
+      "name": "business.people.update",
+      "owner": "platform",
+      "status": "active"
+    },
+    {
+      "kind": "operation",
+      "name": "business.people.setActive",
+      "owner": "platform",
+      "status": "active"
+    },
+    {
+      "kind": "operation",
+      "name": "business.people.list",
+      "owner": "platform",
+      "status": "active"
+    },
+    { "kind": "event", "name": "business.created", "owner": "platform", "status": "active" },
+    { "kind": "event", "name": "business.updated", "owner": "platform", "status": "active" },
+    { "kind": "event", "name": "feature.switched", "owner": "platform", "status": "active" },
+    { "kind": "event", "name": "feature.option_set", "owner": "platform", "status": "active" },
+    { "kind": "event", "name": "person.created", "owner": "platform", "status": "active" },
+    { "kind": "event", "name": "person.updated", "owner": "platform", "status": "active" },
+    { "kind": "event", "name": "person.deactivated", "owner": "platform", "status": "active" },
+    { "kind": "event", "name": "person.reactivated", "owner": "platform", "status": "active" },
+    { "kind": "feature", "name": "business", "owner": "platform", "status": "active" },
+    { "kind": "module", "name": "business", "owner": "platform", "status": "active" },
+    { "kind": "right", "name": "people_roles", "owner": "platform", "status": "active" },
+    { "kind": "right", "name": "settings", "owner": "platform", "status": "active" }
   ]
 }

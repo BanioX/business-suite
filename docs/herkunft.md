@@ -25,6 +25,7 @@ Die Plattform ist aus der Ausgabe für die Gastronomie herausgelöst (`BanioX/Ra
 <!-- provenance:generated:start -->
 | Datei der Suite | Quelle | Commit | Art | Was geändert wurde |
 | --- | --- | --- | --- | --- |
+| `platform/business/src/model.ts` | BanioX/Randen `packages/core/src/model/business.ts` | `5d016f1` | angepasst | the business keeps branches, kinds, canton, VAT method, letterhead, bank account, the switched-on functions and the values of their options as plain identifiers instead of a fixed trade, kind and module list; the person has a profile of the access package instead of a trade role; no target costs, no default VAT rate, no demo flag |
 | `platform/contract/src/command.ts` | BanioX/Randen `packages/core/src/application/command.ts` | `e0f0907` | angepasst | the kit takes the operation itself instead of a name in a fixed contract; a commandId of another operation or business is refused; the result is checked against the output schema and recorded with its business; error, context and row helper live elsewhere |
 | `platform/contract/src/contract.ts` | BanioX/Randen `packages/core/src/application/command.ts` | `e0f0907` | angepasst | only the types of a use case, as functions of an operation and of any contract |
 | `platform/contract/src/contract.ts` | BanioX/Randen `packages/core/src/contract/index.ts` | `e0f0907` | angepasst | only the types, as functions of any contract instead of the fixed sum |

@@ -61,6 +61,34 @@ importers:
         specifier: ^4.10.2
         version: 4.10.3
 
+  platform/business:
+    dependencies:
+      '@onestrand/access':
+        specifier: workspace:*
+        version: link:../access
+      '@onestrand/contract':
+        specifier: workspace:*
+        version: link:../contract
+      '@onestrand/core':
+        specifier: workspace:*
+        version: link:../core
+      '@onestrand/features':
+        specifier: workspace:*
+        version: link:../features
+      '@onestrand/storage':
+        specifier: workspace:*
+        version: link:../storage
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+    devDependencies:
+      '@onestrand/testing':
+        specifier: workspace:*
+        version: link:../testing
+      fast-check:
+        specifier: ^4.10.2
+        version: 4.10.3
+
   platform/contract:
     dependencies:
       '@onestrand/core':
@@ -156,6 +184,9 @@ importers:
 
   tools:
     devDependencies:
+      '@onestrand/business':
+        specifier: workspace:*
+        version: link:../platform/business
       '@onestrand/contract':
         specifier: workspace:*
         version: link:../platform/contract

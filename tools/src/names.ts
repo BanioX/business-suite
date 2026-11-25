@@ -17,8 +17,11 @@
 //
 // - `kind`: what the identifier names. The guard reads these kinds from the code: `package` (the
 //   name in every package.json of the workspace), `table` (the tables the storage keeps for
-//   itself) and `unit` (the units of the platform). Operations, events, features, tables of
-//   modules and the frozen names of an edition get their kinds with the packages that carry them.
+//   itself and those a package registers), `unit` (the units of the platform), and, since the
+//   package for the business, `operation` (a name in a contract fragment), `event` (a type
+//   of event a command appends), `feature` and `module` (an id in the register of features,
+//   a module being a group) and `right` (a delicate right). The frozen names of an edition get
+//   their kinds with the editions.
 // - `name`: the identifier, in the form of its kind.
 // - `owner`: `head`, `platform` or `industry:<id>`: who may use the name.
 // - `status`: `active` (the code uses it) or `reserved` (held for later, so nobody else takes it).
@@ -33,13 +36,26 @@
 //    not removed from the register, it is marked `reserved` with a note).
 //
 // What this cannot check: identifiers of kinds it does not read yet, and a name built at run time.
+import { FEATURE_ID_PATTERN, OPERATION_NAME_PATTERN, RIGHT_ID_PATTERN } from '@onestrand/contract';
 import type { Problem } from './repo-files.ts';
+
+/** The type of an event: `<thing>.<what_happened>`, the form `DomainEventSchema` of the contract package takes. */
+export const EVENT_TYPE_PATTERN = /^[a-z][a-z_]*\.[a-z][a-z_]*$/;
 
 /** The register, from the root of the repository. */
 export const NAMES_PATH = 'registry/names.json';
 
 /** The kinds of identifiers the register holds. */
-export const NAME_KINDS = ['package', 'table', 'unit'] as const;
+export const NAME_KINDS = [
+  'package',
+  'table',
+  'unit',
+  'operation',
+  'event',
+  'feature',
+  'module',
+  'right',
+] as const;
 
 export type NameKind = (typeof NAME_KINDS)[number];
 
@@ -53,6 +69,12 @@ const NAME_FORM: Readonly<Record<NameKind, RegExp>> = {
   package: /^@onestrand\/[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/,
   table: /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/,
   unit: /^[a-z][a-z0-9_]*$/,
+  // The forms of the contract package, so a name in the register cannot drift from the code.
+  operation: OPERATION_NAME_PATTERN,
+  event: EVENT_TYPE_PATTERN,
+  feature: FEATURE_ID_PATTERN,
+  module: FEATURE_ID_PATTERN,
+  right: RIGHT_ID_PATTERN,
 };
 
 const OWNER = /^(?:head|platform|industry:[a-z][a-z0-9]*(?:-[a-z0-9]+)*)$/;

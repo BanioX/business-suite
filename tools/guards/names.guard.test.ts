@@ -1,5 +1,12 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import {
+  BUSINESS_EVENT_TYPES,
+  businessContract,
+  businessFeatureEntries,
+  businessRightEntries,
+  businessTables,
+} from '@onestrand/business';
 import { PLATFORM_UNITS } from '@onestrand/core';
 import { RESERVED_TABLE_NAMES } from '@onestrand/storage';
 import { describe, expect, it } from 'vitest';
@@ -28,6 +35,37 @@ describe('identifiers of the suite (registry/names.json)', () => {
       name,
       path: 'platform/core/src/units.ts',
     })),
+    // What the package for the business sets for good, read from its exports, not from a list.
+    ...businessTables.map(({ name }) => ({
+      kind: 'table' as const,
+      name,
+      path: 'platform/business/src/model.ts',
+    })),
+    ...Object.keys(businessContract).map((name) => ({
+      kind: 'operation' as const,
+      name,
+      path: 'platform/business/src/contract.ts',
+    })),
+    ...BUSINESS_EVENT_TYPES.map((name) => ({
+      kind: 'event' as const,
+      name,
+      path: 'platform/business/src/contract.ts',
+    })),
+    ...businessFeatureEntries.features.map(({ id }) => ({
+      kind: 'feature' as const,
+      name: id,
+      path: 'platform/business/src/entries.ts',
+    })),
+    ...businessFeatureEntries.groups.map(({ id }) => ({
+      kind: 'module' as const,
+      name: id,
+      path: 'platform/business/src/entries.ts',
+    })),
+    ...businessRightEntries.rights.map(({ id }) => ({
+      kind: 'right' as const,
+      name: id,
+      path: 'platform/business/src/entries.ts',
+    })),
   ];
 
   it('reads the identifiers the code uses', () => {
@@ -36,6 +74,12 @@ describe('identifiers of the suite (registry/names.json)', () => {
     expect(names).toContain('package @onestrand/core');
     expect(names).toContain('table businesses');
     expect(names).toContain('unit m2');
+    expect(names).toContain('table people');
+    expect(names).toContain('operation business.create');
+    expect(names).toContain('event business.created');
+    expect(names).toContain('feature business');
+    expect(names).toContain('module business');
+    expect(names).toContain('right settings');
   });
 
   it('has a register that is well formed', () => {
