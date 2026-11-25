@@ -201,6 +201,22 @@ describe('platformWordProblems', () => {
     expect(platformWordProblems(files)).toEqual([]);
   });
 
+  it('reads such a line in a file that carries no headers: nothing else would check it there', () => {
+    // The provenance guard reads source files only. In a document or a JSON file the line
+    // would be a place where anything could be written and nobody looks.
+    const header =
+      '// Origin: BanioX/Randen packages/core/src/money.ts @ e0f0907 — adapted: as in the kitchen';
+    const lines = (path: string) =>
+      platformWordProblems([file(path, `${header}\n`)]).map((problem) => problem.message);
+    expect(lines('platform/core/src/money.ts')).toEqual([]);
+    for (const path of ['platform/core/api.md', 'platform/core/package.json', 'platform/NOTES']) {
+      expect(lines(path), path).toEqual([
+        '«kitchen» is a word of the gastronomy and has no place in the platform',
+        '«randen» is a word of a product (name of an edition or app) and has no place in the platform',
+      ]);
+    }
+  });
+
   it('reads a line that only looks like a provenance header', () => {
     const lines = [
       '// Origin: Randen packages/core/src/money.ts',

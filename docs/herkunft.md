@@ -16,8 +16,8 @@ Die Plattform ist aus der Ausgabe für die Gastronomie herausgelöst (`BanioX/Ra
   «unchanged» steht nur, wenn der Rest der Datei Zeichen für Zeichen der Quelle entspricht. Sind nur die Importpfade anders, heisst es «adapted: import paths».
 - **Kein Vermerk für Neues.** Eine Datei, die neu geschrieben ist und die Quelle nur als Muster nimmt, trägt keinen Vermerk.
 - **Tabelle 1 wird erzeugt.** `node tools/provenance.mjs` liest die Vermerke aller Quelldateien und schreibt die Tabelle zwischen den beiden Markierungen neu, sortiert nach Datei. Niemand ändert sie von Hand.
-- **Tabelle 2 wird von Hand geführt.** Sie nennt übernommene Dateien, die keinen Vermerk tragen können (JSON, YAML, Dateien mit Punkt am Anfang), und Konfiguration, die nach dem Muster der Quelle eingerichtet ist. Ein `*` im Pfad steht für einen Teil des Pfads, also für «dieselbe Datei in jedem Paket».
-- **Ein Wächter prüft** (`tools/guards/provenance.guard.test.ts`, läuft mit `pnpm guards`): Tabelle 1 ist auf dem Stand der Vermerke, jeder Vermerk hat die verlangte Form und steht am Anfang der Datei, jede Zeile beider Tabellen nennt eine Datei, die es gibt, mit Quelle, Commit und «unverändert» oder «angepasst».
+- **Tabelle 2 wird von Hand geführt.** Sie nennt übernommene Dateien, die keinen Vermerk tragen können (JSON, YAML, Dateien mit Punkt am Anfang), und Konfiguration, die nach dem Muster der Quelle eingerichtet ist. Ein `*` im Pfad steht für einen Teil des Pfads, also für «dieselbe Datei in jedem Paket» (Muster wie in `registry/owners.json`, Regeln in `tools/src/globs.ts`).
+- **Ein Wächter prüft** (`tools/guards/provenance.guard.test.ts`, läuft mit `pnpm guards`): Tabelle 1 ist auf dem Stand der Vermerke, jeder Vermerk hat die verlangte Form und steht am Anfang der Datei, jede Tabelle beginnt mit ihrem Kopf, und jede Zeile beider Tabellen nennt eine Datei, die es gibt, mit Quelle, Commit und «unverändert» oder «angepasst».
 - **Was der Wächter nicht sieht:** ob eine Datei mit «unverändert» der Quelle wirklich entspricht, und ob eine kopierte Datei ohne Vermerk in Tabelle 2 fehlt. Die Quell-Repos gehören nicht zu diesem Repo; das prüft, wer kopiert.
 
 ## 1. Dateien mit Herkunftsvermerk (erzeugt)
@@ -25,12 +25,24 @@ Die Plattform ist aus der Ausgabe für die Gastronomie herausgelöst (`BanioX/Ra
 <!-- provenance:generated:start -->
 | Datei der Suite | Quelle | Commit | Art | Was geändert wurde |
 | --- | --- | --- | --- | --- |
-| `platform/core/src/currency.ts` | BanioX/Randen `packages/core/src/currency.ts` | `e0f0907` | unverändert | – |
-| `platform/core/src/dates.ts` | BanioX/Randen `packages/core/src/dates.ts` | `e0f0907` | angepasst | import path, comments |
-| `platform/core/src/format.ts` | BanioX/Randen `packages/core/src/format.ts` | `e0f0907` | unverändert | – |
-| `platform/core/src/ids.ts` | BanioX/Randen `packages/core/src/ids.ts` | `e0f0907` | unverändert | – |
+| `platform/contract/src/command.ts` | BanioX/Randen `packages/core/src/application/command.ts` | `e0f0907` | angepasst | the kit takes the operation itself instead of a name in a fixed contract; a commandId of another operation or business is refused; the result is checked against the output schema and recorded with its business; error, context and row helper live elsewhere |
+| `platform/contract/src/contract.ts` | BanioX/Randen `packages/core/src/application/command.ts` | `e0f0907` | angepasst | only the types of a use case, as functions of an operation and of any contract |
+| `platform/contract/src/contract.ts` | BanioX/Randen `packages/core/src/contract/index.ts` | `e0f0907` | angepasst | only the types, as functions of any contract instead of the fixed sum |
+| `platform/contract/src/errors.ts` | BanioX/Randen `packages/core/src/application/command.ts` | `e0f0907` | angepasst | only the error of a command; neutral codes of the platform plus namespaced codes of modules and industries, checked at runtime |
+| `platform/contract/src/events.ts` | BanioX/Randen `packages/core/src/contract/events.ts` | `e0f0907` | angepasst | import paths, comments |
+| `platform/contract/src/json-schema.ts` | BanioX/Randen `packages/core/src/contract/index.ts` | `e0f0907` | angepasst | only the JSON Schemas, as a function of any contract instead of the fixed sum; access instead of scopes; a schema JSON cannot carry is named with its operation; the check of the schemas of an operation is new |
+| `platform/contract/src/operation.ts` | BanioX/Randen `packages/core/src/contract/operation.ts` | `e0f0907` | angepasst | access (feature, level, rights) instead of scopes; one technical summary instead of two languages; base fields required by type; name pattern; import paths |
+| `platform/contract/src/ports.ts` | BanioX/Randen `packages/core/src/application/command.ts` | `e0f0907` | angepasst | only the context, narrowed to what a command needs from the storage |
+| `platform/contract/src/ports.ts` | BanioX/Randen `packages/core/src/ports/index.ts` | `e0f0907` | angepasst | only the clock and the id generator; import paths, comments |
+| `platform/contract/src/ports.ts` | BanioX/Randen `packages/core/src/ports/storage.ts` | `e0f0907` | angepasst | only the command log, the event log and the transaction; an entry of the command log carries its business and is read back whole |
+| `platform/contract/test/support.ts` | BanioX/Randen `packages/core/src/ports/memory-storage.ts` | `e0f0907` | angepasst | only the event log, the command log and the transaction, behind the ports of a command; entries by business; counters for the tests |
+| `platform/contract/test/support.ts` | BanioX/Randen `packages/core/src/testing/index.ts` | `e0f0907` | angepasst | the counting ids and the fixed clock as they are; the test context without a business row, a person row and use cases; import paths |
+| `platform/core/src/currency.ts` | BanioX/Randen `packages/core/src/currency.ts` | `e0f0907` | angepasst | an amount with misplaced thousands marks is refused; comments |
+| `platform/core/src/dates.ts` | BanioX/Randen `packages/core/src/dates.ts` | `e0f0907` | angepasst | the years 0 to 99 are no longer counted as 1900 to 1999; import path, comments |
+| `platform/core/src/format.ts` | BanioX/Randen `packages/core/src/format.ts` | `e0f0907` | angepasst | comments |
+| `platform/core/src/ids.ts` | BanioX/Randen `packages/core/src/ids.ts` | `e0f0907` | angepasst | comments |
 | `platform/core/src/money.ts` | BanioX/Randen `packages/core/src/money.ts` | `e0f0907` | angepasst | comments |
-| `platform/core/src/primitives.ts` | BanioX/Randen `packages/core/src/model/primitives.ts` | `e0f0907` | angepasst | closed unit enum, temperature, date kind and photo left out; three-decimals rule shared with the arithmetic and exact for large quantities; import paths, comments |
+| `platform/core/src/primitives.ts` | BanioX/Randen `packages/core/src/model/primitives.ts` | `e0f0907` | angepasst | closed unit enum, temperature, date kind and photo left out; three-decimals rule shared with the arithmetic and exact for large quantities; zero stored without a sign; import paths, comments |
 | `platform/core/src/quantities.ts` | BanioX/Randen `packages/core/src/domain/units.ts` | `e0f0907` | angepasst | generalised over the unit register; exact whole-number arithmetic with one rounding; temperature, the decilitre style and the words of a language left out |
 | `platform/core/test/currency.test.ts` | BanioX/Randen `packages/core/test/currency.test.ts` | `e0f0907` | unverändert | – |
 | `platform/core/test/dates.test.ts` | BanioX/Randen `packages/core/test/dates.test.ts` | `e0f0907` | unverändert | – |
@@ -64,6 +76,7 @@ Stand der Quelle: `BanioX/Randen` bei Commit `e0f0907`, verglichen am 24.11.2026
 | `pnpm-workspace.yaml` | BanioX/Randen `pnpm-workspace.yaml` | `e0f0907` | angepasst | Pakete `platform/*` und `tools` statt `apps/*` und `packages/*` |
 | `eslint.config.js` | BanioX/Randen `eslint.config.js` | `e0f0907` | angepasst | Schichten der Plattform und Importgrenzen je Paket; Regeln für `tools/`; ohne die Regeln der Web-App |
 | `vitest.config.ts` | BanioX/Randen `vitest.config.ts` | `e0f0907` | angepasst | Projekte `platform/*` und `tools`; Abdeckung für jedes Paket der Plattform; ohne die Ausnahmen der Web-App |
+| `.github/workflows/ci.yml` | BanioX/Randen `.github/workflows/ci.yml` | `e0f0907` | angepasst | ein Job mit `pnpm check` statt einzelner Schritte; bei Pull Requests nur das Betroffene; ganze Geschichte für den Vergleich und das Pfad-Eigentum; ohne Artefakte und ohne E2E |
 | `platform/*/tsconfig.json` | BanioX/Randen `packages/core/tsconfig.json` | `e0f0907` | angepasst | Node-Typen für die Tests |
 | `platform/*/tsconfig.src.json` | BanioX/Randen `packages/core/tsconfig.src.json` | `e0f0907` | unverändert | – |
 | `platform/*/vitest.config.ts` | BanioX/Randen `packages/core/vitest.config.ts` | `e0f0907` | angepasst | Name des Projekts je Paket |

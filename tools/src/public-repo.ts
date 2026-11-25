@@ -1,5 +1,6 @@
 // Origin: BanioX/Rettich apps/web/src/private-ideas.test.ts @ 0ac1fd2 — adapted: the check of names as a function over given files that reports place and hash, never the word; the check of prices is new
 import { createHash } from 'node:crypto';
+import { escapeRegExp } from './globs.ts';
 import { linesOf, type Problem, type RepoFile } from './repo-files.ts';
 import { FORBIDDEN_FIRST_WORDS, FORBIDDEN_NAMES } from './words/forbidden-names.ts';
 import { PRICE_RULES, PRICE_WINDOW, type PriceRuleData } from './words/prices.ts';
@@ -172,10 +173,6 @@ const AMOUNT = new RegExp(
   'giu',
 );
 
-function escaped(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
-}
-
 /**
  * A pattern for «one of these words or phrases»: whole words, any case, a space standing for
  * any white space. An entry that starts or ends with a sign (`/monat`) is not held to a word
@@ -185,7 +182,7 @@ function anyOf(words: readonly string[]): RegExp {
   const alternatives = words.map((word) => {
     const start = /^[\p{L}\p{N}]/u.test(word) ? '(?<![\\p{L}\\p{N}])' : '';
     const end = /[\p{L}\p{N}]$/u.test(word) ? '(?![\\p{L}\\p{N}])' : '';
-    return `${start}${word.split(' ').map(escaped).join('\\s+')}${end}`;
+    return `${start}${word.split(' ').map(escapeRegExp).join('\\s+')}${end}`;
   });
   return new RegExp(alternatives.join('|'), 'iu');
 }

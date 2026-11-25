@@ -1,4 +1,4 @@
-import { isOriginHeader } from './provenance.ts';
+import { canCarryHeader, isOriginHeader } from './provenance.ts';
 import { linesOf, type Problem, type RepoFile } from './repo-files.ts';
 import { PLATFORM_WORD_LISTS } from './words/platform.ts';
 
@@ -12,7 +12,10 @@ import { PLATFORM_WORD_LISTS } from './words/platform.ts';
  * line of it.
  *
  * The one exception is a line that is exactly a provenance header (`// Origin: BanioX/<Repo>
- * <path> @ <commit> — …`): it must name where a file comes from.
+ * <path> @ <commit> — …`) in a file that can carry one: it must name where a file comes from.
+ * The provenance guard reads the same files and holds every such line to the start of its file,
+ * so the exception is the few lines at the top of a copied source file and nothing else. What
+ * stands after «adapted:» there is free text and stays with the review.
  *
  * What this cannot see: a word of a trade that is not on a list, a compound whose fragment is
  * not listed («Tagesgericht»), and an idea of a trade behind a neutral word (a field `lot` that
@@ -81,7 +84,8 @@ export function wordHits(
 /**
  * Every word of an industry and every product name in the given files (the files of
  * `platform/`), by line. Line 0 is the path of the file. Lines that are exactly a provenance
- * header are not read.
+ * header are not read, in the files that can carry one (source files); in a document or a JSON
+ * file the same line is read like any other.
  */
 export function platformWordProblems(
   files: readonly RepoFile[],
@@ -94,10 +98,13 @@ export function platformWordProblems(
       line,
       message: `«${hit.word}» is a word of ${label.get(hit.list) ?? hit.list} and has no place in the platform`,
     }));
-  return files.flatMap((file) => [
-    ...problems(file.path, 0, file.path),
-    ...linesOf(file.text).flatMap((line, index) =>
-      isOriginHeader(line) ? [] : problems(file.path, index + 1, line),
-    ),
-  ]);
+  return files.flatMap((file) => {
+    const carriesHeaders = canCarryHeader(file.path);
+    return [
+      ...problems(file.path, 0, file.path),
+      ...linesOf(file.text).flatMap((line, index) =>
+        carriesHeaders && isOriginHeader(line) ? [] : problems(file.path, index + 1, line),
+      ),
+    ];
+  });
 }

@@ -1,4 +1,5 @@
-import { linesOf, type Problem, type RepoFile } from './repo-files.ts';
+import { compileGlob, globProblems } from './globs.ts';
+import { byCodeUnit, linesOf, type Problem, type RepoFile } from './repo-files.ts';
 
 /**
  * Provenance (Herkunft): where the copied files of the suite come from.
@@ -12,8 +13,9 @@ import { linesOf, type Problem, type RepoFile } from './repo-files.ts';
  * `docs/herkunft.md` holds two tables: one generated from these lines (`node
  * tools/provenance.mjs` rewrites it between two marker comments) and one kept by hand for copied
  * files that cannot carry such a line (JSON and dot files) or were set up after a pattern. The
- * guard fails when the generated table is out of date, a header is malformed or misplaced, a row
- * names a file that does not exist, or a row does not say «unchanged» or «adapted».
+ * guard fails when the generated table is out of date, a header is malformed or misplaced, a
+ * table does not start with its head, a row names a file that does not exist, or a row does not
+ * say «unchanged» or «adapted».
  *
  * What this cannot check: that a file marked «unchanged» really equals its source, and that a
  * copied file without a header is listed at all. The source repositories are not part of this
@@ -81,10 +83,6 @@ export function isOriginHeader(line: string): boolean {
 /** True if a file of this name can carry a provenance header. */
 export function canCarryHeader(path: string): boolean {
   return SOURCE_FILE.test(path);
-}
-
-function byCodeUnit(a: string, b: string): number {
-  return a < b ? -1 : a > b ? 1 : 0;
 }
 
 /**
@@ -156,10 +154,8 @@ export function provenanceRows(files: readonly RepoFile[]): {
 // --- The document ---
 
 const KIND_LABEL = { unchanged: 'unverändert', adapted: 'angepasst' } as const;
-const TABLE_HEAD = [
-  '| Datei der Suite | Quelle | Commit | Art | Was geändert wurde |',
-  '| --- | --- | --- | --- | --- |',
-];
+const TABLE_TITLES = '| Datei der Suite | Quelle | Commit | Art | Was geändert wurde |';
+const TABLE_HEAD = [TABLE_TITLES, '| --- | --- | --- | --- | --- |'];
 const NO_ROWS = '_Noch trägt keine Datei einen Herkunftsvermerk._';
 
 /** A text as the content of a table cell. */
@@ -212,25 +208,17 @@ export function updateGenerated(document: string, rows: readonly ProvenanceRow[]
   ].join('\n');
 }
 
-/** The files of the repository a path of a table names; `*` stands for one part of a path. */
-function matching(pattern: string, paths: readonly string[]): string[] {
-  const source = pattern
-    .split('*')
-    .map((part) => part.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&'))
-    .join('[^/]+');
-  const matcher = new RegExp(`^${source}$`, 'u');
-  return paths.filter((path) => matcher.test(path));
-}
-
 const CODE = /^`([^`]+)`$/;
 const SOURCE_CELL = /^BanioX\/[A-Za-z0-9][A-Za-z0-9._-]* `[^`]+`$/;
 const COMMIT_CELL = /^`[0-9a-f]{7,40}`$/;
 
 /**
- * The problems of the rows of one table of the document: every row names a file of the suite
- * that exists (a `*` stands for one part of a path, for «the same file in every package»), a
- * source, a commit and «unverändert» or «angepasst» with what was changed. In the table kept by
- * hand, a file that carries its own header is a problem too: it belongs to the generated table.
+ * The problems of one table of the document. The table starts with its head, so that no row is
+ * taken for a head and passed over. Every row names a file of the suite that exists (a path as
+ * in tools/src/globs.ts: a `*` stands for one part of a path, for «the same file in every
+ * package»), a source, a commit and «unverändert» or «angepasst» with what was changed. In the
+ * table kept by hand, a file that carries its own header is a problem too: it belongs to the
+ * generated table.
  */
 function rowProblems(
   lines: readonly string[],
@@ -238,12 +226,24 @@ function rowProblems(
   paths: readonly string[],
   withHeader: ReadonlySet<string>,
 ): Problem[] {
-  return lines
+  const table = lines
     .map((line, index) => ({ text: line.trim(), line: index + 1 }))
     .slice(block.from + 1, block.to)
-    .filter((row) => row.text.startsWith('|'))
-    .slice(TABLE_HEAD.length)
-    .flatMap(({ text, line }) => {
+    .filter((row) => row.text.startsWith('|'));
+  const [first] = table;
+  if (first === undefined) {
+    return [];
+  }
+  const headed = TABLE_HEAD.every((head, index) => table[index]?.text === head);
+  const problem = (line: number, message: string): Problem => ({
+    path: PROVENANCE_DOCUMENT,
+    line,
+    message,
+  });
+  return [
+    // Without its head, every line of the table is read as a row: nothing is skipped unseen.
+    ...(headed ? [] : [problem(first.line, `the table starts with its head: ${TABLE_TITLES}`)]),
+    ...table.slice(headed ? TABLE_HEAD.length : 0).flatMap(({ text, line }) => {
       const cells = text
         .replace(/^\||\|$/g, '')
         .split(/(?<!\\)\|/)
@@ -251,15 +251,14 @@ function rowProblems(
       const [file, source, commit, kind, what] = cells;
       const pattern = CODE.exec(file ?? '')?.[1];
       if (cells.length !== 5 || pattern === undefined) {
-        return [
-          {
-            path: PROVENANCE_DOCUMENT,
-            line,
-            message: 'a row has five cells, the first a path in backticks',
-          },
-        ];
+        return [problem(line, 'a row has five cells, the first a path in backticks')];
       }
-      const found = matching(pattern, paths);
+      const flaws = globProblems(pattern);
+      if (flaws.length > 0) {
+        return [problem(line, `the path «${pattern}» ${flaws.join('; ')}`)];
+      }
+      const names = compileGlob(pattern);
+      const found = paths.filter((path) => names.matches(path));
       return [
         ...(found.length === 0 ? [`names a file that does not exist: ${pattern}`] : []),
         ...found
@@ -277,8 +276,9 @@ function rowProblems(
         ...(kind === KIND_LABEL.adapted && (what === undefined || what === '' || what === '–')
           ? [`${pattern}: an adapted file says what was changed`]
           : []),
-      ].map((message) => ({ path: PROVENANCE_DOCUMENT, line, message }));
-    });
+      ].map((message) => problem(line, message));
+    }),
+  ];
 }
 
 /** What the provenance guard looks at. */

@@ -443,6 +443,48 @@ describe('provenanceProblems', () => {
     ]);
   });
 
+  it('reads every line of a table without its head as a row, and reports the missing head', () => {
+    // Before, the first two lines of a table were passed over as its head, whatever they said.
+    const rows = [
+      '| `.nvmrc` | BanioX/Randen `.nvmrc` | `e0f0907` | unverändert | – |',
+      '| `package.json` | BanioX/Randen `package.json` | `e0f0907` | kopiert | – |',
+      ...MANUAL,
+    ];
+    const headless = upToDate(rows)
+      .split('\n')
+      .filter((line, index, lines) => {
+        const start = lines.indexOf(MANUAL_START);
+        return index <= start || index > start + HEAD.length;
+      })
+      .join('\n');
+    const firstLine = headless.split('\n').indexOf(MANUAL_START) + 2;
+    expect(messages(headless)).toEqual([
+      `docs/herkunft.md:${firstLine}: the table starts with its head: ${HEAD[0]}`,
+      `docs/herkunft.md:${firstLine}: names a file that does not exist: .nvmrc`,
+      `docs/herkunft.md:${firstLine + 1}: package.json: says neither «unverändert» nor «angepasst»`,
+    ]);
+  });
+
+  it('has nothing to say about a table kept by hand that is still empty', () => {
+    const empty = upToDate([])
+      .split('\n')
+      .filter((line, index, lines) => index < lines.indexOf(MANUAL_START) || !HEAD.includes(line))
+      .join('\n');
+    expect(empty).toContain(`${MANUAL_START}\n${MANUAL_END}`);
+    expect(messages(empty)).toEqual([]);
+  });
+
+  it('reports a path written in a way the patterns of the tools do not know', () => {
+    const rows = [
+      '| `platform/{core,storage}/tsconfig.json` | BanioX/Randen `a.json` | `e0f0907` | unverändert | – |',
+      '| `/package.json` | BanioX/Randen `package.json` | `e0f0907` | unverändert | – |',
+    ];
+    expect(messages(upToDate(rows))).toEqual([
+      `docs/herkunft.md:${firstManualLine}: the path «platform/{core,storage}/tsconfig.json» uses «{», which this matcher does not understand (only «*» and «**»)`,
+      `docs/herkunft.md:${firstManualLine + 1}: the path «/package.json» starts with a slash: a pattern is a path from the root of the repository`,
+    ]);
+  });
+
   it('reads an escaped bar as part of a cell', () => {
     const row =
       '| `package.json` | BanioX/Randen `package.json` | `e0f0907` | angepasst | a \\| b |';

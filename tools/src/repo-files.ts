@@ -63,7 +63,7 @@ const SKIPPED_SUFFIXES = ['.tsbuildinfo'];
 const SNIFFED_BYTES = 8000;
 
 /** Plain comparison by code unit: the same order on every machine, whatever its language. */
-function byCodeUnit(a: string, b: string): number {
+export function byCodeUnit(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
 }
 

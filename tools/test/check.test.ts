@@ -14,6 +14,7 @@ import { delimiter, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { STEPS } from '../src/affected.ts';
+import { fixtureGit as git } from './git-fixture.ts';
 
 // The runner is tested as it is used: `node tools/check.mjs` in a made-up repository in a
 // temporary directory, never against this repository. Some tests let the real pnpm run made-up
@@ -69,8 +70,10 @@ function fixture(scripts: Record<string, string>): string {
     }),
   );
   mkdirSync(join(root, 'tools/src'), { recursive: true });
-  copyFileSync(join(TOOLS, 'check.mjs'), join(root, 'tools/check.mjs'));
-  copyFileSync(join(TOOLS, 'src/affected.ts'), join(root, 'tools/src/affected.ts'));
+  // The runner and what it imports, file by file: a new import must be added here on purpose.
+  for (const file of ['check.mjs', 'src/affected.ts', 'src/git.ts', 'src/globs.ts']) {
+    copyFileSync(join(TOOLS, file), join(root, 'tools', file));
+  }
   return root;
 }
 
@@ -256,28 +259,6 @@ describe.skipIf(!posix)('pnpm check: a step that cannot run', () => {
     expect(outcome.asked).toEqual([]);
   });
 });
-
-/** A git repository with made-up authorship, independent of the configuration of the machine. */
-function git(root: string, ...args: string[]): void {
-  const result = spawnSync(
-    'git',
-    [
-      '-c',
-      'user.name=Person Eins',
-      '-c',
-      'user.email=person.eins@example.invalid',
-      '-c',
-      'commit.gpgsign=false',
-      '-c',
-      'core.hooksPath=/dev/null',
-      ...args,
-    ],
-    { cwd: root, encoding: 'utf8' },
-  );
-  if (result.status !== 0) {
-    throw new Error(`git ${args.join(' ')} failed: ${result.stderr}`);
-  }
-}
 
 /** The fixture as a workspace under git: base ← top ← tools, and a package on its own. */
 function repository(): string {

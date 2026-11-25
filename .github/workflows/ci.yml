@@ -15,8 +15,12 @@ on:
 permissions:
   contents: read
 
+# A newer push to a pull request replaces the run before it: only the last state counts there.
+# A push to main is never cancelled and never waits behind another one (its group is its own
+# run): the ownership guard reads exactly the commits of one push, from the commit before it to
+# its head, so a run that is cancelled would leave its commits unread for good.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
   cancel-in-progress: true
 
 jobs:
@@ -51,7 +55,8 @@ jobs:
       #   skip lint, typecheck, tests and build; a change inside some packages checks those and
       #   every package that depends on them; anything else checks everything.
       # - Push to main and manual run: everything.
-      # OWNERSHIP_BASE tells the ownership guard from which commit on to read the commits.
+      # OWNERSHIP_BASE tells the ownership guard from which commit on to read the commits; here
+      # on the CI the guard fails without it (tools/src/ownership.ts, tools/test/agreement.test.ts).
       # Branch names and commit ids reach the shell through `env`, never through an expression
       # inside `run`: a name is data, not a piece of the script.
       - name: Check

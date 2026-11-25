@@ -160,6 +160,15 @@ describe('strongCopyleft', () => {
     expect(strongCopyleft(licence)).toBe(true);
   });
 
+  // A package.json may hold anything as its licence. These are not SPDX, and they are the ways
+  // the GNU licences are written most often: none of them may pass as «not strong copyleft».
+  it.each(['GPLv3', 'GPL3', 'GPLv2+', 'gplv3', 'AGPLv3', 'LGPLv3', 'LGPLv2.1', 'GPL'])(
+    'finds %s, a short name with its version written the old way',
+    (licence) => {
+      expect(strongCopyleft(licence)).toBe(true);
+    },
+  );
+
   it.each(['MIT', 'MPL-2.0', 'CC-BY-4.0', 'Python-2.0', 'Unknown', 'GPLX-1.0', 'OSLO-1.0', ''])(
     'leaves «%s» alone',
     (licence) => {
@@ -186,6 +195,10 @@ describe('strongCopyleft', () => {
 
   it('judges text that is not an expression by the families it mentions', () => {
     expect(strongCopyleft('GNU GPL version 3')).toBe(true);
+    expect(strongCopyleft('GNU General Public License v3 or later')).toBe(true);
+    expect(strongCopyleft('GNU Affero General Public Licence')).toBe(true);
+    expect(strongCopyleft('GNU Lesser General Public License')).toBe(true);
+    expect(strongCopyleft('Mozilla Public License 2.0')).toBe(false);
     expect(strongCopyleft('MIT OR')).toBe(false);
     expect(strongCopyleft('GPL-3.0-only OR')).toBe(true);
     expect(strongCopyleft('SEE LICENSE IN LICENSE.md')).toBe(false);
@@ -228,6 +241,22 @@ describe('licenceProblems', () => {
         all: { ...CLEAN_TOOLING, 'AGPL-3.0-or-later': [{ name: 'copyleft-tool-sample' }] },
       }),
     ).toEqual(['tooling  AGPL-3.0-or-later: copyleft-tool-sample']);
+  });
+
+  it('reports copyleft tooling whose licence is not written as SPDX', () => {
+    expect(
+      licenceProblems({
+        runtime: CLEAN_RUNTIME,
+        all: {
+          ...CLEAN_TOOLING,
+          GPLv3: [{ name: 'old-style-sample' }],
+          'GNU General Public License v2': [{ name: 'long-name-sample' }],
+        },
+      }),
+    ).toEqual([
+      'tooling  GPLv3: old-style-sample',
+      'tooling  GNU General Public License v2: long-name-sample',
+    ]);
   });
 
   it('allows weak copyleft for tooling, but not in what ships', () => {

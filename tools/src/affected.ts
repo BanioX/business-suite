@@ -1,11 +1,13 @@
 // `pnpm check --affected=<git ref>`: which steps a change needs (order W0-01, step 9).
 //
 // The decision is a pure function: changed paths + workspace graph → plan (`planCheck`). Reading
-// the workspace and git from disk sits at the end of this file; running the plan is the job of
-// tools/check.mjs. Node runs this file as it is (type stripping), so it uses erasable syntax only.
-import { spawnSync } from 'node:child_process';
+// the workspace from disk and the changed paths from git (through tools/src/git.ts) sits at the
+// end of this file; running the plan is the job of tools/check.mjs. Node runs this file as it is
+// (type stripping), so it uses erasable syntax only.
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { git, pathList, resolveCommit } from './git.ts';
+import { escapeRegExp } from './globs.ts';
 
 /** The steps of `pnpm check`, cheap ones first. Each is a script of the root package.json. */
 export const STEPS = [
@@ -342,10 +344,6 @@ export function workspacePatterns(yaml: string): string[] {
   return entries;
 }
 
-function escapeRegExp(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
 /** The directories below `at` that one segment of a pattern matches (`*` stands for any characters). */
 function matching(root: string, at: string, segment: string): string[] {
   const shape = new RegExp(`^${segment.split('*').map(escapeRegExp).join('.*')}$`);
@@ -388,24 +386,6 @@ export function readWorkspace(root: string): WorkspacePackage[] {
 
 // --- Git -----------------------------------------------------------------------------------
 
-/** Runs git in `root`; the output on success, `undefined` when git answers with an error. */
-function git(root: string, args: readonly string[]): string | undefined {
-  const result = spawnSync('git', args, {
-    cwd: root,
-    encoding: 'utf8',
-    maxBuffer: 256 * 1024 * 1024,
-  });
-  if (result.error !== undefined) {
-    throw new Error(`could not start git: ${result.error.message}`);
-  }
-  return result.status === 0 ? result.stdout : undefined;
-}
-
-/** Paths as git prints them with `-z`: separated by NUL, never quoted. */
-function pathList(output: string): string[] {
-  return output.split('\0').filter((path) => path !== '');
-}
-
 export interface ChangedPaths {
   /** The commit the working tree was compared with: the merge base of the ref and HEAD. */
   readonly base: string;
@@ -418,44 +398,37 @@ export interface ChangedPaths {
  * request would bring, plus what is not committed yet. A moved file counts with both names, a
  * deleted one with its old name, so the package that lost a file is checked too.
  *
- * Throws when the comparison is not possible (no repository, unknown ref, no common history as
- * in a shallow clone): the caller must fail then, not guess.
+ * Throws when the comparison is not possible (no git, no repository, unknown ref, no common
+ * history as in a shallow clone): the caller must fail then, not guess.
  */
 export function changedPaths(root: string, ref: string): ChangedPaths {
-  // `--end-of-options`: a ref that starts with a dash is a name, never an option of git.
-  const target = git(root, [
-    'rev-parse',
-    '--verify',
-    '--quiet',
-    '--end-of-options',
-    `${ref}^{commit}`,
-  ]);
+  const target = resolveCommit(root, ref);
   if (target === undefined) {
     throw new Error(
-      `«${ref}» is not a commit in this clone (no git repository, a typo, or a branch that was not fetched)`,
+      `«${ref}» is not a commit in this clone (no git, no git repository, a typo, or a branch that was not fetched)`,
     );
   }
-  const base = git(root, ['merge-base', target.trim(), 'HEAD']);
-  if (base === undefined) {
+  let base: string;
+  try {
+    base = git(root, ['merge-base', target, 'HEAD']).trim();
+  } catch {
     throw new Error(
       `«${ref}» and HEAD have no common commit in this clone (a shallow clone? fetch the full history)`,
     );
   }
+  // Both throw when git fails: a list that could not be read is never an empty list.
   const tracked = git(root, [
     'diff',
     '--name-only',
     '--no-renames',
     '--relative',
     '-z',
-    base.trim(),
+    base,
     '--',
   ]);
   const untracked = git(root, ['ls-files', '--others', '--exclude-standard', '-z']);
-  if (tracked === undefined || untracked === undefined) {
-    throw new Error('git could not list the changed files');
-  }
   return {
-    base: base.trim(),
+    base,
     paths: [...new Set([...pathList(tracked), ...pathList(untracked)])].sort(),
   };
 }

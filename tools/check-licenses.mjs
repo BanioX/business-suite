@@ -25,7 +25,14 @@ const PERMISSIVE = new Set(
     'OFL-1.1',
   ].map((id) => id.toLowerCase()),
 );
-const STRONG_COPYLEFT = /\b(A?GPL|LGPL|SSPL|EUPL|OSL|CPAL)\b/i;
+/**
+ * The families of strong copyleft: by their short name, and the GNU licences also by their long
+ * one. A package.json may hold anything as its licence, not only SPDX: «GPLv3», «GPL3» and «GNU
+ * General Public License v3» are found like «GPL-3.0-only». A short name ends at a word border or
+ * at its version («v3», «3»), so «GPLX-1.0» is no member of the family.
+ */
+const STRONG_COPYLEFT =
+  /\b(?:A?GPL|LGPL|SSPL|EUPL|OSL|CPAL)(?:\b|v?\d)|\bgeneral public licen[cs]e\b/i;
 
 /** The operators of an SPDX expression; the standard allows them in upper or in lower case. */
 const OPERATOR = new Map([

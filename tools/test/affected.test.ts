@@ -1,9 +1,8 @@
-import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   STEPS,
   changedPaths,
@@ -17,6 +16,7 @@ import {
   workspacePatterns,
 } from '../src/affected.ts';
 import type { CheckPlan, PlannedStep, WorkspacePackage } from '../src/affected.ts';
+import { fixtureGit as git } from './git-fixture.ts';
 
 /** A made-up workspace: base ← middle ← top, a package on its own, and the tools on top of all. */
 function pkg(name: string, dir: string, dependsOn: string[] = []): WorkspacePackage {
@@ -524,29 +524,6 @@ describe('readWorkspace', () => {
   });
 });
 
-/** A git repository with made-up authorship, independent of the configuration of the machine. */
-function git(root: string, ...args: string[]): string {
-  const result = spawnSync(
-    'git',
-    [
-      '-c',
-      'user.name=Person Eins',
-      '-c',
-      'user.email=person.eins@example.invalid',
-      '-c',
-      'commit.gpgsign=false',
-      '-c',
-      'core.hooksPath=/dev/null',
-      ...args,
-    ],
-    { cwd: root, encoding: 'utf8' },
-  );
-  if (result.status !== 0) {
-    throw new Error(`git ${args.join(' ')} failed: ${result.stderr}`);
-  }
-  return result.stdout.trim();
-}
-
 function repository(): string {
   const root = temporaryDirectory();
   git(root, 'init', '--quiet', '--initial-branch=main');
@@ -641,6 +618,32 @@ describe('changedPaths', () => {
     expect(() => changedPaths(temporaryDirectory(), 'main')).toThrow(
       '«main» is not a commit in this clone',
     );
+  });
+
+  it('fails where git cannot be started: a missing tool is not «nothing changed»', () => {
+    const root = repository();
+    vi.stubEnv('PATH', temporaryDirectory());
+    try {
+      expect(() => changedPaths(root, 'main')).toThrow(
+        '«main» is not a commit in this clone (no git,',
+      );
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it('reads the repository of its directory, whatever a hook exported', () => {
+    const root = repository();
+    const other = repository();
+    write(other, 'platform/top/src/elsewhere.ts', 'export const elsewhere = 1;\n');
+    write(root, 'docs/plan.md', 'a better plan\n');
+    vi.stubEnv('GIT_DIR', join(other, '.git'));
+    vi.stubEnv('GIT_WORK_TREE', other);
+    try {
+      expect(changedPaths(root, 'main').paths).toEqual(['docs/plan.md']);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it('fails when the ref and HEAD share no history', () => {

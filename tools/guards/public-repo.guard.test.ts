@@ -17,6 +17,9 @@ describe('the public repository (ADR-0011)', () => {
     expect(paths).toContain('CLAUDE.md');
     expect(paths).toContain('docs/adr/0011-oeffentliches-repo.md');
     expect(paths).toContain('tools/src/words/forbidden-names.ts');
+    // Dot files and dot directories are part of the repository like everything else.
+    expect(paths).toContain('.github/workflows/ci.yml');
+    expect(paths).toContain('.gitignore');
     expect(paths.filter((path) => path.includes('node_modules/'))).toEqual([]);
   });
 
