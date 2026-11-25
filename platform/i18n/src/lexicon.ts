@@ -91,7 +91,8 @@ export function lexiconProblems(input: LexiconInput): LexiconProblem[] {
     term: string,
     message: string,
     language?: string,
-  ) => problems.push({ code, from, term, message, ...(language === undefined ? {} : { language }) });
+  ) =>
+    problems.push({ code, from, term, message, ...(language === undefined ? {} : { language }) });
 
   const checkEntries = (from: string, entries: unknown, isBase: boolean) => {
     if (!isRecord(entries)) {
@@ -116,7 +117,13 @@ export function lexiconProblems(input: LexiconInput): LexiconProblem[] {
       }
       for (const [language, forms] of Object.entries(languages)) {
         if (!isLanguageTag(language)) {
-          report('invalid_language', from, term, `${JSON.stringify(language)} is no language tag.`, language);
+          report(
+            'invalid_language',
+            from,
+            term,
+            `${JSON.stringify(language)} is no language tag.`,
+            language,
+          );
         } else if (!isRecord(forms) || !isFilled(forms.one) || !isFilled(forms.many)) {
           report(
             'invalid_forms',
