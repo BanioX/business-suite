@@ -36,7 +36,7 @@ describe('ProfileSchema', () => {
     ['rights that are no list', custom_({ rights: 'wages' })],
     ['no rights', { type: 'custom', levels: {} }],
     ['no levels', { type: 'custom', rights: [] }],
-    ['an unknown type', { type: 'guest' }],
+    ['an unknown type', { type: 'stranger' }],
     ['no type', {}],
     ['nothing', undefined],
   ])('refuses %s', (_what, value) => {
