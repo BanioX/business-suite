@@ -114,12 +114,15 @@ Optionen:
 
 **Albans Wort, 25.11.2026:** «Also ich erlaube alles sofern zweckdienlich wenn ich ein scalable Business habe investiere ich gerne in server struktur usw. Weisst wie ich meine? Ich bin aktuell einfach noch Indie Entwickler».
 
-**Lesart des Kopfs** (gilt, bis Alban sie korrigiert; die Regel «Freigabe» in `CLAUDE.md` bleibt bis dahin im Wortlaut stehen):
+**Albans Antwort auf die Lesart, 25.11.2026:** «Also du hast mein Ja praktisch zu allem habe aktuell einfach nicht die Möglichkeit die Kosten zu tragen aber so bauen das es geht kann man doch schon im voraus?»
+
+**Lesart des Kopfs.** Die Regel «Freigabe» in `CLAUDE.md` (Arbeitsweise 5) bleibt im Wortlaut stehen; ändern kann sie nur Alban selbst. Bis dahin gilt bei einem Widerspruch die Regel in `CLAUDE.md`.
 
 1. **Zweckdienlich und kostenlos:** wird ohne Rückfrage geplant und gebaut, auch grössere Ergänzungen des Plans. Darum sind S-23 (a) und S-24 (b) jetzt eingeplant: Auftrag [W0-04](auftraege/w0-04-offene-schnittstelle.md), Pakete P-14 bis P-17 in [`plattform.md`](plattform.md).
 2. **Geld:** heute keine laufenden Kosten. Alles wird so gebaut, dass es ohne Server läuft und ein Server später nur eingesteckt wird (Ports für das Modell, das Relais, die Konten). Lohnt sich eine Ausgabe, kommt der Kopf mit Zweck und Betrag; der Betrag steht in Albans privater Ablage, nicht hier.
 3. **Stufe 2** (Server, Konten, Relais, Assistent über einen Dienst) ist gewollt, sobald das Geschäft sie trägt. Sie ist eine Frage des Zeitpunkts, kein Tabu.
 4. **Echte Betriebsdaten** verlassen ein Gerät weiterhin nur mit eigenem ADR, Eintrag im Register der Nebenwirkungen und einer Meldung an Alban vor dem Einschalten. Vor dem ersten Pilot gibt es keine echten Betriebsdaten.
+5. **Im Voraus bauen:** Was später Geld kostet, wird jetzt als Anschluss gebaut und mit Platzhaltern getestet (Modell, Relais, Konten). Code kostet nichts, erst der Betrieb eines Dienstes. Nicht im Voraus beweisbar sind die Güte eines echten Modells bei echter Sprache, das Verhalten unter Last und die Kosten je Betrieb; das zeigt sich erst mit dem Dienst und wird dann gemessen.
 
 ## Vor Welle 2 und 3
 
