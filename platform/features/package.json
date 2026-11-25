@@ -1,0 +1,20 @@
+{
+  "name": "@onestrand/features",
+  "version": "0.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.src.json && tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@onestrand/contract": "workspace:*"
+  },
+  "devDependencies": {
+    "fast-check": "^4.10.2",
+    "zod": "^4.6.7"
+  }
+}

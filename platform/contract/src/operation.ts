@@ -1,4 +1,4 @@
-// Origin: BanioX/Randen packages/core/src/contract/operation.ts @ e0f0907 — adapted: access (feature, level, rights) instead of scopes; one technical summary instead of two languages; base fields required by type; name pattern; import paths
+// Origin: BanioX/Randen packages/core/src/contract/operation.ts @ e0f0907 — adapted: access (feature, level, rights) instead of scopes; one technical summary instead of two languages; base fields required by type; name pattern; feature id pattern; import paths
 import { IdSchema, type Id } from '@onestrand/core';
 import type { z } from 'zod';
 
@@ -29,6 +29,26 @@ export interface OperationAccess {
  * digits only: `customers.create`, `facility.keys.issue`.
  */
 export const OPERATION_NAME_PATTERN = /^[a-z][a-zA-Z0-9]*(?:\.[a-z][a-zA-Z0-9]*){1,3}$/;
+
+/**
+ * The id of a function in the feature register: one or two segments, each lower-case letters,
+ * digits and single underscores starting with a letter, joined by a dot. One segment is a
+ * function of the platform (`customers`, `team_time`); two are a function of an industry, the
+ * first segment being its namespace (`facility.keys`, suite ADR-0004). `@onestrand/features`
+ * builds its register on this form, so `access.feature` and the register cannot drift apart.
+ */
+export const FEATURE_ID_PATTERN =
+  /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*(?:\.[a-z][a-z0-9]*(?:_[a-z0-9]+)*)?$/;
+
+/**
+ * The id of a delicate right: one to three segments, each lower-case letters, digits and single
+ * underscores starting with a letter, joined by dots. One segment is a right of the platform
+ * (`wages`, `export_delete`); more are a right of an industry, the first segment being its
+ * namespace (`facility.access_notes`, `facility.keys.assign`). The register of rights in
+ * `@onestrand/access` builds on this form, so `access.rights` and the register cannot drift apart.
+ */
+export const RIGHT_ID_PATTERN =
+  /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*(?:\.[a-z][a-z0-9]*(?:_[a-z0-9]+)*){0,2}$/;
 
 /**
  * One operation of the contract (suite ADR-0009; ADR-0005 of the origin): a named command or

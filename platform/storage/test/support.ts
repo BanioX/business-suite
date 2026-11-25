@@ -63,6 +63,15 @@ export function fixedClock(day = '2026-11-14'): TestClock {
 /** SHA-256 of the runtime the tests run on. */
 export const hasher = createWebCryptoHasher(globalThis.crypto);
 
+/**
+ * The time limit of a test that derives a key from a password. The key comes from 600 000 rounds
+ * of PBKDF2, on purpose slow: one derivation takes about a quarter of a second on an idle
+ * machine, a test makes up to a dozen of them, and under load (a full run with coverage next to
+ * other work) they take ten times as long. The usual 5 s then ends a correct test. Only the
+ * tests that derive a key carry this limit; every other test keeps the default.
+ */
+export const KEY_DERIVATION_TIMEOUT = 60_000;
+
 /** A note with everything loose reading has to cope with: a record, a list, a list of records. */
 export const NoteSchema = z.object({
   ...syncFields,

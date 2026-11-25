@@ -8,6 +8,7 @@ import {
   WrongPasswordError,
   type EncryptedBackup,
 } from '../src';
+import { KEY_DERIVATION_TIMEOUT } from './support';
 
 const FORMAT = 'sample-encrypted';
 const cipher = createBackupCipher({ crypto: globalThis.crypto, format: FORMAT });
@@ -78,7 +79,7 @@ describe('createBackupCipher', () => {
 });
 
 describe('backup cipher', () => {
-  it('writes the documented envelope', async () => {
+  it('writes the documented envelope', { timeout: KEY_DERIVATION_TIMEOUT }, async () => {
     const text = await cipher.encryptBackup(plain, 'correct horse');
     expect(text.endsWith('}\n')).toBe(true);
     const envelope = JSON.parse(text) as EncryptedBackup;
@@ -97,12 +98,16 @@ describe('backup cipher', () => {
     expect(text).not.toContain(Buffer.from('Zürich').toString('base64'));
   });
 
-  it('gives the same text back after a round trip', async () => {
-    const text = await cipher.encryptBackup(plain, 'correct horse');
-    expect(await cipher.decryptBackup(open(text), 'correct horse')).toBe(plain);
-  });
+  it(
+    'gives the same text back after a round trip',
+    { timeout: KEY_DERIVATION_TIMEOUT },
+    async () => {
+      const text = await cipher.encryptBackup(plain, 'correct horse');
+      expect(await cipher.decryptBackup(open(text), 'correct horse')).toBe(plain);
+    },
+  );
 
-  it('writes what a second implementation opens', async () => {
+  it('writes what a second implementation opens', { timeout: KEY_DERIVATION_TIMEOUT }, async () => {
     const envelope = open(await cipher.encryptBackup(plain, 'pässwörd-日本語'));
     expect(readElsewhere(envelope, 'pässwörd-日本語')).toBe(plain);
   });
@@ -116,19 +121,27 @@ describe('backup cipher', () => {
     );
   });
 
-  it('survives unicode in the data and the password', async () => {
-    const data = '{"name":"Zürcher Strasse 12, Genève, œ ñ 日本語 😀"}';
-    const text = await cipher.encryptBackup(data, 'pässwörd-日本語-😀');
-    expect(await cipher.decryptBackup(open(text), 'pässwörd-日本語-😀')).toBe(data);
-  });
+  it(
+    'survives unicode in the data and the password',
+    { timeout: KEY_DERIVATION_TIMEOUT },
+    async () => {
+      const data = '{"name":"Zürcher Strasse 12, Genève, œ ñ 日本語 😀"}';
+      const text = await cipher.encryptBackup(data, 'pässwörd-日本語-😀');
+      expect(await cipher.decryptBackup(open(text), 'pässwörd-日本語-😀')).toBe(data);
+    },
+  );
 
-  it('opens with the same letters typed composed or decomposed', async () => {
-    const composed = 'pässwörd'.normalize('NFC');
-    const decomposed = 'pässwörd'.normalize('NFD');
-    expect(composed).not.toBe(decomposed);
-    const text = await cipher.encryptBackup(plain, decomposed);
-    expect(await cipher.decryptBackup(open(text), composed)).toBe(plain);
-  });
+  it(
+    'opens with the same letters typed composed or decomposed',
+    { timeout: KEY_DERIVATION_TIMEOUT },
+    async () => {
+      const composed = 'pässwörd'.normalize('NFC');
+      const decomposed = 'pässwörd'.normalize('NFD');
+      expect(composed).not.toBe(decomposed);
+      const text = await cipher.encryptBackup(plain, decomposed);
+      expect(await cipher.decryptBackup(open(text), composed)).toBe(plain);
+    },
+  );
 
   it('gives the text back exactly, a byte order mark at the start included', async () => {
     const data = '\uFEFF{"a":1}';
@@ -136,28 +149,32 @@ describe('backup cipher', () => {
     expect(await cipher.decryptBackup(envelope, 'correct horse')).toBe(data);
   });
 
-  it('survives an empty text and an empty password', async () => {
-    // The form of an app asks for a password of some length; the cipher itself takes any.
-    const empty = open(await cipher.encryptBackup('', 'correct horse'));
-    // Nothing but the 16 bytes of authentication.
-    expect(bytesOf(empty.data)).toHaveLength(16);
-    expect(await cipher.decryptBackup(empty, 'correct horse')).toBe('');
-    await expect(cipher.decryptBackup(empty, 'wrong horse')).rejects.toBeInstanceOf(
-      WrongPasswordError,
-    );
-    const open2 = open(await cipher.encryptBackup(plain, ''));
-    expect(await cipher.decryptBackup(open2, '')).toBe(plain);
-    expect(readElsewhere(open2, '')).toBe(plain);
-    await expect(cipher.decryptBackup(open2, ' ')).rejects.toBeInstanceOf(WrongPasswordError);
-  });
+  it(
+    'survives an empty text and an empty password',
+    { timeout: KEY_DERIVATION_TIMEOUT },
+    async () => {
+      // The form of an app asks for a password of some length; the cipher itself takes any.
+      const empty = open(await cipher.encryptBackup('', 'correct horse'));
+      // Nothing but the 16 bytes of authentication.
+      expect(bytesOf(empty.data)).toHaveLength(16);
+      expect(await cipher.decryptBackup(empty, 'correct horse')).toBe('');
+      await expect(cipher.decryptBackup(empty, 'wrong horse')).rejects.toBeInstanceOf(
+        WrongPasswordError,
+      );
+      const open2 = open(await cipher.encryptBackup(plain, ''));
+      expect(await cipher.decryptBackup(open2, '')).toBe(plain);
+      expect(readElsewhere(open2, '')).toBe(plain);
+      await expect(cipher.decryptBackup(open2, ' ')).rejects.toBeInstanceOf(WrongPasswordError);
+    },
+  );
 
-  it('survives a large backup', async () => {
+  it('survives a large backup', { timeout: KEY_DERIVATION_TIMEOUT }, async () => {
     const big = JSON.stringify({ blob: 'x'.repeat(300_000) });
     const text = await cipher.encryptBackup(big, 'long enough');
     expect(await cipher.decryptBackup(open(text), 'long enough')).toBe(big);
   });
 
-  it('uses a fresh salt and IV every time', async () => {
+  it('uses a fresh salt and IV every time', { timeout: KEY_DERIVATION_TIMEOUT }, async () => {
     const a = open(await cipher.encryptBackup(plain, 'correct horse'));
     const b = open(await cipher.encryptBackup(plain, 'correct horse'));
     expect(a.kdf.salt).not.toBe(b.kdf.salt);
@@ -165,7 +182,7 @@ describe('backup cipher', () => {
     expect(a.data).not.toBe(b.data);
   });
 
-  it('refuses a wrong password', async () => {
+  it('refuses a wrong password', { timeout: KEY_DERIVATION_TIMEOUT }, async () => {
     const envelope = open(await cipher.encryptBackup(plain, 'correct horse'));
     await expect(cipher.decryptBackup(envelope, 'wrong horse')).rejects.toBeInstanceOf(
       WrongPasswordError,

@@ -1,0 +1,9 @@
+{
+  "//": "Purity check of a browser package: src only, with the DOM types (IndexedDB) and no Node types. Which globals the code may reach is decided by eslint.config.js (BROWSER_PACKAGES), not here. Tests and configs are checked via tsconfig.json.",
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM"],
+    "types": []
+  },
+  "include": ["src"]
+}
