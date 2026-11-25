@@ -1,6 +1,6 @@
 # Fahrplan
 
-In welcher Reihenfolge die Suite entsteht, was parallel geht und woran jede Welle gemessen wird. Stand 24.11.2026. Nichts davon ist gebaut. Die Pakete stehen in [`plattform.md`](plattform.md), die Branchen in [`branchen/`](branchen/README.md), die Aufträge zum Weitergeben in [`auftraege/`](auftraege/README.md).
+In welcher Reihenfolge die Suite entsteht, was parallel geht und woran jede Welle gemessen wird. Stand 25.11.2026. Gebaut ist das Fundament (W0-01), alles andere ist Plan. Die Pakete stehen in [`plattform.md`](plattform.md), die Branchen in [`branchen/`](branchen/README.md), die Aufträge zum Weitergeben in [`auftraege/`](auftraege/README.md).
 
 ## Grundsätze der Reihenfolge
 
@@ -34,7 +34,7 @@ W7  ───── Stufe 2 nur nach Albans JA ───────────
 **Ziel:** Ein leeres, grünes Monorepo, in dem eine Branche andocken kann, ohne einen eigenen Kern zu erfinden.
 
 - **W0-00 Kopf (erledigt mit diesem Stand):** Plan, Architektur, ADR-Entwürfe, Steckbriefe aller Branchen, Fakten, Aufträge, Entscheide für Alban.
-- **W0-01 Werkzeuge und Fundament** ([Auftrag](auftraege/w0-01-fundament.md)): pnpm-Monorepo, TypeScript strict, ESLint mit Importgrenzen, Vitest, Vite, Playwright mit axe, `pnpm check` mit `ALL=`, CI, Lizenzprüfung, Wächter für das öffentliche Repo, `LICENSE`; P-01 bis P-05, P-12, P-13 aus Randen herausgelöst (Kopie mit Herkunftsvermerk, Stand des Randen-Commits).
+- **W0-01 Werkzeuge und Fundament** ([Auftrag](auftraege/w0-01-fundament.md)): pnpm-Monorepo, TypeScript strict, ESLint mit Importgrenzen, Vitest, Vite, Playwright mit axe, `pnpm check` mit `ALL=`, CI, Lizenzprüfung, Wächter für das öffentliche Repo, `LICENSE`; P-01 bis P-05, P-12, P-13 aus Randen herausgelöst (Kopie mit Herkunftsvermerk, Stand des Randen-Commits). **Stand 25.11.2026: gebaut**, siehe Abschnitt «Stand» im Auftrag; Vite und Playwright mit axe kommen mit der ersten App in W0-03.
 - **W0-02 Zusammensetzen** ([Auftrag](auftraege/w0-02-zusammensetzen.md)): `defineIndustry`, `defineEdition`, `composeContract`, Hülle für Rechte, P-06 Register, P-07 Sprachen, P-20 Betrieb, IndexedDB aus dem Tabellen-Register mit Schema-Ledger; Referenz-Branche `muster` (rein TS); Generator für neue Branchen.
 - **W0-03 Oberfläche und erste Ausgabe** ([Auftrag](auftraege/w0-03-oberflaeche.md)): P-08 UI-Kit neutral, P-09 Shell mit Arbeitsplätzen je Rolle, P-10 Gerät, P-11 PDF, P-32 Heute; `muster` mit Seiten; Ausgabe «Vor Ort» als leerer Rahmen mit Demo, nur als Vorschau.
 

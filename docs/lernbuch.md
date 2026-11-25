@@ -29,6 +29,8 @@ Was wir aus Fehlern gelernt haben, mit Beleg. Neue Arbeit liest zuerst diese Lis
 | L-S24 | Mutationen von Hand im Arbeitsbaum, während jemand Zwischenstände committet, landen im Commit: ein Zwischenstand enthielt eine absichtlich kaputte Datei | Eine Kopie mutieren oder die Zwischenstände anhalten; nach jeder Mutation prüfen, dass sie zurückgenommen ist |
 | L-S25 | Vitest zeigt `console.log` eines bestandenen Tests in der Umgebung eines Agenten nicht | Was sichtbar sein muss, geht über `process.stdout.write` |
 | L-S26 | Reinheit lässt sich auch zur Laufzeit prüfen: die Globalen der Laufzeit auf `undefined` setzen, den Ablauf fahren, zurücksetzen | Neben der Reinheits-Typprüfung ein Laufzeit-Test je Paket mit Verschlüsselung oder Kodierung |
+| L-S27 | Neue Tests für ein fertiges Paket waren beim ersten Lauf grün. Sechs gezielte Änderungen am geprüften Code zeigten eine Lücke: «ja» ohne Wortgrenze blieb grün, weil der Fall nur für gewöhnliche Zeilen stand, nicht für eine Anfrage an einen Server | Nach neuen Tests einige Regeln im geprüften Code von Hand brechen und rot sehen; was grün bleibt, bekommt seinen Fall |
+| L-S28 | `'reduce' in wert` gilt für jede Liste, weil Listen die Methode erben: ein Test, der damit «ist ein Ledger» fragte, hielt drei Listen von Kennungen für Ledger | Fremde Werte an einem Feld erkennen, das nur die gesuchte Form hat, und den Test einmal rot sehen |
 
 ## Werkzeuge und Wächter
 
@@ -43,6 +45,8 @@ Was wir aus Fehlern gelernt haben, mit Beleg. Neue Arbeit liest zuerst diese Lis
 | L-S36 | `git show` und `git log` hängen von lokalen Einstellungen ab; `git diff --name-only` zeigt bei einer verschobenen Datei nur den neuen Namen | `cat-file`, `diff-tree --no-renames -z`, `rev-list`, `rev-parse`; Tests mit eigenen Repos entfernen `GIT_*` aus der Umgebung |
 | L-S37 | «unchanged» im Herkunftsvermerk friert auch Kommentare ein, die auf ADR-Nummern eines anderen Repos zeigen | Korrigieren kostet das Wort «unchanged» und lohnt sich; Vermerk und Commit sagen weiter genau, woher die Datei kommt |
 | L-S38 | Ein Wächter, der nichts zu prüfen findet, einen Fehler schluckt oder die falschen Dateien liest, meldet grün | Jeder Wächter hat einen Test mit einem erfundenen Verstoss, der rot wird, und einen sauberen Fall, der grün bleibt |
+| L-S39 | Ohne `.gitattributes` holt Git unter Windows jede Textdatei mit CRLF, und `prettier --check` meldet 166 Dateien, obwohl nichts geändert wurde | Zeilenenden im Repo festlegen (`* text=auto eol=lf`); bis dahin vor dem Checkout `core.autocrlf false` setzen |
+| L-S40 | `pnpm` nur über `corepack pnpm …` aufzurufen reicht nicht: Skripte, die selbst `pnpm` starten (`typecheck`, `build`), finden es dann nicht | `corepack enable`, wo nötig mit `--install-directory` in einen Ordner im Pfad |
 
 ## Arbeit mit Agenten
 
