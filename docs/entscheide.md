@@ -70,6 +70,16 @@ Optionen:
 
 **Empfehlung: (a) jetzt, (b) als eigener Entscheid vor dem ersten Pilot.** (a) kostet wenig, weil die Schnittstelle schon alles trägt, und hält die Suite offen für Werkzeuge, ohne dass Daten das Gerät verlassen. (b) ist ein neuer Datenfluss und braucht dein JA mit Wortlaut.
 
+**Nachfrage Albans, 25.11.2026, wörtlich:** «Respektive was davon realistisch ist da ich mich nicht auskenne». Einschätzung des Kopfs:
+
+| Teil | Realistisch? | Begründung |
+| --- | --- | --- |
+| Modular und erweiterbar | ja, ist der Kern des Plans | Plattform, Branchen als Pakete, Register und Steckplätze |
+| Baukasten | ja, fast ohne Mehraufwand | Die Agenten bauen jede Branche ohnehin damit |
+| Kommandozeile | ja, klein | Anlegen und Prüfen einer Branche stehen schon in W0-02; das Lesen einer Sicherungsdatei ist ein kleiner Zusatz |
+| Editor | nur der günstige Teil | Typen, Schemas und `api.md` genügen, solange Agenten bauen; eine eigene Erweiterung für einen Editor bringt wenig |
+| Werkzeug-Schnittstelle für Assistenten | vorbereiten ja, als Funktion für Betriebe noch nicht | Die Daten liegen in der App auf dem Gerät, ein Assistent erreicht sie ohne Server nur über eine Sicherungsdatei; dazu gehen die Daten an den Anbieter des Assistenten. Sinnvoll erst mit Stufe 2 und eigenem Entscheid |
+
 Grenzen, die bleiben: Erweiterungen sind Pakete, die mitgebaut werden, keine Plug-ins, die eine installierte App zur Laufzeit nachlädt (CSP nur `'self'`). Die Suite selbst baut weiterhin keine Anbindungen an Partner; die offene Schnittstelle ist die Tür, durch die ein Betrieb seine eigenen Werkzeuge anschliesst.
 
 **Folgen bei (a):** Der Auftrag W0-02 bekommt einen Schritt «Client und Werkzeug-Definitionen aus der Schnittstelle»; `plattform.md` bekommt ein Paket für Kommandozeile und Werkzeug-Schnittstelle; neue Kennungen ins Namensregister. Das trägt der Kopf nach deinem Wort ein.
