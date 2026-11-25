@@ -84,6 +84,30 @@ Grenzen, die bleiben: Erweiterungen sind Pakete, die mitgebaut werden, keine Plu
 
 **Folgen bei (a):** Der Auftrag W0-02 bekommt einen Schritt «Client und Werkzeug-Definitionen aus der Schnittstelle»; `plattform.md` bekommt ein Paket für Kommandozeile und Werkzeug-Schnittstelle; neue Kennungen ins Namensregister. Das trägt der Kopf nach deinem Wort ein.
 
+### S-24 Sagen statt klicken: ein Assistent in der App [Geld, Datenfluss]
+
+**Albans Bild, 25.11.2026, im Wortlaut gekürzt:** «Stell dir vor diese Leute haben wenig zeit alles durchzuklicken sondern sagen der KI oder sprechen mit ihr oder nehmen ein video auf […] wäre mein produkt mit AI enhanced in der lage, die betriebe zu entlasten […] oder nicht zeit haben alles selber zusammenzuklicken. Ein AI agent kann das in sekunden».
+
+**Was das heisst:** Die Person sagt, tippt oder fotografiert, was war («Rapport Musterweg 12, drei Stunden zu zweit, Fenster, zwei Liter Reiniger»). Ein Assistent macht daraus Befehle der Schnittstelle und zeigt sie als Vorschlag; ein Tipp bestätigt. Er klickt nicht durch die Oberfläche, er ruft dieselben benannten Befehle wie die Oberfläche, mit Schema, Recht und `commandId`. Das ist schneller und prüfbarer als Durchklicken, und dafür ist das Fundament gebaut.
+
+**Grundsätze, die für jeden Weg gelten:**
+
+1. Der Assistent **schlägt vor, die Person bestätigt.** Was Dritte erhalten oder unterschreiben (Rechnung ausstellen, Rapport abschliessen), geschieht nie ohne ausdrückliche Bestätigung.
+2. Er hat **die Rechte der Person**, die ihn nutzt, nie mehr; jede Handlung ist ein gewöhnlicher Befehl mit Ereignis und bleibt im Ledger nachvollziehbar und korrigierbar.
+3. **Heikle Daten** (Löhne, Gesundheit, Zugangshinweise) sieht er nie; er bekommt nur, was die Aufgabe braucht.
+4. Die App bleibt **ohne Assistent voll bedienbar** und klein: im Keller und auf dem Dach gibt es kein Netz. Eine Sprachnotiz darf warten, bis wieder Netz da ist.
+5. Er **beurteilt nie** (Asbest, Lohn, Recht) und sagt, wenn er unsicher ist.
+
+**Die Hürde:** Ein Modell, das Sprache, Text und Bilder zuverlässig in Befehle übersetzt, läuft heute nicht auf dem Gerät in einer installierten Web-App. Es braucht einen Dienst. Das kostet je Nutzung, und Betriebsdaten verlassen das Gerät an den Anbieter des Modells. Beides ändert Grundsätze der Stufe 1.
+
+Optionen:
+
+- (a) **Assistent über einen Dienst von Onestrand** (Stufe 2 vorgezogen): Text, Sprache und Foto; Video später. Braucht einen Server, einen Vertrag mit dem Anbieter (keine Nutzung der Daten zum Trainieren, Region), Einwilligung je Betrieb, eigenes ADR und Einträge im Register der Nebenwirkungen.
+- (b) **Jetzt vorbereiten, ohne Kosten und ohne Datenfluss:** Werkzeug-Definitionen aus der Schnittstelle (S-23), ein Port für das Modell, die Vorschlags-Ansicht als Baustein der Oberfläche, Diktat über die Tastatur des Geräts; der Assistent wird zuerst nur am Demo-Betrieb vorgeführt.
+- (c) Der Betrieb schliesst seinen eigenen Assistenten an (S-23, Option b).
+
+**Empfehlung: (b) jetzt, (a) als Entscheid am Ende von Welle 1,** wenn die erste Branche steht und sich an echten Abläufen zeigen lässt, was der Assistent abnimmt. Was (a) kostet und wie es verrechnet wird, steht nach [ADR-0011](adr/0011-oeffentliches-repo.md) nicht hier, sondern in Albans privater Ablage. (c) ist für Betriebe, die sich auskennen, und kein Ersatz für (a).
+
 ## Vor Welle 2 und 3
 
 ### S-06 Abgleich zwischen Büro und Aussendienst ohne Server [Datenfluss]
