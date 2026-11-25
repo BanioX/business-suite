@@ -35,7 +35,13 @@ function codeOf(work: () => unknown): StorageErrorCode | 'no error' | 'another e
 
 /** A definition as somebody without types would write it: whatever is passed goes through. */
 function loosely(options: Record<string, unknown>): () => unknown {
-  const base = { name: 'probe', schema: NoteSchema, indexes: [], sensitivity: 'normal', sync: 'device' };
+  const base = {
+    name: 'probe',
+    schema: NoteSchema,
+    indexes: [],
+    sensitivity: 'normal',
+    sync: 'device',
+  };
   return () => createTableRegistry([{ ...base, ...options } as unknown as TableDefinition]);
 }
 
@@ -154,7 +160,13 @@ describe('defineTable', () => {
     ['an empty field name', ['']],
     ['the same field twice in one index', [['text', 'text']]],
     ['the same index twice', ['text', 'text']],
-    ['the same compound index twice', [['text', 'id'], ['text', 'id']]],
+    [
+      'the same compound index twice',
+      [
+        ['text', 'id'],
+        ['text', 'id'],
+      ],
+    ],
   ])('refuses indexes with %s', (_what, indexes) => {
     expect(codeOf(loosely({ indexes }))).toBe('invalid_table');
   });
@@ -305,7 +317,13 @@ describe('createTableRegistry', () => {
   it('holds a definition written by hand to the rules of defineTable', () => {
     expect(codeOf(loosely({ name: 'Bad Name' }))).toBe('invalid_table');
     const byHand = createTableRegistry([
-      { name: 'by_hand', schema: NoteSchema, indexes: [], sensitivity: 'normal', sync: 'device' } as unknown as TableDefinition,
+      {
+        name: 'by_hand',
+        schema: NoteSchema,
+        indexes: [],
+        sensitivity: 'normal',
+        sync: 'device',
+      } as unknown as TableDefinition,
     ]);
     // The defaults are filled in for it as well.
     expect(byHand.tables[0]).toMatchObject({ backup: true, appendOnly: false, fields: {} });

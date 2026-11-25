@@ -49,7 +49,9 @@ describe('requireRow', () => {
   it('fails with not_found for an id that does not exist, and names what was asked for', async () => {
     const t = await createTestStorage();
     const id = t.ids.next();
-    const error = await refusal(requireRow(t.storage.table('notes'), t.one.business.id, id, 'Note'));
+    const error = await refusal(
+      requireRow(t.storage.table('notes'), t.one.business.id, id, 'Note'),
+    );
     expect(error.code).toBe('not_found');
     expect(error.message).toBe(`Note ${id} not found`);
   });

@@ -1,5 +1,5 @@
-import type { CommandContext, CommandStorage } from '@onestrand/contract';
-import type { Id } from '@onestrand/core';
+import type { CommandContext, CommandLogEntry, CommandStorage } from '@onestrand/contract';
+import { IdSchema, type Id } from '@onestrand/core';
 import { describe, expectTypeOf, it } from 'vitest';
 import { z } from 'zod';
 import {
@@ -11,9 +11,12 @@ import {
   createWebCryptoHasher,
   defineTable,
   type AnyTableRegistry,
+  type BackupCheck,
   type BackupDocument,
   type BusinessBase,
   type CheckedBackup,
+  type FileMeta,
+  type Hasher,
   type ModuleStorage,
   type RecordStore,
   type Rows,
@@ -39,8 +42,8 @@ import {
 } from './support';
 
 /**
- * Probes of the types: what must compile and what must not. Vitest runs these as no-ops; the
- * typecheck of the package (`tsc -p tsconfig.json`) is what gives them teeth.
+ * The types the next layers build on: what must compile and what must not. Vitest runs these as
+ * no-ops; the typecheck of the package (`tsc -p tsconfig.json`) is what gives them teeth.
  */
 
 const ports = { hasher, clock: fixedClock(), ids: sequentialIds() };
@@ -70,19 +73,48 @@ describe('types of the table register', () => {
   });
 
   it('narrows a name with has', () => {
-    const name: string = 'notes';
-    if (REGISTRY.has(name)) {
-      expectTypeOf(name).toEqualTypeOf<'notes' | 'time_entries' | 'device_settings'>();
-    }
+    const narrowed = (name: string) => {
+      if (REGISTRY.has(name)) {
+        expectTypeOf(name).toEqualTypeOf<'notes' | 'time_entries' | 'device_settings'>();
+      } else {
+        expectTypeOf(name).toEqualTypeOf<string>();
+      }
+    };
+    narrowed('notes');
   });
 
   it('adds the tables of extend to the type', () => {
     const small = createTableRegistry([notesTable]);
     expectTypeOf<TableName<typeof small>>().toEqualTypeOf<'notes'>();
     const extended = small.extend([timeEntriesTable]);
-    expectTypeOf<TableName<typeof extended>>().toEqualTypeOf<'notes' | 'time_entries'>();
+    expectTypeOf(extended.names).toEqualTypeOf<readonly ('notes' | 'time_entries')[]>();
+    expectTypeOf(extended.get('time_entries')).toEqualTypeOf<
+      TableDefinition<'time_entries', TimeEntry>
+    >();
     expectTypeOf<Rows<typeof extended>['time_entries']>().toEqualTypeOf<TimeEntry>();
+    expectTypeOf<Rows<typeof extended>['notes']>().toEqualTypeOf<Note>();
     expectTypeOf<RowsOf<readonly [typeof notesTable]>>().toEqualTypeOf<{ notes: Note }>();
+    typesOnly(() => {
+      // @ts-expect-error a table that was not added
+      extended.get('device_settings');
+    });
+  });
+
+  it('infers the row type from the schema, whatever the schema is made of', () => {
+    const Loose = z.looseObject({ id: IdSchema, businessId: IdSchema, minutes: z.int() });
+    const loose = defineTable({
+      name: 'loose_rows',
+      schema: Loose,
+      indexes: ['minutes'],
+      sensitivity: 'normal',
+      sync: 'device',
+    });
+    expectTypeOf(loose).toEqualTypeOf<TableDefinition<'loose_rows', z.infer<typeof Loose>>>();
+    const registry = createTableRegistry([loose, notesTable]);
+    expectTypeOf(registry.get('loose_rows')).toEqualTypeOf(loose);
+    expectTypeOf<Rows<typeof registry>['loose_rows']['minutes']>().toBeNumber();
+    expectTypeOf<Rows<typeof registry>['loose_rows']['id']>().toEqualTypeOf<Id>();
+    expectTypeOf<Rows<typeof registry>['notes']>().toEqualTypeOf<Note>();
   });
 
   it('is a register of any tables for code that works for every register', () => {
@@ -158,6 +190,38 @@ describe('types of the storage', () => {
     // The business row is part of the type: a storage of one edition is not that of another.
     expectTypeOf(full).not.toExtend<Storage<Registry>>();
     expectTypeOf<FullBusiness>().toExtend<BusinessBase>();
+
+    // The backup of that edition carries the same row, checked with the schema of the edition.
+    const kit = createBackupKit({
+      format: 'sample-backup',
+      version: 1,
+      registry: REGISTRY,
+      hasher,
+      businessSchema: FullBusinessSchema,
+    });
+    expectTypeOf(kit.checkBackup).returns.resolves.toEqualTypeOf<
+      BackupCheck<Registry, FullBusiness>
+    >();
+    expectTypeOf<
+      CheckedBackup<Registry, FullBusiness>['business']['currency']
+    >().toEqualTypeOf<'CHF'>();
+    typesOnly(() => {
+      // @ts-expect-error the storage of an edition with another business row
+      void kit.exportBackup(storage, ports.ids.next(), ports);
+      void kit.exportBackup(full, ports.ids.next(), ports);
+    });
+  });
+
+  it('is what the ports of the storage ask for, and nothing wider', () => {
+    expectTypeOf(storage.files.put).returns.resolves.toEqualTypeOf<FileMeta>();
+    expectTypeOf(storage.files.verify).returns.resolves.toBeBoolean();
+    expectTypeOf(storage.purge).parameter(0).toEqualTypeOf<Id>();
+    expectTypeOf(storage.commands.find).returns.resolves.toEqualTypeOf<
+      CommandLogEntry | undefined
+    >();
+    expectTypeOf(hasher).toEqualTypeOf<Hasher>();
+    // Tables are reached through `table`, never as properties of the storage.
+    expectTypeOf(storage).not.toHaveProperty('notes');
   });
 
   it('does not let a row of one table into another', () => {
@@ -173,12 +237,24 @@ describe('types of the storage', () => {
 
 describe('types of the backup', () => {
   it('carries the register and the business row through the kit', () => {
-    const kit = createBackupKit({ format: 'probe-backup', version: 1, registry: REGISTRY, hasher });
+    const kit = createBackupKit({
+      format: 'sample-backup',
+      version: 1,
+      registry: REGISTRY,
+      hasher,
+    });
     expectTypeOf(kit.exportBackup).returns.resolves.toEqualTypeOf<BackupDocument<Registry>>();
-    expectTypeOf<BackupDocument<Registry>['tables']['notes']>().toEqualTypeOf<
-      Note[] | undefined
+    expectTypeOf<BackupDocument<Registry>['tables']['notes']>().toEqualTypeOf<Note[] | undefined>();
+    expectTypeOf<CheckedBackup<Registry>['business']>().toEqualTypeOf<Readonly<BusinessBase>>();
+    // The rows of a checked backup are lists nobody adds to.
+    expectTypeOf<CheckedBackup<Registry>['tables']['notes']>().toEqualTypeOf<
+      readonly Note[] | undefined
     >();
-    expectTypeOf<CheckedBackup<Registry>['business']>().toEqualTypeOf<BusinessBase>();
+    typesOnly(() => {
+      const backup = null as unknown as CheckedBackup<Registry>;
+      // @ts-expect-error a checked backup is not put together or changed by hand
+      backup.tables = {};
+    });
     expectTypeOf(kit.checkBackup).parameter(0).toBeUnknown();
     typesOnly(() => {
       // @ts-expect-error restoreBackup takes the checked backup, not what was read from a file
@@ -188,7 +264,7 @@ describe('types of the backup', () => {
 
   it('takes WebCrypto of the runtime as it is', () => {
     expectTypeOf(createWebCryptoHasher).toBeCallableWith(globalThis.crypto);
-    const cipher = createBackupCipher({ crypto: globalThis.crypto, format: 'probe-encrypted' });
+    const cipher = createBackupCipher({ crypto: globalThis.crypto, format: 'sample-encrypted' });
     expectTypeOf(cipher.encryptBackup).returns.resolves.toBeString();
   });
 });

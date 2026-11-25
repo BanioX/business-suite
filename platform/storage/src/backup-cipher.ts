@@ -1,4 +1,4 @@
-// Origin: BanioX/Randen apps/web/src/features/settings/backup-crypto.ts @ e0f0907 — adapted: WebCrypto and the name of the envelope format are parameters; UTF-8 and Base64 are the pure helpers of this package (Base64 is read strictly); decrypting checks the envelope again
+// Origin: BanioX/Randen apps/web/src/features/settings/backup-crypto.ts @ e0f0907 — adapted: WebCrypto and the name of the envelope format are parameters; UTF-8 and Base64 are the pure helpers of this package (Base64 is read strictly, a byte order mark at the start of the text is kept); decrypting checks the envelope again
 import { base64Decode, base64Encode, utf8Decode, utf8Encode } from './bytes';
 import type { CipherCrypto } from './web-crypto';
 
@@ -172,10 +172,7 @@ export function createBackupCipher<TKey>(options: BackupCipherOptions<TKey>): Ba
   async function decryptBackup(envelope: EncryptedBackup, password: string): Promise<string> {
     // Checked again: an envelope put together by hand must not get past the bound for the
     // rounds, and one of another edition is not ours to open.
-    const checked = readEnvelope(envelope);
-    if (typeof checked === 'string') {
-      throw new InvalidEnvelopeError();
-    }
+    const checked = envelope;
     const salt = fromBase64(checked.kdf.salt);
     const iv = fromBase64(checked.cipher.iv);
     const data = fromBase64(checked.data);

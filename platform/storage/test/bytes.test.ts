@@ -89,7 +89,14 @@ describe('utf8Encode', () => {
 
 describe('utf8Decode', () => {
   it('reads what utf8Encode wrote', () => {
-    for (const text of ['', 'Betrieb Muster', 'Zürich, Genève, Tromsø', '日本語', 'a😀b', '\u0000']) {
+    for (const text of [
+      '',
+      'Betrieb Muster',
+      'Zürich, Genève, Tromsø',
+      '日本語',
+      'a😀b',
+      '\u0000',
+    ]) {
       expect(utf8Decode(utf8Encode(text))).toBe(text);
     }
   });

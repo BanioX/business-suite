@@ -12,7 +12,10 @@ import {
 const FORMAT = 'sample-encrypted';
 const cipher = createBackupCipher({ crypto: globalThis.crypto, format: FORMAT });
 
-const plain = JSON.stringify({ format: 'sample-backup', items: [{ name: 'Betrieb Muster, Zürich' }] });
+const plain = JSON.stringify({
+  format: 'sample-backup',
+  items: [{ name: 'Betrieb Muster, Zürich' }],
+});
 
 const open = (text: string): EncryptedBackup => {
   const envelope = cipher.readEnvelope(JSON.parse(text));
@@ -25,14 +28,16 @@ const open = (text: string): EncryptedBackup => {
 const bytesOf = (base64: string) => Buffer.from(base64, 'base64');
 
 /** The same envelope written by a second implementation (the crypto module of Node). */
-function writtenElsewhere(
-  data: Uint8Array,
-  password: string,
-  iterations: number,
-): EncryptedBackup {
+function writtenElsewhere(data: Uint8Array, password: string, iterations: number): EncryptedBackup {
   const salt = randomBytes(16);
   const iv = randomBytes(12);
-  const key = pbkdf2Sync(Buffer.from(password.normalize('NFC'), 'utf8'), salt, iterations, 32, 'sha256');
+  const key = pbkdf2Sync(
+    Buffer.from(password.normalize('NFC'), 'utf8'),
+    salt,
+    iterations,
+    32,
+    'sha256',
+  );
   const aes = createCipheriv('aes-256-gcm', key, iv);
   const encrypted = Buffer.concat([aes.update(data), aes.final(), aes.getAuthTag()]);
   return {
@@ -131,6 +136,21 @@ describe('backup cipher', () => {
     expect(await cipher.decryptBackup(envelope, 'correct horse')).toBe(data);
   });
 
+  it('survives an empty text and an empty password', async () => {
+    // The form of an app asks for a password of some length; the cipher itself takes any.
+    const empty = open(await cipher.encryptBackup('', 'correct horse'));
+    // Nothing but the 16 bytes of authentication.
+    expect(bytesOf(empty.data)).toHaveLength(16);
+    expect(await cipher.decryptBackup(empty, 'correct horse')).toBe('');
+    await expect(cipher.decryptBackup(empty, 'wrong horse')).rejects.toBeInstanceOf(
+      WrongPasswordError,
+    );
+    const open2 = open(await cipher.encryptBackup(plain, ''));
+    expect(await cipher.decryptBackup(open2, '')).toBe(plain);
+    expect(readElsewhere(open2, '')).toBe(plain);
+    await expect(cipher.decryptBackup(open2, ' ')).rejects.toBeInstanceOf(WrongPasswordError);
+  });
+
   it('survives a large backup', async () => {
     const big = JSON.stringify({ blob: 'x'.repeat(300_000) });
     const text = await cipher.encryptBackup(big, 'long enough');
@@ -219,15 +239,17 @@ describe('readEnvelope', () => {
   it('recognises a valid envelope and returns only its own fields', () => {
     const envelope = valid();
     expect(cipher.readEnvelope(envelope)).toEqual(envelope);
-    expect(cipher.readEnvelope({ ...envelope, extra: true, kdf: { ...envelope.kdf, x: 1 } })).toEqual(
-      envelope,
-    );
+    expect(
+      cipher.readEnvelope({ ...envelope, extra: true, kdf: { ...envelope.kdf, x: 1 } }),
+    ).toEqual(envelope);
   });
 
   it('accepts the bounds of the rounds', () => {
     const envelope = valid();
     for (const iterations of [1, 600_000, 5_000_000]) {
-      expect(cipher.readEnvelope({ ...envelope, kdf: { ...envelope.kdf, iterations } })).toMatchObject({
+      expect(
+        cipher.readEnvelope({ ...envelope, kdf: { ...envelope.kdf, iterations } }),
+      ).toMatchObject({
         kdf: { iterations },
       });
     }

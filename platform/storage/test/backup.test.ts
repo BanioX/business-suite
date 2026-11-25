@@ -1,4 +1,4 @@
-// Origin: BanioX/Randen packages/core/test/settings-backup.test.ts @ e0f0907 — adapted: the backup kit on a sample register with two made-up businesses instead of use cases on a fixed list of tables; tests for files, loose reading, versions and readers, counts, unknown fields and the rules of a caller added
+// Origin: BanioX/Randen packages/core/test/settings-backup.test.ts @ e0f0907 — adapted: the backup kit on a sample register with two made-up businesses instead of use cases on a fixed list of tables; tests for files, the password, loose reading, versions and readers, counts, unknown fields, the frozen result of the check and the rules of a caller added
 import { CommandError } from '@onestrand/contract';
 import type { Id } from '@onestrand/core';
 import fc from 'fast-check';
@@ -139,9 +139,9 @@ describe('createBackupKit', () => {
   it.each([0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, 2 ** 53])(
     'refuses the version %d',
     (version) => {
-      expect(() => createBackupKit({ format: FORMAT, version, registry: REGISTRY, hasher })).toThrow(
-        TypeError,
-      );
+      expect(() =>
+        createBackupKit({ format: FORMAT, version, registry: REGISTRY, hasher }),
+      ).toThrow(TypeError);
     },
   );
 
@@ -157,9 +157,9 @@ describe('createBackupKit', () => {
     expect(() => createBackupKit({ ...base, version: 3, readers: { 2: reader } })).toThrow(
       'Version 3 of a backup needs a reader for version 1',
     );
-    expect(createBackupKit({ ...base, version: 3, readers: { 1: reader, 2: reader } }).version).toBe(
-      3,
-    );
+    expect(
+      createBackupKit({ ...base, version: 3, readers: { 1: reader, 2: reader } }).version,
+    ).toBe(3);
   });
 
   it('refuses a reader that belongs to no older version', () => {
@@ -168,12 +168,12 @@ describe('createBackupKit', () => {
     expect(() => createBackupKit({ ...base, version: 1, readers: { 1: reader } })).toThrow(
       TypeError,
     );
-    expect(() => createBackupKit({ ...base, version: 2, readers: { 1: reader, 2: reader } })).toThrow(
-      TypeError,
-    );
-    expect(() => createBackupKit({ ...base, version: 2, readers: { 0: reader, 1: reader } })).toThrow(
-      TypeError,
-    );
+    expect(() =>
+      createBackupKit({ ...base, version: 2, readers: { 1: reader, 2: reader } }),
+    ).toThrow(TypeError);
+    expect(() =>
+      createBackupKit({ ...base, version: 2, readers: { 0: reader, 1: reader } }),
+    ).toThrow(TypeError);
     expect(() =>
       createBackupKit({
         ...base,
@@ -247,7 +247,11 @@ describe('exportBackup', () => {
 
   it('writes the rows as they are stored, unknown fields included', async () => {
     const { t, one } = await setup();
-    const newer = { ...one.notes[0], colour: 'blue', place: { room: 'Lager', floor: 1, door: 'B' } };
+    const newer = {
+      ...one.notes[0],
+      colour: 'blue',
+      place: { room: 'Lager', floor: 1, door: 'B' },
+    };
     await t.storage.table('notes').put(newer as (typeof one.notes)[number]);
     const doc = await exported(t);
     expect(doc.tables.notes?.find((row) => row.id === newer.id)).toEqual(newer);
@@ -288,6 +292,27 @@ describe('exportBackup', () => {
       .catch((caught: unknown) => caught);
     expect(error).toBeInstanceOf(CommandError);
     expect((error as CommandError).code).toBe('not_found');
+  });
+
+  it('fails if the storage lists a file it cannot read, instead of writing a backup without it', async () => {
+    const { t, one } = await setup();
+    // A storage whose bytes of one file are gone, as a damaged database would have it.
+    const damaged = {
+      ...t.storage,
+      files: {
+        ...t.storage.files,
+        get: (id: Id) =>
+          id === one.receipt.id ? Promise.resolve(undefined) : t.storage.files.get(id),
+      },
+    };
+    const error = await kit
+      .exportBackup(damaged, t.one.business.id, { clock: t.clock })
+      .catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(StorageError);
+    expect((error as StorageError).code).toBe('invalid_file');
+    expect((error as StorageError).message).toBe(
+      `File ${one.receipt.id} is listed for the business but cannot be read`,
+    );
   });
 
   it('writes a business without rows and files', async () => {
@@ -331,6 +356,58 @@ describe('checkBackup', () => {
       { meta: one.receipt, bytes: Uint8Array.of(0, 255, 128, 7) },
     ]);
     expect(Object.isFrozen(backup)).toBe(true);
+  });
+
+  it('hands back a backup nobody can change between the check and the restore', async () => {
+    const { t } = await setup();
+    const backup = await checked(await exported(t));
+    const note = backup.tables.notes?.[1];
+    const photo = backup.files[0];
+    if (note === undefined || photo === undefined) {
+      throw new Error('The backup has notes and files');
+    }
+    // What was checked is what will be written: every attempt to change it fails.
+    const attempts: (() => void)[] = [
+      () => {
+        note.businessId = t.two.business.id;
+      },
+      () => {
+        note.text = 'changed after the check';
+      },
+      () => {
+        note.lines?.push({ label: 'neu', minutes: 1 });
+      },
+      () => {
+        Object.assign(note.place ?? {}, { floor: 9 });
+      },
+      () => {
+        Object.assign(note, { added: true });
+      },
+      () => {
+        (backup.tables.notes as unknown[]).pop();
+      },
+      () => {
+        Object.assign(backup.tables, { notes: [] });
+      },
+      () => {
+        Object.assign(backup.business, { name: 'Umbenannt' });
+      },
+      () => {
+        photo.meta.businessId = t.two.business.id;
+      },
+      () => {
+        Object.assign(photo, { bytes: new Uint8Array() });
+      },
+      () => {
+        (backup.files as unknown[]).pop();
+      },
+      () => {
+        Object.assign(backup, { tables: {} });
+      },
+    ];
+    for (const [index, attempt] of attempts.entries()) {
+      expect(attempt, `attempt ${index}`).toThrow(TypeError);
+    }
   });
 
   it.each([
@@ -454,6 +531,18 @@ describe('checkBackup', () => {
     expect(check.preview.counts).toEqual({ notes: 3, time_entries: 0 });
   });
 
+  it('refuses a business row that carries the key which would replace a prototype', async () => {
+    const { t } = await setup();
+    const text = JSON.stringify(await exported(t)).replace(
+      '"name":"Betrieb Muster"',
+      '"name":"Betrieb Muster","__proto__":{"admin":true}',
+    );
+    const check = await kit.checkBackup(JSON.parse(text));
+    expect(check.preview.problems).toEqual([{ kind: 'business' }]);
+    expect(check.preview).not.toHaveProperty('businessName');
+    expect(({} as { admin?: boolean }).admin).toBeUndefined();
+  });
+
   it('refuses a table that is no list', async () => {
     const { t } = await setup();
     const doc = await exported(t);
@@ -494,7 +583,8 @@ describe('checkBackup', () => {
     expect(await problemsOf({ ...doc, exportedAt: '14.11.2026' })).toEqual([
       { kind: 'field', field: 'exportedAt' },
     ]);
-    const { exportedAt: _exportedAt, ...without } = doc;
+    const without: Record<string, unknown> = { ...doc };
+    delete without.exportedAt;
     const check = await kit.checkBackup(without);
     expect(check.preview.problems).toEqual([{ kind: 'field', field: 'exportedAt' }]);
     expect(check.preview).not.toHaveProperty('exportedAt');
@@ -559,7 +649,10 @@ describe('checkBackup', () => {
         'a size that is not the size of its bytes',
         (meta: Record<string, unknown>) => ({ meta: { ...meta, size: 5 }, data: 'AP+ABw==' }),
       ],
-      ['bytes that are no Base64', (meta: Record<string, unknown>) => ({ meta, data: 'AP+A Bw==' })],
+      [
+        'bytes that are no Base64',
+        (meta: Record<string, unknown>) => ({ meta, data: 'AP+A Bw==' }),
+      ],
       ['bytes that are no text', (meta: Record<string, unknown>) => ({ meta, data: [0, 255] })],
       ['no bytes', (meta: Record<string, unknown>) => ({ meta })],
       [
@@ -568,7 +661,10 @@ describe('checkBackup', () => {
       ],
       [
         'a media type that is none',
-        (meta: Record<string, unknown>) => ({ meta: { ...meta, mediaType: 'PDF' }, data: 'AP+ABw==' }),
+        (meta: Record<string, unknown>) => ({
+          meta: { ...meta, mediaType: 'PDF' },
+          data: 'AP+ABw==',
+        }),
       ],
       [
         'a checksum that is none',
@@ -782,6 +878,17 @@ describe('restoreBackup', () => {
     expect(await t.storage.files.ofBusiness(t.one.business.id)).toHaveLength(2);
   });
 
+  it('removes what the device kept for the business it replaces, and only for that one', async () => {
+    const { t } = await setup();
+    const doc = await exported(t);
+    expect(await t.storage.table('device_settings').ofBusiness(t.one.business.id)).toHaveLength(1);
+    await kit.restoreBackup(t.storage, await checked(doc));
+    // A table outside the backup may point at rows the file does not hold: it goes with the
+    // business and is set up again, it is never mixed with a business from a file.
+    expect(await t.storage.table('device_settings').ofBusiness(t.one.business.id)).toEqual([]);
+    expect(await t.storage.table('device_settings').ofBusiness(t.two.business.id)).toHaveLength(1);
+  });
+
   it('removes the events and the command log of the business it replaces', async () => {
     const { t } = await setup();
     const doc = await exported(t);
@@ -881,12 +988,53 @@ describe('restoreBackup', () => {
       one: await snapshot(t.storage, t.one.business.id),
       two: await snapshot(t.storage, t.two.business.id),
     };
+    const commandId = t.ids.next();
+    const entry = {
+      commandId,
+      businessId: t.one.business.id,
+      operation: 'notes.add',
+      result: { ok: true },
+      at: t.clock.now(),
+    };
+    await t.storage.commands.record(entry);
     const error = await kit.restoreBackup(t.storage, backup).catch((caught: unknown) => caught);
     expect(error).toBeInstanceOf(StorageError);
     expect((error as StorageError).code).toBe('exists');
-    // The business of the file was removed first: the failed transaction brought it back.
+    // The business of the file was removed first: the failed transaction brought it back, with
+    // what the device kept for it and its entries of the command log.
     expect(await snapshot(t.storage, t.one.business.id)).toEqual(before.one);
     expect(await snapshot(t.storage, t.two.business.id)).toEqual(before.two);
+    expect(before.one.tables.device_settings).toHaveLength(1);
+    expect(await t.storage.commands.find(commandId)).toEqual(entry);
+  });
+
+  it('writes nothing at all if the bytes of a file were changed after the check', async () => {
+    const { t } = await setup();
+    const backup = await checked(await exported(t));
+    const before = {
+      one: await snapshot(t.storage, t.one.business.id),
+      two: await snapshot(t.storage, t.two.business.id),
+    };
+    // Bytes cannot be frozen: the storage compares them with the checksum once more.
+    backup.files[1]?.bytes.fill(0);
+    const error = await kit.restoreBackup(t.storage, backup).catch((caught: unknown) => caught);
+    expect((error as StorageError).code).toBe('checksum');
+    expect(await snapshot(t.storage, t.one.business.id)).toEqual(before.one);
+    expect(await snapshot(t.storage, t.two.business.id)).toEqual(before.two);
+  });
+
+  it('restores inside a transaction of the caller and shares its fate', async () => {
+    const { t } = await setup();
+    const backup = await checked(await exported(t));
+    await t.storage.table('notes').add(t.note(t.one.business.id, 'Nur hier'));
+    const before = await snapshot(t.storage, t.one.business.id);
+    await expect(
+      t.storage.transaction(async () => {
+        await kit.restoreBackup(t.storage, backup);
+        throw new Error('stop');
+      }),
+    ).rejects.toThrow('stop');
+    expect(await snapshot(t.storage, t.one.business.id)).toEqual(before);
   });
 
   it('writes nothing at all if a file of the backup has the id of a file of another business', async () => {
@@ -996,6 +1144,77 @@ describe('a backup as a file, with and without a password', () => {
     );
     const cut = JSON.stringify({ ...envelope, data: envelope.data.slice(0, -3) });
     await expect(readFile(cut, 'correct horse battery')).rejects.toThrow('The envelope is damaged');
+  });
+
+  it('carries every text exactly, with and without a password', async () => {
+    const t = await createTestStorage();
+    const texts = [
+      'Zürich, Genève, Müstair: äöü ÀÉÈ œ ñ',
+      '日本語 und Ελληνικά',
+      'Astral: 😀 𝄞 👩🏽‍🔧',
+      // Half of a character, as a field cut at a length leaves it behind.
+      'cut \ud83d here',
+      'Zeile\nmit\tSteuerzeichen \u0000 \u2028 und "Anführung" \\',
+    ];
+    // A list of plain texts is kept to the letter, white space at the ends included.
+    const tags = ['\uFEFFmit Marke am Anfang', '  Leerzeichen an beiden Enden  ', ''];
+    const notes = texts.map((text) => t.note(t.one.business.id, text, { tags: [text, ...tags] }));
+    for (const note of notes) {
+      await t.storage.table('notes').add(note);
+    }
+    await t.storage.businesses.put({ ...t.one.business, name: 'Betrieb Müster 😀' });
+    const before = await snapshot(t.storage, t.one.business.id);
+    const document = await kit.exportBackup(t.storage, t.one.business.id, { clock: t.clock });
+    const plain = JSON.stringify(document);
+    const encrypted = await cipher.encryptBackup(plain, 'pässwörd-日本語-😀');
+
+    for (const [text, password] of [[plain], [encrypted, 'pässwörd-日本語-😀']] as const) {
+      const device = otherDevice();
+      const check = await readFile(text, password);
+      expect(check.preview.problems).toEqual([]);
+      if (check.backup !== undefined) {
+        await kit.restoreBackup(device, check.backup);
+      }
+      const after = await snapshot(device, t.one.business.id);
+      expect(after.business).toStrictEqual(before.business);
+      expect(after.tables.notes).toStrictEqual(before.tables.notes);
+      const stored = await device.table('notes').ofBusiness(t.one.business.id);
+      expect(stored.map((row) => row.text).sort()).toEqual([...texts].sort());
+    }
+  });
+
+  it('carries files of any bytes, an empty one included', async () => {
+    const t = await createTestStorage();
+    const contents = [
+      new Uint8Array(),
+      Uint8Array.of(0),
+      Uint8Array.from({ length: 256 }, (_, index) => index),
+      Uint8Array.from({ length: 70_001 }, (_, index) => (index * 7) % 251),
+    ];
+    for (const bytes of contents) {
+      await t.storage.files.put({
+        businessId: t.one.business.id,
+        bytes,
+        mediaType: 'application/octet-stream',
+      });
+    }
+    const before = await snapshot(t.storage, t.one.business.id);
+    const text = JSON.stringify(
+      await kit.exportBackup(t.storage, t.one.business.id, { clock: t.clock }),
+    );
+    const device = otherDevice();
+    const check = await readFile(
+      await cipher.encryptBackup(text, 'correct horse'),
+      'correct horse',
+    );
+    expect(check.preview).toMatchObject({ importable: true, files: 4 });
+    if (check.backup !== undefined) {
+      await kit.restoreBackup(device, check.backup);
+    }
+    expect((await snapshot(device, t.one.business.id)).files).toEqual(before.files);
+    for (const meta of await device.files.ofBusiness(t.one.business.id)) {
+      expect(await device.files.verify(meta.id), meta.id).toBe(true);
+    }
   });
 
   it('refuses a damaged file without a password: one changed letter in a row is found', async () => {
@@ -1119,6 +1338,25 @@ describe('loose reading: a backup from a newer app loses no field', () => {
     ]);
   });
 
+  it('writes a field a schema knows as the schema reads it: a name comes back trimmed', async () => {
+    const { t } = await setup();
+    const doc = fromNewerApp(await exported(t));
+    const first = doc.tables.notes?.[0];
+    if (first === undefined || doc.business === undefined) {
+      throw new Error('The backup has notes');
+    }
+    // Written past its schema: what the schema knows wins, what it does not know stays as it is.
+    first.text = '  Schlüssel beim Hauswart  ';
+    first.colour = '  blue  ';
+    doc.business.name = ' Betrieb Muster ';
+    const backup = await checked(doc);
+    expect(backup.tables.notes?.[0]).toMatchObject({
+      text: 'Schlüssel beim Hauswart',
+      colour: '  blue  ',
+    });
+    expect(backup.business.name).toBe('Betrieb Muster');
+  });
+
   it('still refuses a known field with a wrong value next to unknown ones', async () => {
     const { t } = await setup();
     const doc = fromNewerApp(await exported(t));
@@ -1167,17 +1405,24 @@ describe('loose reading: a backup from a newer app loses no field', () => {
 });
 
 describe('older versions of a format', () => {
-  /** Version 1 of the sample format called the notes «memos» and had no files yet. */
-  function asVersionOne(doc: Doc): Doc {
-    const { files: _files, ...rest } = doc;
-    const { notes, ...tables } = rest.tables;
-    const { notes: count, ...counts } = rest.counts;
-    return {
-      ...rest,
+  /** A file of version 1 of the sample format: the notes were called «memos», no files yet. */
+  interface OldDoc {
+    counts: Doc['counts'];
+    tables: Doc['tables'];
+    [key: string]: unknown;
+  }
+
+  function asVersionOne(doc: Doc): OldDoc {
+    const { notes, ...tables } = doc.tables;
+    const { notes: count, ...counts } = doc.counts;
+    const old: OldDoc = {
+      ...doc,
       version: 1,
       tables: { ...tables, memos: notes },
       counts: { ...counts, memos: count },
-    } as Doc;
+    };
+    delete old.files;
+    return old;
   }
 
   const fromOne: BackupReader = (document) => {

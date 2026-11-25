@@ -51,7 +51,9 @@ export interface StoredFile {
 export function parseFileMeta(value: unknown): FileMeta {
   const parsed = FileMetaSchema.safeParse(value);
   if (!parsed.success) {
-    const fields = parsed.error.issues.map((issue) => issue.path.map(String).join('.') || 'meta').join(', ');
+    const fields = parsed.error.issues
+      .map((issue) => issue.path.map(String).join('.') || 'meta')
+      .join(', ');
     throw new StorageError('invalid_file', `The meta data of a file does not fit: ${fields}`);
   }
   return parsed.data;

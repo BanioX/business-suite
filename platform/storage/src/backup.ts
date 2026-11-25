@@ -1,4 +1,4 @@
-// Origin: BanioX/Randen packages/core/src/modules/settings/backup.ts @ e0f0907 — adapted: a kit over a table register with format and version as parameters; loose reading keeps unknown fields; older versions through readers, newer ones refused; unknown top-level fields, counts and files with checksums are checked; rules of the caller instead of the team rule
+// Origin: BanioX/Randen packages/core/src/modules/settings/backup.ts @ e0f0907 — adapted: a kit over a table register with format and version as parameters; loose reading keeps unknown fields; older versions through readers, newer ones refused; unknown top-level fields, counts and files with checksums are checked; rules of the caller instead of the team rule; the result of the check is frozen
 // Origin: BanioX/Randen packages/core/src/modules/settings/contract.ts @ e0f0907 — adapted: only the backup document, its problems and its preview, as types over a register; files added; no name of an app in the document
 // Origin: BanioX/Randen packages/core/src/modules/settings/use-cases.ts @ e0f0907 — adapted: only export and restore, as functions over a storage; restore replaces the business of the file and no other; the event is left to the caller
 import { CommandError } from '@onestrand/contract';
@@ -6,6 +6,7 @@ import { IsoDateTimeSchema, type Id, type IsoDateTime } from '@onestrand/core';
 import type { z } from 'zod';
 import { BusinessBaseSchema, type BusinessBase } from './business';
 import { base64Decode, base64Encode } from './bytes';
+import { StorageError } from './errors';
 import {
   FileMetaSchema,
   matchesChecksum,
@@ -203,9 +204,10 @@ export interface BackupKit<
   readonly tables: readonly string[];
   /**
    * Reads the whole business as one document, soft-deleted rows included. Writes nothing.
-   * Fails with a `CommandError` `not_found` if the business is not on the device. Rows and
-   * files are written as they are stored; `checkBackup` on the result tells whether it would
-   * come back.
+   * Fails with a `CommandError` `not_found` if the business is not on the device, and with a
+   * `StorageError` `invalid_file` if the storage lists a file it cannot read. Rows and files
+   * are written as they are stored, unchecked: run `checkBackup` on the result before the file
+   * counts as a backup, it tells whether the file would come back.
    */
   exportBackup: (
     storage: Storage<TRegistry, TBusiness>,
@@ -593,9 +595,14 @@ export function createBackupKit<
       const files: BackupFile[] = [];
       for (const meta of (await storage.files.ofBusiness(businessId)).sort(byId)) {
         const file = await storage.files.get(meta.id);
-        if (file !== undefined) {
-          files.push({ meta: file.meta, data: base64Encode(file.bytes) });
+        if (file === undefined) {
+          // A backup without a file that rows refer to would look whole and not be.
+          throw new StorageError(
+            'invalid_file',
+            `File ${meta.id} is listed for the business but cannot be read`,
+          );
         }
+        files.push({ meta: file.meta, data: base64Encode(file.bytes) });
       }
       return {
         format,

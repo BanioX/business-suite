@@ -1,14 +1,15 @@
-// Origin: BanioX/Randen packages/core/test/application.test.ts @ e0f0907 — adapted: only the tests of the memory storage, on a sample register with two made-up businesses; tests for files, append-only tables, the logs and plain data added
+// Origin: BanioX/Randen packages/core/test/application.test.ts @ e0f0907 — adapted: only the tests of the memory storage, on a sample register with two made-up businesses; tests for files, append-only tables, the logs, plain data, missing ids and transactions inside transactions added
 import { createHash } from 'node:crypto';
 import type { CommandLogEntry, DomainEvent } from '@onestrand/contract';
 import type { Id } from '@onestrand/core';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { ZodError } from 'zod';
 import {
   alive,
   createMemoryStorage,
+  defineTable,
   StorageError,
+  type BusinessBase,
   type Hasher,
   type StorageErrorCode,
   type StoredFile,
@@ -19,12 +20,15 @@ import {
   createTestStorage,
   fixedClock,
   hasher,
+  NoteSchema,
   notesTable,
   REGISTRY,
   sequentialIds,
   snapshot,
+  timeEntriesTable,
   type Note,
   type TestStorage,
+  type TimeEntry,
 } from './support';
 
 /** The code of the `StorageError` a storage call fails with. */
@@ -111,6 +115,28 @@ describe('memory storage: tables', () => {
     );
   });
 
+  it('refuses a definition that is another table of the same name', async () => {
+    const t = await createTestStorage();
+    // Another module calls its table «notes» too: its rows are not the rows stored here.
+    const otherNotes = defineTable({
+      name: 'notes',
+      schema: NoteSchema.extend({}),
+      indexes: [],
+      sensitivity: 'normal',
+      sync: 'device',
+    });
+    expect(() => t.storage.table(otherNotes)).toThrow(StorageError);
+    expect(() => t.storage.table(otherNotes)).toThrow(
+      'Table "notes" of this storage is not the table of the definition given',
+    );
+    // A ledger must be able to rely on «rows are never replaced».
+    expect(() => t.storage.table({ ...notesTable, appendOnly: true })).toThrow(StorageError);
+    expect(() => t.storage.table({ ...timeEntriesTable, appendOnly: false })).toThrow(StorageError);
+    // The same table declared again, or taken from the register, is the same table.
+    expect(t.storage.table({ ...notesTable })).toBe(t.storage.table('notes'));
+    expect(t.storage.table(REGISTRY.get('time_entries'))).toBe(t.storage.table('time_entries'));
+  });
+
   it('hands out copies and keeps a copy', async () => {
     const t = await createTestStorage();
     const note = t.note(t.one.business.id, 'Notiz', { tags: ['a'] });
@@ -141,6 +167,40 @@ describe('memory storage: tables', () => {
     const broken = { ...t.note(t.one.business.id, 'Notiz'), text: 42 } as unknown as Note;
     await t.storage.table('notes').put(broken);
     expect(await t.storage.table('notes').get(broken.id)).toEqual(broken);
+  });
+
+  it.each([
+    ['no id', { id: undefined }],
+    ['an empty id', { id: '' }],
+    ['an id that is no text', { id: 7 }],
+    ['no business', { businessId: undefined }],
+    ['an empty business', { businessId: '' }],
+    ['a business that is no text', { businessId: null }],
+  ])('refuses a row with %s: it would be stored where nothing finds it', async (_what, change) => {
+    const t = await createTestStorage();
+    const row = { ...t.note(t.one.business.id, 'Notiz'), ...change } as unknown as Note;
+    expect(await codeOf(t.storage.table('notes').put(row))).toBe('invalid_id');
+    expect(await codeOf(t.storage.table('notes').add(row))).toBe('invalid_id');
+    const entry = { ...t.timeEntry(t.one.business.id, t.one.personId, 5), ...change };
+    expect(await codeOf(t.storage.table('time_entries').put(entry as unknown as TimeEntry))).toBe(
+      'invalid_id',
+    );
+    for (const table of REGISTRY.tables) {
+      expect(await t.storage.table(table).ofBusiness(t.one.business.id), table.name).toEqual([]);
+      expect(await t.storage.table(table).get(undefined as unknown as Id)).toBeUndefined();
+    }
+  });
+
+  it('refuses what is no row at all', async () => {
+    const t = await createTestStorage();
+    for (const value of [null, undefined, 'Notiz', 7, [t.note(t.one.business.id, 'Notiz')]]) {
+      expect(await codeOf(t.storage.table('notes').put(value as unknown as Note))).toBe(
+        'invalid_id',
+      );
+    }
+    await expect(t.storage.table('notes').put(null as unknown as Note)).rejects.toThrow(
+      'A row of notes needs "id": a text that is not empty',
+    );
   });
 
   it('answers nothing for an id it does not have', async () => {
@@ -330,6 +390,16 @@ describe('memory storage: several businesses on one device', () => {
     ]);
   });
 
+  it('refuses a business without an id', async () => {
+    const t = await createTestStorage();
+    for (const id of [undefined, '', 7]) {
+      const business = { ...t.one.business, id, name: 'Ohne Kennung' } as unknown as BusinessBase;
+      expect(await codeOf(t.storage.businesses.add(business))).toBe('invalid_id');
+      expect(await codeOf(t.storage.businesses.put(business))).toBe('invalid_id');
+    }
+    expect(await t.storage.businesses.all()).toEqual([t.one.business, t.two.business]);
+  });
+
   it('purges one business for good and leaves the other alone', async () => {
     const t = await createTestStorage();
     const mine = await fill(t, t.one.business.id, t.one.personId);
@@ -407,6 +477,43 @@ describe('memory storage: events', () => {
     expect(await t.storage.events.ofBusiness(t.one.business.id)).toEqual([
       { ...first, payload: { step: 'note.added' } },
     ]);
+  });
+});
+
+describe('memory storage: what the logs refuse', () => {
+  it('refuses an event without its id or its business: no purge would ever remove it', async () => {
+    const t = await createTestStorage();
+    const good = event(t, t.one.business.id, 'note.added');
+    for (const change of [{ id: undefined }, { id: '' }, { businessId: undefined }]) {
+      expect(await codeOf(t.storage.events.append({ ...good, ...change } as DomainEvent))).toBe(
+        'invalid_id',
+      );
+    }
+    expect(await t.storage.events.ofBusiness(t.one.business.id)).toEqual([]);
+  });
+
+  it('refuses an entry of the command log without its command or its business', async () => {
+    const t = await createTestStorage();
+    const good = commandEntry(t, t.one.business.id, {});
+    for (const change of [
+      { commandId: undefined },
+      { businessId: undefined },
+      { businessId: '' },
+    ]) {
+      expect(
+        await codeOf(t.storage.commands.record({ ...good, ...change } as CommandLogEntry)),
+      ).toBe('invalid_id');
+    }
+    expect(await t.storage.commands.find(good.commandId)).toBeUndefined();
+  });
+
+  it('refuses an event or a result that is not plain data', async () => {
+    const t = await createTestStorage();
+    const withDate = { ...event(t, t.one.business.id, 'note.added'), payload: { on: new Date(0) } };
+    expect(await codeOf(t.storage.events.append(withDate))).toBe('not_plain');
+    expect(
+      await codeOf(t.storage.commands.record(commandEntry(t, t.one.business.id, new Map()))),
+    ).toBe('not_plain');
   });
 });
 
@@ -515,12 +622,57 @@ describe('memory storage: files', () => {
     'refuses the media type %j and stores nothing',
     async (mediaType) => {
       const t = await createTestStorage();
-      await expect(
-        t.storage.files.put({ businessId: t.one.business.id, bytes: bytesOf('x'), mediaType }),
-      ).rejects.toBeInstanceOf(ZodError);
+      const put = t.storage.files.put({
+        businessId: t.one.business.id,
+        bytes: bytesOf('x'),
+        mediaType,
+      });
+      expect(await codeOf(put)).toBe('invalid_file');
+      await expect(put).rejects.toThrow('The meta data of a file does not fit: mediaType');
       expect(await t.storage.files.ofBusiness(t.one.business.id)).toEqual([]);
     },
   );
+
+  it('refuses a file without a business, with a name of spaces, and names every field', async () => {
+    const t = await createTestStorage();
+    const put = t.storage.files.put({
+      businessId: 'no id' as Id,
+      bytes: bytesOf('x'),
+      mediaType: 'text/plain',
+      name: '   ',
+    });
+    expect(await codeOf(put)).toBe('invalid_file');
+    await expect(put).rejects.toThrow('The meta data of a file does not fit: businessId, name');
+  });
+
+  it.each([
+    ['a text', 'Foto'],
+    ['a number', 3],
+    ['a list of numbers', [1, 2, 3]],
+    ['a buffer without a view', new ArrayBuffer(3)],
+    ['nothing', undefined],
+  ])('refuses %s as the bytes of a file instead of storing zeros', async (_what, bytes) => {
+    const t = await createTestStorage();
+    const put = t.storage.files.put({
+      businessId: t.one.business.id,
+      bytes: bytes as unknown as Uint8Array,
+      mediaType: 'text/plain',
+    });
+    expect(await codeOf(put)).toBe('invalid_file');
+    expect(await t.storage.files.ofBusiness(t.one.business.id)).toEqual([]);
+  });
+
+  it('trims the name of a file as it trims every name', async () => {
+    const t = await createTestStorage();
+    const meta = await t.storage.files.put({
+      businessId: t.one.business.id,
+      bytes: bytesOf('x'),
+      mediaType: 'text/plain',
+      name: '  rapport.txt ',
+    });
+    expect(meta.name).toBe('rapport.txt');
+    expect((await t.storage.files.get(meta.id))?.meta.name).toBe('rapport.txt');
+  });
 
   it('answers nothing for a file it does not have, and does not verify it', async () => {
     const t = await createTestStorage();
@@ -540,7 +692,11 @@ describe('memory storage: files', () => {
       ids: sequentialIds(),
     });
     const businessId = sequentialIds(500).next();
-    const meta = await storage.files.put({ businessId, bytes: bytesOf('x'), mediaType: 'text/plain' });
+    const meta = await storage.files.put({
+      businessId,
+      bytes: bytesOf('x'),
+      mediaType: 'text/plain',
+    });
     expect(await storage.files.verify(meta.id)).toBe(true);
     damaged = true;
     expect(await storage.files.verify(meta.id)).toBe(false);
@@ -618,8 +774,20 @@ describe('memory storage: files', () => {
       const file = await stored(t);
       await t.storage.purge(t.one.business.id);
       const malformed = { ...file, meta: { ...file.meta, mediaType: 'JPEG' } };
-      await expect(t.storage.files.restore(malformed)).rejects.toBeInstanceOf(ZodError);
+      expect(await codeOf(t.storage.files.restore(malformed))).toBe('invalid_file');
+      const noBytes = { ...file, bytes: 'Foto vorher' as unknown as StoredFile['bytes'] };
+      expect(await codeOf(t.storage.files.restore(noBytes))).toBe('invalid_file');
       expect(await t.storage.files.ofBusiness(t.one.business.id)).toEqual([]);
+    });
+
+    it('keeps a copy of the bytes it was given', async () => {
+      const t = await createTestStorage();
+      const file = await stored(t);
+      await t.storage.purge(t.one.business.id);
+      const bytes = new Uint8Array(file.bytes);
+      await t.storage.files.restore({ meta: file.meta, bytes });
+      bytes.fill(0);
+      expect(await t.storage.files.verify(file.meta.id)).toBe(true);
     });
   });
 });
@@ -651,7 +819,9 @@ describe('memory storage: transactions', () => {
       t.storage.transaction(async () => {
         await t.storage.table('notes').put({ ...kept.note, text: 'Geändert' });
         await t.storage.table('notes').add(t.note(t.one.business.id, 'Neu'));
-        await t.storage.table('time_entries').add(t.timeEntry(t.one.business.id, t.one.personId, 5));
+        await t.storage
+          .table('time_entries')
+          .add(t.timeEntry(t.one.business.id, t.one.personId, 5));
         await t.storage.businesses.put({ ...t.one.business, name: 'Umbenannt' });
         await t.storage.businesses.add({ ...t.one.business, id: t.ids.next(), name: 'Neu' });
         await t.storage.events.append(event(t, t.one.business.id, 'note.changed'));
@@ -715,19 +885,67 @@ describe('memory storage: transactions', () => {
     expect(await t.storage.table('notes').ofBusiness(t.one.business.id)).toEqual([outer, inner]);
   });
 
-  it('undoes nothing by itself when an inner transaction fails and the outer one goes on', async () => {
+  it('fails the outer transaction if one inside it failed, even if the error was caught', async () => {
     const t = await createTestStorage();
+    const before = t.note(t.one.business.id, 'Vorher');
     const inner = t.note(t.one.business.id, 'Innen');
-    await t.storage.transaction(async () => {
+    const after = t.note(t.one.business.id, 'Nachher');
+    const outer = t.storage.transaction(async () => {
+      await t.storage.table('notes').add(before);
       await t.storage
         .transaction(async () => {
           await t.storage.table('notes').add(inner);
           throw new Error('inner stop');
         })
         .catch(() => undefined);
+      // The outer work goes on as if nothing had happened, and ends well.
+      await t.storage.table('notes').add(after);
+      return 'done';
     });
-    // The inner one joined the outer one, and that one ended well.
-    expect(await t.storage.table('notes').get(inner.id)).toEqual(inner);
+    // The inner one wrote half of its work. Keeping that would break «all or nothing», so the
+    // whole transaction fails with the error of the inner one, as the database of the browser
+    // does it.
+    await expect(outer).rejects.toThrow('inner stop');
+    expect(await t.storage.table('notes').ofBusiness(t.one.business.id)).toEqual([]);
+  });
+
+  it('keeps the first error if several transactions inside failed', async () => {
+    const t = await createTestStorage();
+    const failing = (message: string) =>
+      t.storage.transaction(() => Promise.reject(new Error(message))).catch(() => undefined);
+    await expect(
+      t.storage.transaction(async () => {
+        await failing('first');
+        await failing('second');
+      }),
+    ).rejects.toThrow('first');
+  });
+
+  it('forgets a failure inside once the outer transaction is over', async () => {
+    const t = await createTestStorage();
+    await expect(
+      t.storage.transaction(async () => {
+        await t.storage.transaction(() => Promise.reject(new Error('inner stop'))).catch(() => 0);
+      }),
+    ).rejects.toThrow('inner stop');
+    const note = t.note(t.one.business.id, 'Danach');
+    await t.storage.transaction(async () => {
+      await t.storage.transaction(async () => {
+        await t.storage.table('notes').add(note);
+      });
+    });
+    expect(await t.storage.table('notes').get(note.id)).toEqual(note);
+  });
+
+  it('does not fail a transaction for a refused call that the work caught', async () => {
+    const t = await createTestStorage();
+    const note = t.note(t.one.business.id, 'Notiz');
+    await t.storage.transaction(async () => {
+      await t.storage.table('notes').add(note);
+      // A single call of the storage that fails is no transaction: the work may go on.
+      expect(await codeOf(t.storage.table('notes').add(note))).toBe('exists');
+    });
+    expect(await t.storage.table('notes').get(note.id)).toEqual(note);
   });
 
   it('starts afresh after a failed transaction', async () => {

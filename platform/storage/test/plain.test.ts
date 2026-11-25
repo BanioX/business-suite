@@ -28,7 +28,19 @@ describe('isPlainRecord', () => {
     class Row {
       id = 'x';
     }
-    for (const value of [null, undefined, 'a', 1, true, [], [{}], new Date(0), new Map(), new Row(), () => 1]) {
+    for (const value of [
+      null,
+      undefined,
+      'a',
+      1,
+      true,
+      [],
+      [{}],
+      new Date(0),
+      new Map(),
+      new Row(),
+      () => 1,
+    ]) {
       expect(isPlainRecord(value)).toBe(false);
     }
   });
@@ -242,9 +254,7 @@ describe('keepUnknownFields', () => {
   });
 
   it('brings a field back that a schema dropped with a transform', () => {
-    const Renaming = z
-      .object({ old: z.string() })
-      .transform(({ old }) => ({ renamed: old }));
+    const Renaming = z.object({ old: z.string() }).transform(({ old }) => ({ renamed: old }));
     expect(keepUnknownFields({ old: 'x' }, Renaming.parse({ old: 'x' }))).toStrictEqual({
       old: 'x',
       renamed: 'x',
