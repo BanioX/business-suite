@@ -124,6 +124,20 @@ Optionen:
 4. **Echte Betriebsdaten** verlassen ein Gerät weiterhin nur mit eigenem ADR, Eintrag im Register der Nebenwirkungen und einer Meldung an Alban vor dem Einschalten. Vor dem ersten Pilot gibt es keine echten Betriebsdaten.
 5. **Im Voraus bauen:** Was später Geld kostet, wird jetzt als Anschluss gebaut und mit Platzhaltern getestet (Modell, Relais, Konten). Code kostet nichts, erst der Betrieb eines Dienstes. Nicht im Voraus beweisbar sind die Güte eines echten Modells bei echter Sprache, das Verhalten unter Last und die Kosten je Betrieb; das zeigt sich erst mit dem Dienst und wird dann gemessen.
 
+### S-26 Bedienmuster: fünf Punkte unten, Einstellungen oben rechts
+
+**Albans Vorgabe, 25.11.2026, gekürzt um Namen:** «[…] UI/UX. 5 Punkte unten. Einstellungen oben Rechts. Sie müssen für Nutzer die täglich […] nutzen einfach bedienbar sein weil sie dem bekannten muster folgen.» Gemeint sind die verbreiteten Heuristiken der Gebrauchstauglichkeit und das Muster der meistgenutzten Apps auf dem Handy.
+
+**Was gilt, ab der ersten Oberfläche (W0-03):**
+
+1. **Auf dem iPhone eine Leiste unten mit genau fünf Punkten**, mit dem Daumen erreichbar. Die Mitte ist «＋ Erfassen»: Foto, Rapport, Zeit, später auch Sagen ([S-24](#s-24-sagen-statt-klicken-ein-assistent-in-der-app-geld-datenfluss)). Vorschlag für die fünf: im Büro **Heute · Aufträge · ＋ · Kundschaft · Mehr**, für Mitarbeitende **Heute · Einsätze · ＋ · Stunden · Ich**. Die Rolle bestimmt die fünf; eine Branche füllt Steckplätze, fügt aber nie einen sechsten Punkt an. Was nicht in die fünf passt, liegt unter «Mehr».
+2. **Einstellungen oben rechts**, als Zahnrad, auf «Heute» und auf «Mehr» oder «Ich».
+3. **iPad und Web:** dieselben fünf Ziele, als Leiste an der Seite; Einstellungen ebenfalls oben rechts.
+4. **Bekannte Muster ja, Sog nein.** Übernommen wird, was Leute schon können: Leiste unten, Mitte zum Erfassen, Zurück durch das System, Ziehen zum Aktualisieren nur wo es etwas zu holen gibt. Nicht übernommen wird, was Aufmerksamkeit bindet: endlose Listen ohne Ende, Zähler als Lockmittel, Lob und Serien. Das Zielbild bleibt «ruhig».
+5. **Prüfliste für jeden Bildschirm** (die zehn Heuristiken, in eigenen Worten): Der Stand ist sichtbar. Die Wörter sind die der Branche. Jede Handlung lässt sich zurücknehmen oder abbrechen. Gleiches sieht gleich aus und folgt dem Gerät. Fehler werden verhindert, bevor sie gemeldet werden. Erkennen statt erinnern. Geübte kommen schneller ans Ziel. Nichts Überflüssiges auf dem Bildschirm. Eine Fehlermeldung sagt, was war und was jetzt geht. Hilfe steht dort, wo man sie braucht.
+
+Passt zu den Grundsätzen aus Randen ([ADR-0009](adr/0009-grundsaetze-aus-randen.md): eine App für iPhone, iPad und Web, eine Hauptaktion pro Seite, Ziele 44 px) und zu den Prüfsteinen 2 und 5 im [Zielbild](zielbild.md) (unter zehn Sekunden, mit einer Hand). Eingetragen in den Auftrag [W0-03](auftraege/w0-03-oberflaeche.md).
+
 ## Vor Welle 2 und 3
 
 ### S-06 Abgleich zwischen Büro und Aussendienst ohne Server [Datenfluss]
