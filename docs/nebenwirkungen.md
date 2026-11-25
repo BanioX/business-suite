@@ -13,8 +13,11 @@ Was eine App der Suite ausserhalb ihrer selbst tut: Netz, Speicher des Geräts, 
 
 | Kennung | Nebenwirkung | Im Code | Wo | Daten verlassen das Gerät? | Entscheid | Seit |
 | --- | --- | --- | --- | --- | --- | --- |
+| SE-01 | Datenbank des Geräts (IndexedDB): Zeilen, Ereignisse, Befehlsprotokoll und Dateien aller Betriebe auf dem Gerät, unter dem Datenbanknamen der Ausgabe | `indexedDB` | `platform/web-data/src/indexeddb-storage.ts` | nein | ADR-0009 (Daten bleiben auf dem Gerät), ADR-0005 (Dateien als Bytes, mehrere Betriebe je Gerät), ADR-0008 (Name je Ausgabe) | 25.11.2026 |
+| SE-02 | Speicher des Browsers für das, was zum Gerät gehört und in keine Sicherung geht: offener Betrieb, handelnde Person, Gerätemodus, Sprache der Bedienung; jeder Schlüssel trägt das Präfix der Ausgabe | `localStorage` | `platform/web-data/src/device.ts` | nein | ADR-0008 (Präfix je Ausgabe), ADR-0009 | 25.11.2026 |
+| SE-03 | Bitte an den Browser, die Daten auch bei knappem Platz zu behalten (die App entscheidet, wann sie fragt) | `storage.persist` | `platform/web-data/src/persistence.ts` | nein | ADR-0009 (Daten bleiben auf dem Gerät) | 25.11.2026 |
 
-Stand 25.11.2026: Das Fundament (Auftrag [W0-01](auftraege/w0-01-fundament.md)) ist reines TypeScript hinter Ports und hat keine Nebenwirkung. Die ersten Zeilen kommen mit dem Speicher im Browser und der ersten Ausgabe (W0-02, W0-03).
+Stand 25.11.2026: Das Fundament (Auftrag [W0-01](auftraege/w0-01-fundament.md)) ist reines TypeScript hinter Ports. Die ersten Zeilen kamen mit dem Speicher im Browser (`@onestrand/web-data`, W0-02, Schritt 7); weitere kommen mit der ersten Ausgabe (W0-03).
 
 ## Was der Wächter nicht sieht
 
