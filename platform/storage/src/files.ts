@@ -43,6 +43,32 @@ export interface StoredFile {
   bytes: Uint8Array<ArrayBuffer>;
 }
 
+/**
+ * The meta data of a file, checked for its form and returned as the schema reads it (the name
+ * trimmed). Throws a `StorageError` with the code `invalid_file` that says which field does not
+ * fit; every implementation of the file store refuses malformed meta data this way.
+ */
+export function parseFileMeta(value: unknown): FileMeta {
+  const parsed = FileMetaSchema.safeParse(value);
+  if (!parsed.success) {
+    const fields = parsed.error.issues.map((issue) => issue.path.map(String).join('.') || 'meta').join(', ');
+    throw new StorageError('invalid_file', `The meta data of a file does not fit: ${fields}`);
+  }
+  return parsed.data;
+}
+
+/**
+ * The bytes of a file as a copy of its own, so nobody changes a stored file through the array
+ * that was handed in. Throws a `StorageError` with the code `invalid_file` for anything that is
+ * no `Uint8Array`: a text or a number would become a file of zeros without a word.
+ */
+export function copyOfBytes(bytes: unknown): Uint8Array<ArrayBuffer> {
+  if (!(bytes instanceof Uint8Array)) {
+    throw new StorageError('invalid_file', 'The bytes of a file must be a Uint8Array');
+  }
+  return new Uint8Array(bytes);
+}
+
 /** Computes checksums. The browser and the tests implement it with WebCrypto. */
 export interface Hasher {
   /** SHA-256 of the bytes as 64 hex digits, lower case. */

@@ -4,10 +4,13 @@
  *
  * - `invalid_table`: a table definition breaks a rule of the register.
  * - `duplicate_table`: two tables of one register share a name.
- * - `unknown_table`: the register has no table of this name.
+ * - `unknown_table`: the register has no table of this name, or the storage holds another table
+ *   under the name of the definition it was asked with.
  * - `exists`: a row, business, event, command or file with this id is stored already.
  * - `append_only`: a row of an append-only table would be replaced.
  * - `other_business`: a row would be taken over by another business.
+ * - `invalid_id`: what should be stored lacks its id or the business it belongs to.
+ * - `invalid_file`: the bytes or the meta data of a file are malformed.
  * - `not_plain`: the value is not plain data, so a backup could not carry it.
  * - `checksum`: the bytes of a file do not match its checksum or its size.
  */
@@ -18,6 +21,8 @@ export type StorageErrorCode =
   | 'exists'
   | 'append_only'
   | 'other_business'
+  | 'invalid_id'
+  | 'invalid_file'
   | 'not_plain'
   | 'checksum';
 

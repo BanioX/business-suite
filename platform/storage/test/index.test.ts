@@ -8,7 +8,54 @@ import * as storage from '../src';
  */
 describe('@onestrand/storage', () => {
   it('exports exactly these values', () => {
-    expect(Object.keys(storage).sort()).toEqual([]);
+    expect(Object.keys(storage).sort()).toEqual(
+      [
+        // errors
+        'StorageError',
+        // text and bytes without the runtime
+        'utf8Encode',
+        'utf8Decode',
+        'base64Encode',
+        'base64Decode',
+        'hexEncode',
+        // plain data
+        'isPlainRecord',
+        'plainCopy',
+        'keepUnknownFields',
+        // table register
+        'TABLE_NAME_PATTERN',
+        'RESERVED_TABLE_NAMES',
+        'SENSITIVITIES',
+        'SYNC_KINDS',
+        'defineTable',
+        'fieldSensitivity',
+        'createTableRegistry',
+        // business
+        'BusinessBaseSchema',
+        // files
+        'SHA256_PATTERN',
+        'MEDIA_TYPE_PATTERN',
+        'FileMetaSchema',
+        'sha256Of',
+        'matchesChecksum',
+        'assertChecksum',
+        // ports
+        'alive',
+        'requireRow',
+        // storage in memory
+        'createMemoryStorage',
+        // WebCrypto as a parameter
+        'createWebCryptoHasher',
+        // password protection of a backup
+        'MIN_PASSWORD_LENGTH',
+        'WrongPasswordError',
+        'InvalidEnvelopeError',
+        'createBackupCipher',
+        // backup
+        'BACKUP_PROBLEM_KINDS',
+        'createBackupKit',
+      ].sort(),
+    );
   });
 
   it('holds no fixed list of tables: every edition brings its register', () => {
@@ -16,5 +63,10 @@ describe('@onestrand/storage', () => {
       (value) => typeof value === 'object' && 'tables' in value && 'names' in value,
     );
     expect(registers).toEqual([]);
+  });
+
+  it('names no format of an edition: backup and envelope get theirs as a parameter', () => {
+    const texts = Object.values(storage).filter((value) => typeof value === 'string');
+    expect(texts).toEqual([]);
   });
 });

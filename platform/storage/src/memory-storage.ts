@@ -1,17 +1,18 @@
-// Origin: BanioX/Randen packages/core/src/ports/memory-storage.ts @ e0f0907 — adapted: tables from a register; several businesses per device (purge removes one business and only its entries of the command log); files with a checksum; append-only tables; a row never changes its business; the command log keeps whole entries and refuses a second one; events keep their order; copies refuse what is not plain data
+// Origin: BanioX/Randen packages/core/src/ports/memory-storage.ts @ e0f0907 — adapted: tables from a register; several businesses per device (purge removes one business and only its entries of the command log); files with a checksum; append-only tables; a row never changes its business; the command log keeps whole entries and refuses a second one; events keep their order; copies refuse what is not plain data; nothing is stored without its id and its business; a failed transaction inside another fails the outer one
 import type { CommandLog, CommandLogEntry, DomainEvent, EventLog } from '@onestrand/contract';
 import type { Id } from '@onestrand/core';
 import type { BusinessBase } from './business';
 import { StorageError } from './errors';
 import {
   assertChecksum,
-  FileMetaSchema,
+  copyOfBytes,
   matchesChecksum,
+  parseFileMeta,
   sha256Of,
   type FileMeta,
   type Hasher,
 } from './files';
-import { plainCopy } from './plain';
+import { isPlainRecord, plainCopy } from './plain';
 import type {
   BusinessStore,
   Clock,
@@ -75,6 +76,25 @@ function exists(what: string, id: Id): StorageError {
   return new StorageError('exists', `${what} ${id} exists`);
 }
 
+/**
+ * A copy of what is about to be stored, with the ids the storage itself depends on. No schema
+ * is checked, but without its id a value would be stored under no key, and without its business
+ * nothing would ever find it again or purge it. Throws a `StorageError`: `not_plain` for what
+ * is not plain data, `invalid_id` for an id that is missing, empty or no text.
+ */
+function storable<TValue>(what: string, value: TValue, ids: readonly string[]): TValue {
+  const copy = plainCopy(value);
+  for (const key of ids) {
+    const id: unknown = isPlainRecord(copy) && Object.hasOwn(copy, key) ? copy[key] : undefined;
+    if (typeof id !== 'string' || id === '') {
+      throw new StorageError('invalid_id', `${what} needs "${key}": a text that is not empty`);
+    }
+  }
+  return copy;
+}
+
+const ROW_IDS = ['id', 'businessId'] as const;
+
 /** Removes the entries of one business from a map. */
 function removeWhere<TValue>(entries: Map<Id, TValue>, belongs: (value: TValue) => boolean): void {
   for (const [id, value] of entries) {
@@ -88,8 +108,10 @@ function removeWhere<TValue>(entries: Map<Id, TValue>, belongs: (value: TValue) 
  * Storage in plain memory, for tests of the use cases and as the reference behaviour of the
  * storage ports. Values are copied in and out, so callers cannot change stored data by
  * accident. Rows are kept exactly as given: no schema is checked and no field is dropped. A
- * failing transaction restores everything (tables, businesses, events, command log, files); a
- * transaction inside another joins it.
+ * failing transaction restores everything (tables, businesses, events, command log, files). A
+ * transaction inside another joins it and shares its fate: if the inner one fails, the outer
+ * one fails with the same error at its end, even if it caught that error, so the writes of a
+ * half-done step are never kept. The database of the browser behaves the same way.
  *
  * The tables are those of the register; the ports give files their checksum, time and id.
  */
@@ -108,6 +130,7 @@ export function createMemoryStorage<
   };
 
   function recordStore({ name, appendOnly }: TableDefinition): RecordStore<StoredRow> {
+    const what = `A row of ${name}`;
     const rows = (): Map<Id, StoredRow> => {
       const found = state.tables.get(name);
       if (found === undefined) {
@@ -126,43 +149,62 @@ export function createMemoryStorage<
         ),
       add: (record) =>
         settled(() => {
-          if (rows().has(record.id)) {
-            throw exists(`Row of ${name}`, record.id);
+          const row = storable(what, record, ROW_IDS);
+          if (rows().has(row.id)) {
+            throw exists(`Row of ${name}`, row.id);
           }
-          rows().set(record.id, plainCopy(record));
+          rows().set(row.id, row);
         }),
       put: (record) =>
         settled(() => {
-          const current = rows().get(record.id);
+          const row = storable(what, record, ROW_IDS);
+          const current = rows().get(row.id);
           if (current !== undefined && appendOnly) {
             throw new StorageError(
               'append_only',
-              `Row ${record.id} of ${name} exists; rows of this table are added, never replaced`,
+              `Row ${row.id} of ${name} exists; rows of this table are added, never replaced`,
             );
           }
-          if (current !== undefined && current.businessId !== record.businessId) {
+          if (current !== undefined && current.businessId !== row.businessId) {
             throw new StorageError(
               'other_business',
-              `Row ${record.id} of ${name} belongs to another business`,
+              `Row ${row.id} of ${name} belongs to another business`,
             );
           }
-          rows().set(record.id, plainCopy(record));
+          rows().set(row.id, row);
         }),
     };
   }
 
-  const stores = new Map(registry.tables.map((table) => [table.name, recordStore(table)]));
+  const stores = new Map(
+    registry.tables.map((definition) => [
+      definition.name,
+      { definition, store: recordStore(definition) },
+    ]),
+  );
 
   function table(nameOrDefinition: string | TableDefinition): RecordStore<StoredRow> {
     const name = typeof nameOrDefinition === 'string' ? nameOrDefinition : nameOrDefinition.name;
-    const store = stores.get(name);
-    if (store === undefined) {
+    const found = stores.get(name);
+    if (found === undefined) {
       throw new StorageError(
         'unknown_table',
         `Unknown table ${JSON.stringify(name)}; registered: ${registry.names.join(', ')}`,
       );
     }
-    return store;
+    if (
+      typeof nameOrDefinition !== 'string' &&
+      (found.definition.schema !== nameOrDefinition.schema ||
+        found.definition.appendOnly !== nameOrDefinition.appendOnly)
+    ) {
+      // Two modules that both call a table `name` would write into each other's rows, typed as
+      // their own. The register of the edition holds one of them; the other is told here.
+      throw new StorageError(
+        'unknown_table',
+        `Table ${JSON.stringify(name)} of this storage is not the table of the definition given: another schema or another appendOnly`,
+      );
+    }
+    return found.store;
   }
 
   const businesses: BusinessStore<TBusiness> = {
@@ -170,24 +212,27 @@ export function createMemoryStorage<
     all: () => settled(() => [...state.businesses.values()].map((row) => plainCopy(row))),
     add: (business) =>
       settled(() => {
-        if (state.businesses.has(business.id)) {
-          throw exists('Business', business.id);
+        const row = storable('A business', business, ['id']);
+        if (state.businesses.has(row.id)) {
+          throw exists('Business', row.id);
         }
-        state.businesses.set(business.id, plainCopy(business));
+        state.businesses.set(row.id, row);
       }),
     put: (business) =>
       settled(() => {
-        state.businesses.set(business.id, plainCopy(business));
+        const row = storable('A business', business, ['id']);
+        state.businesses.set(row.id, row);
       }),
   };
 
   const events: EventLog = {
     append: (event) =>
       settled(() => {
-        if (state.events.has(event.id)) {
-          throw exists('Event', event.id);
+        const row = storable('An event', event, ROW_IDS);
+        if (state.events.has(row.id)) {
+          throw exists('Event', row.id);
         }
-        state.events.set(event.id, plainCopy(event));
+        state.events.set(row.id, row);
       }),
     ofBusiness: (businessId) =>
       settled(() =>
@@ -201,10 +246,11 @@ export function createMemoryStorage<
     find: (commandId) => settled(() => plainCopy(state.commands.get(commandId))),
     record: (entry) =>
       settled(() => {
-        if (state.commands.has(entry.commandId)) {
-          throw exists('Command', entry.commandId);
+        const row = storable('An entry of the command log', entry, ['commandId', 'businessId']);
+        if (state.commands.has(row.commandId)) {
+          throw exists('Command', row.commandId);
         }
-        state.commands.set(entry.commandId, plainCopy(entry));
+        state.commands.set(row.commandId, row);
       }),
   };
 
@@ -217,8 +263,8 @@ export function createMemoryStorage<
 
   const files: FileStore = {
     put: async ({ businessId, bytes, mediaType, name }) => {
-      const copy = new Uint8Array(bytes);
-      const meta = FileMetaSchema.parse({
+      const copy = copyOfBytes(bytes);
+      const meta = parseFileMeta({
         id: ids.next(),
         businessId,
         sha256: await sha256Of(hasher, copy),
@@ -249,27 +295,42 @@ export function createMemoryStorage<
     },
     restore: async (file) => {
       // Checked for its form, kept as given: fields a newer version added stay on the file.
-      FileMetaSchema.parse(file.meta);
-      const entry = { meta: plainCopy(file.meta), bytes: new Uint8Array(file.bytes) };
+      parseFileMeta(file.meta);
+      const entry = { meta: plainCopy(file.meta), bytes: copyOfBytes(file.bytes) };
       await assertChecksum(hasher, entry.meta, entry.bytes);
       addFile(entry);
     },
   };
 
   let depth = 0;
+  /** The first error of a transaction that had joined the one that is running. */
+  let failedInside: { error: unknown } | undefined;
   async function transaction<T>(work: () => Promise<T>): Promise<T> {
     if (depth > 0) {
-      return work();
+      try {
+        return await work();
+      } catch (error) {
+        failedInside ??= { error };
+        throw error;
+      }
     }
     const snapshot = snapshotOf(state);
     depth += 1;
     try {
-      return await work();
+      const result = await work();
+      const inner = failedInside;
+      if (inner !== undefined) {
+        // The inner one promised «all or nothing» for its writes and is part of this one: the
+        // only way to keep that promise is to undo everything, whoever caught its error.
+        throw inner.error;
+      }
+      return result;
     } catch (error) {
       state = snapshot;
       throw error;
     } finally {
       depth -= 1;
+      failedInside = undefined;
     }
   }
 
