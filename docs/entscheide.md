@@ -47,6 +47,33 @@ Gemeint sind Register (AP-1), Rollen und Rechte (AP-2), Zeit (AP-3 bis AP-6), Er
 - **Empfehlung: (a)** für neue Ausgaben, weil das Wort sagt, wofür die App ist; Randen nach deiner Wahl, aber vor seinem ersten Pilot.
 - **Onestrand als Marke** prüfen und anmelden lassen, bevor die Suite öffentlich auftritt: kostet Geld, nur auf dein Wort.
 
+### S-23 Erweiterbar von Haus aus: Werkzeug-Schnittstelle für Assistenten, Kommandozeile, Baukasten, Editor [Datenfluss beim Assistenten]
+
+**Wunsch Albans, 25.11.2026, wörtlich:** «Ich hätte gerne von haus aus Mcp und CLI und SDK und IDE Anbindungen das es erweiterbar ist modular».
+
+Was das Fundament dafür schon trägt (W0-01): Jede Operation der Schnittstelle hat einen Namen, eine technische Beschreibung, ihr Recht (`access`) und Schemas für Ein- und Ausgabe; `contractJsonSchemas` liefert daraus JSON Schema. Befehle sind über `commandId` gefahrlos wiederholbar. Der Speicher ist ein Port, dieselbe Logik läuft also auch ausserhalb des Browsers. Branchen, Tabellen, Einheiten und Fehlercodes melden sich in Registern an.
+
+Was «von Haus aus» heisst, je Teil:
+
+| Teil | Bedeutung | Stufe 1 möglich? |
+| --- | --- | --- |
+| **Baukasten (SDK)** | Ein typisierter Client, erzeugt aus der zusammengesetzten Schnittstelle (`client.customers.create(…)`), dazu die öffentlichen Einstiege der Plattform-Pakete (`defineIndustry`, `defineTable`, `command`) | ja, rein TypeScript |
+| **Kommandozeile (CLI)** | Für den Bau: neue Branche anlegen, prüfen, stempeln. Für Daten: eine Sicherungsdatei prüfen, abfragen und als CSV oder JSON ausgeben, auf dem eigenen Rechner | ja; liest nur Dateien, die die Person selbst geladen hat |
+| **Werkzeug-Schnittstelle für Assistenten (MCP)** | Aus jeder Operation entsteht ein Werkzeug mit Schema und Recht; ein lokaler Dienst stellt sie einem KI-Assistenten bereit | der Erzeuger ja; mit **echten Betriebsdaten** verlassen Daten das Gerät an den Anbieter des Assistenten |
+| **Editor (IDE)** | Schemas für Manifeste und Register, damit der Editor prüft und ergänzt; Vorlagen und Generator; `api.md` je Paket | ja |
+
+Optionen:
+
+- (a) **Erzeugt statt gebaut:** Client, Kommandozeile und Werkzeug-Definitionen entstehen aus der zusammengesetzten Schnittstelle. Jede Branche bekommt sie ohne eigenen Code, sobald sie ihre Operationen anmeldet. Der Erzeuger kommt mit W0-02, die Kommandozeile für Sicherungsdateien mit Welle 1; der Assistent arbeitet zuerst nur mit dem Demo-Betrieb.
+- (b) Wie (a), dazu der Assistent mit echten Betriebsdaten: nur lesen, je Betrieb ausdrücklich eingeschaltet und widerrufbar, heikle Tabellen ausgenommen, mit eigenem ADR und Eintrag im Register der Nebenwirkungen.
+- (c) Später, nach dem ersten Pilot.
+
+**Empfehlung: (a) jetzt, (b) als eigener Entscheid vor dem ersten Pilot.** (a) kostet wenig, weil die Schnittstelle schon alles trägt, und hält die Suite offen für Werkzeuge, ohne dass Daten das Gerät verlassen. (b) ist ein neuer Datenfluss und braucht dein JA mit Wortlaut.
+
+Grenzen, die bleiben: Erweiterungen sind Pakete, die mitgebaut werden, keine Plug-ins, die eine installierte App zur Laufzeit nachlädt (CSP nur `'self'`). Die Suite selbst baut weiterhin keine Anbindungen an Partner; die offene Schnittstelle ist die Tür, durch die ein Betrieb seine eigenen Werkzeuge anschliesst.
+
+**Folgen bei (a):** Der Auftrag W0-02 bekommt einen Schritt «Client und Werkzeug-Definitionen aus der Schnittstelle»; `plattform.md` bekommt ein Paket für Kommandozeile und Werkzeug-Schnittstelle; neue Kennungen ins Namensregister. Das trägt der Kopf nach deinem Wort ein.
+
 ## Vor Welle 2 und 3
 
 ### S-06 Abgleich zwischen Büro und Aussendienst ohne Server [Datenfluss]
