@@ -21,6 +21,7 @@ import {
   createTestStorage,
   fixedClock,
   hasher,
+  KEY_DERIVATION_TIMEOUT,
   plainJson,
   REGISTRY,
   sequentialIds,
@@ -1104,7 +1105,7 @@ describe('a backup as a file, with and without a password', () => {
     expect(after.files).toEqual(before.files);
   });
 
-  it('goes out and comes back with a password', async () => {
+  it('goes out and comes back with a password', { timeout: KEY_DERIVATION_TIMEOUT }, async () => {
     const { t } = await setup();
     const before = await snapshot(t.storage, t.one.business.id);
     const document = await kit.exportBackup(t.storage, t.one.business.id, { clock: t.clock });
@@ -1128,94 +1129,108 @@ describe('a backup as a file, with and without a password', () => {
     expect(after.files).toEqual(before.files);
   });
 
-  it('stays closed with the wrong password and when the file was damaged', async () => {
-    const { t } = await setup();
-    const document = await kit.exportBackup(t.storage, t.one.business.id, { clock: t.clock });
-    const text = await cipher.encryptBackup(JSON.stringify(document), 'correct horse battery');
-    await expect(readFile(text, 'wrong horse battery')).rejects.toThrow(
-      'wrong password or damaged backup',
-    );
+  it(
+    'stays closed with the wrong password and when the file was damaged',
+    { timeout: KEY_DERIVATION_TIMEOUT },
+    async () => {
+      const { t } = await setup();
+      const document = await kit.exportBackup(t.storage, t.one.business.id, { clock: t.clock });
+      const text = await cipher.encryptBackup(JSON.stringify(document), 'correct horse battery');
+      await expect(readFile(text, 'wrong horse battery')).rejects.toThrow(
+        'wrong password or damaged backup',
+      );
 
-    const envelope = JSON.parse(text) as { data: string };
-    const swapped = envelope.data.startsWith('A') ? 'B' : 'A';
-    const damaged = JSON.stringify({ ...envelope, data: swapped + envelope.data.slice(1) });
-    await expect(readFile(damaged, 'correct horse battery')).rejects.toThrow(
-      'wrong password or damaged backup',
-    );
-    const cut = JSON.stringify({ ...envelope, data: envelope.data.slice(0, -3) });
-    await expect(readFile(cut, 'correct horse battery')).rejects.toThrow('The envelope is damaged');
-  });
+      const envelope = JSON.parse(text) as { data: string };
+      const swapped = envelope.data.startsWith('A') ? 'B' : 'A';
+      const damaged = JSON.stringify({ ...envelope, data: swapped + envelope.data.slice(1) });
+      await expect(readFile(damaged, 'correct horse battery')).rejects.toThrow(
+        'wrong password or damaged backup',
+      );
+      const cut = JSON.stringify({ ...envelope, data: envelope.data.slice(0, -3) });
+      await expect(readFile(cut, 'correct horse battery')).rejects.toThrow(
+        'The envelope is damaged',
+      );
+    },
+  );
 
-  it('carries every text exactly, with and without a password', async () => {
-    const t = await createTestStorage();
-    const texts = [
-      'Zürich, Genève, Müstair: äöü ÀÉÈ œ ñ',
-      '日本語 und Ελληνικά',
-      'Astral: 😀 𝄞 👩🏽‍🔧',
-      // Half of a character, as a field cut at a length leaves it behind.
-      'cut \ud83d here',
-      'Zeile\nmit\tSteuerzeichen \u0000 \u2028 und "Anführung" \\',
-    ];
-    // A list of plain texts is kept to the letter, white space at the ends included.
-    const tags = ['\uFEFFmit Marke am Anfang', '  Leerzeichen an beiden Enden  ', ''];
-    const notes = texts.map((text) => t.note(t.one.business.id, text, { tags: [text, ...tags] }));
-    for (const note of notes) {
-      await t.storage.table('notes').add(note);
-    }
-    await t.storage.businesses.put({ ...t.one.business, name: 'Betrieb Müster 😀' });
-    const before = await snapshot(t.storage, t.one.business.id);
-    const document = await kit.exportBackup(t.storage, t.one.business.id, { clock: t.clock });
-    const plain = JSON.stringify(document);
-    const encrypted = await cipher.encryptBackup(plain, 'pässwörd-日本語-😀');
+  it(
+    'carries every text exactly, with and without a password',
+    { timeout: KEY_DERIVATION_TIMEOUT },
+    async () => {
+      const t = await createTestStorage();
+      const texts = [
+        'Zürich, Genève, Müstair: äöü ÀÉÈ œ ñ',
+        '日本語 und Ελληνικά',
+        'Astral: 😀 𝄞 👩🏽‍🔧',
+        // Half of a character, as a field cut at a length leaves it behind.
+        'cut \ud83d here',
+        'Zeile\nmit\tSteuerzeichen \u0000 \u2028 und "Anführung" \\',
+      ];
+      // A list of plain texts is kept to the letter, white space at the ends included.
+      const tags = ['\uFEFFmit Marke am Anfang', '  Leerzeichen an beiden Enden  ', ''];
+      const notes = texts.map((text) => t.note(t.one.business.id, text, { tags: [text, ...tags] }));
+      for (const note of notes) {
+        await t.storage.table('notes').add(note);
+      }
+      await t.storage.businesses.put({ ...t.one.business, name: 'Betrieb Müster 😀' });
+      const before = await snapshot(t.storage, t.one.business.id);
+      const document = await kit.exportBackup(t.storage, t.one.business.id, { clock: t.clock });
+      const plain = JSON.stringify(document);
+      const encrypted = await cipher.encryptBackup(plain, 'pässwörd-日本語-😀');
 
-    for (const [text, password] of [[plain], [encrypted, 'pässwörd-日本語-😀']] as const) {
+      for (const [text, password] of [[plain], [encrypted, 'pässwörd-日本語-😀']] as const) {
+        const device = otherDevice();
+        const check = await readFile(text, password);
+        expect(check.preview.problems).toEqual([]);
+        if (check.backup !== undefined) {
+          await kit.restoreBackup(device, check.backup);
+        }
+        const after = await snapshot(device, t.one.business.id);
+        expect(after.business).toStrictEqual(before.business);
+        expect(after.tables.notes).toStrictEqual(before.tables.notes);
+        const stored = await device.table('notes').ofBusiness(t.one.business.id);
+        expect(stored.map((row) => row.text).sort()).toEqual([...texts].sort());
+      }
+    },
+  );
+
+  it(
+    'carries files of any bytes, an empty one included',
+    { timeout: KEY_DERIVATION_TIMEOUT },
+    async () => {
+      const t = await createTestStorage();
+      const contents = [
+        new Uint8Array(),
+        Uint8Array.of(0),
+        Uint8Array.from({ length: 256 }, (_, index) => index),
+        Uint8Array.from({ length: 70_001 }, (_, index) => (index * 7) % 251),
+      ];
+      for (const bytes of contents) {
+        await t.storage.files.put({
+          businessId: t.one.business.id,
+          bytes,
+          mediaType: 'application/octet-stream',
+        });
+      }
+      const before = await snapshot(t.storage, t.one.business.id);
+      const text = JSON.stringify(
+        await kit.exportBackup(t.storage, t.one.business.id, { clock: t.clock }),
+      );
       const device = otherDevice();
-      const check = await readFile(text, password);
-      expect(check.preview.problems).toEqual([]);
+      const check = await readFile(
+        await cipher.encryptBackup(text, 'correct horse'),
+        'correct horse',
+      );
+      expect(check.preview).toMatchObject({ importable: true, files: 4 });
       if (check.backup !== undefined) {
         await kit.restoreBackup(device, check.backup);
       }
-      const after = await snapshot(device, t.one.business.id);
-      expect(after.business).toStrictEqual(before.business);
-      expect(after.tables.notes).toStrictEqual(before.tables.notes);
-      const stored = await device.table('notes').ofBusiness(t.one.business.id);
-      expect(stored.map((row) => row.text).sort()).toEqual([...texts].sort());
-    }
-  });
-
-  it('carries files of any bytes, an empty one included', async () => {
-    const t = await createTestStorage();
-    const contents = [
-      new Uint8Array(),
-      Uint8Array.of(0),
-      Uint8Array.from({ length: 256 }, (_, index) => index),
-      Uint8Array.from({ length: 70_001 }, (_, index) => (index * 7) % 251),
-    ];
-    for (const bytes of contents) {
-      await t.storage.files.put({
-        businessId: t.one.business.id,
-        bytes,
-        mediaType: 'application/octet-stream',
-      });
-    }
-    const before = await snapshot(t.storage, t.one.business.id);
-    const text = JSON.stringify(
-      await kit.exportBackup(t.storage, t.one.business.id, { clock: t.clock }),
-    );
-    const device = otherDevice();
-    const check = await readFile(
-      await cipher.encryptBackup(text, 'correct horse'),
-      'correct horse',
-    );
-    expect(check.preview).toMatchObject({ importable: true, files: 4 });
-    if (check.backup !== undefined) {
-      await kit.restoreBackup(device, check.backup);
-    }
-    expect((await snapshot(device, t.one.business.id)).files).toEqual(before.files);
-    for (const meta of await device.files.ofBusiness(t.one.business.id)) {
-      expect(await device.files.verify(meta.id), meta.id).toBe(true);
-    }
-  });
+      expect((await snapshot(device, t.one.business.id)).files).toEqual(before.files);
+      for (const meta of await device.files.ofBusiness(t.one.business.id)) {
+        expect(await device.files.verify(meta.id), meta.id).toBe(true);
+      }
+    },
+  );
 
   it('refuses a damaged file without a password: one changed letter in a row is found', async () => {
     const { t } = await setup();
