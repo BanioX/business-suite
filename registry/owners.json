@@ -1,0 +1,60 @@
+{
+  "about": "Who owns which path, and which order may write where. The first owner pattern that matches wins. Format and rules: tools/src/ownership.ts; checked for every commit by «pnpm ownership».",
+  "version": 1,
+  "owners": [
+    { "pattern": "docs/fakten/**", "owner": "facts" },
+    { "pattern": "docs/branchen/README.md", "owner": "head" },
+    { "pattern": "docs/branchen/_vorlage.md", "owner": "head" },
+    { "pattern": "docs/branchen/gastro*", "owner": "head" },
+    { "pattern": "docs/branchen/weitere*", "owner": "head" },
+    { "pattern": "docs/branchen/**", "owner": "industry:*" },
+    { "pattern": "platform/*/**", "owner": "platform:*" },
+    { "pattern": "industries/muster/**", "owner": "head" },
+    { "pattern": "industries/*/**", "owner": "industry:*" },
+    { "pattern": "**", "owner": "head" }
+  ],
+  "orders": {
+    "W0-01": {
+      "role": "platform",
+      "write": [
+        "package.json",
+        "pnpm-workspace.yaml",
+        "pnpm-lock.yaml",
+        "tsconfig*.json",
+        "eslint.config.js",
+        "vitest.config.ts",
+        ".prettierrc.json",
+        ".prettierignore",
+        ".editorconfig",
+        ".gitignore",
+        ".nvmrc",
+        ".github/workflows/**",
+        "tools/**",
+        "registry/**",
+        "platform/core/**",
+        "platform/contract/**",
+        "platform/storage/**",
+        "platform/ledger/**",
+        "platform/testing/**",
+        "docs/herkunft.md",
+        "docs/schulden.md",
+        "docs/nebenwirkungen.md",
+        "docs/lernbuch.md",
+        "docs/fahrplan.md",
+        "docs/auftraege/w0-01-fundament.md",
+        "CLAUDE.md"
+      ]
+    },
+    "HEAD": {
+      "role": "head",
+      "write": ["*", ".github/**", "docs/**", "editions/**", "registry/**", "tools/**"]
+    }
+  },
+  "orderRules": [
+    {
+      "order": "branche-*",
+      "role": "industry",
+      "write": ["industries/<id>/**", "docs/branchen/<name>*", "docs/branchen/<name>/**"]
+    }
+  ]
+}

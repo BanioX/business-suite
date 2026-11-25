@@ -25,6 +25,49 @@ const NOT_PURE = [
   { name: 'dexie-react-hooks', message: 'Storage is reached through ports only.' },
 ];
 
+/**
+ * Every file of code, whatever its extension: a `.tsx` or a `.mjs` put somewhere by mistake is
+ * held to the same rules as a `.ts`, not let through.
+ */
+const CODE = '*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}';
+
+/** The pure part of a platform package: every file of code under its `src/`. */
+function pureFiles(name) {
+  return `platform/${name}/src/**/${CODE}`;
+}
+
+const NO_INDUSTRY = {
+  group: ['**/industries/**', '**/editions/**'],
+  message: 'The platform imports no industry and no edition (architecture 3.2, rule 2).',
+};
+
+/**
+ * `import('…')` is no import statement, so `no-restricted-imports` does not see it. This selector
+ * does, for a place an import must never reach whatever its form. (The third form, the type
+ * `import('…').Thing`, is refused everywhere by `consistent-type-imports` below.)
+ */
+function dynamicImportOf(pattern, message) {
+  return { selector: `ImportExpression[source.value=/${pattern}/]`, message };
+}
+
+const NO_INDUSTRY_DYNAMIC = dynamicImportOf(
+  '(^|\\/)(industries|editions)(\\/|$)',
+  NO_INDUSTRY.message,
+);
+
+/**
+ * The pure part imports with import statements only. So the rules above see every import, and
+ * none slips past them as `import('…')`.
+ */
+const STATIC_IMPORTS_ONLY = [
+  'error',
+  {
+    selector: 'ImportExpression',
+    message:
+      'The pure part of a package imports with import statements only, so the import rules see every import.',
+  },
+];
+
 /** Import rules of one platform package, for the files given. */
 function platformBoundaries(name, allowed, { pure }) {
   return {
@@ -43,13 +86,10 @@ function platformBoundaries(name, allowed, { pure }) {
             group: ['@onestrand/*/*', '!@onestrand/*/web', '!@onestrand/*/testing'],
             message: 'Import the public entry of a package, never a file inside it.',
           },
-          {
-            group: ['**/industries/**', '**/editions/**'],
-            message: 'The platform imports no industry and no edition (architecture 3.2, rule 2).',
-          },
+          NO_INDUSTRY,
           {
             // A relative path that climbs out of the package or reaches into another one.
-            regex: '^(\\.\\./)+(.*/)?(platform|tools|src|test|node_modules)/',
+            regex: '^(\\.\\./)+(.*/)?(platform|tools|src|test|node_modules)(/|$)',
             message: 'Stay inside the package: other packages are imported by their name.',
           },
           ...(pure
@@ -58,11 +98,22 @@ function platformBoundaries(name, allowed, { pure }) {
                   regex: '^node:',
                   message: 'The pure part of a package runs without Node (architecture 3.2).',
                 },
+                {
+                  // The same packages through a subpath, such as `react-dom/client`.
+                  group: NOT_PURE.map((entry) => `${entry.name}/**`),
+                  message:
+                    'The pure part of a package knows no UI and no database (architecture 3.2).',
+                },
+                {
+                  group: ['@onestrand/*/web'],
+                  message: 'The pure part of a package imports no React part (architecture 3.2).',
+                },
               ]
             : []),
         ],
       },
     ],
+    ...(pure ? { 'no-restricted-syntax': STATIC_IMPORTS_ONLY } : {}),
   };
 }
 
@@ -114,7 +165,7 @@ export default tseslint.config(
   {
     // The pure TypeScript part of every platform package stays free of browser and Node APIs,
     // so the same logic runs in the browser, in tests and later on a server.
-    files: ['platform/*/src/**/*.ts'],
+    files: [pureFiles('*')],
     languageOptions: { globals: {} },
     rules: {
       'no-restricted-globals': [
@@ -132,23 +183,37 @@ export default tseslint.config(
       ],
     },
   },
-  // Layers: the pure part of a package, and its tests (tests may use Node and the package's own
-  // devDependencies, but they respect the same layers).
+  {
+    // Whatever stands under `platform/` and whatever form the import has: no industry and no
+    // edition. The blocks below replace these two rules for the pure part and for the tests of
+    // a package, each with its own, stricter list; this one holds for everything else (the
+    // configuration of a package, a directory that has no rules of its own yet).
+    files: [`platform/**/${CODE}`],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [NO_INDUSTRY] }],
+      'no-restricted-syntax': ['error', NO_INDUSTRY_DYNAMIC],
+    },
+  },
+  // Layers: the pure part of a package. Lint does not hold the tests of a package to the
+  // layers (they may use Node and the package's own devDependencies); there pnpm does, which
+  // links only the packages a package.json declares.
   ...Object.entries(PLATFORM_LAYERS).flatMap(([name, allowed]) => [
     {
-      files: [`platform/${name}/src/**/*.ts`],
+      files: [pureFiles(name)],
       rules: platformBoundaries(name, allowed, { pure: true }),
     },
   ]),
   {
     // A platform package without a line in PLATFORM_LAYERS imports no other platform package.
-    files: ['platform/*/src/**/*.ts'],
+    files: [pureFiles('*')],
     ignores: Object.keys(PLATFORM_LAYERS).map((name) => `platform/${name}/**`),
     rules: platformBoundaries('<new package>', [], { pure: true }),
   },
   {
-    // Tests of the platform: no industry, no edition, no file inside another package.
-    files: ['platform/*/test/**/*.ts'],
+    // Tests of the platform: no industry, no edition, no file inside another package. A test
+    // may load a module of its own package with `import('…')`, so here the same three places
+    // are closed for that form too.
+    files: [`platform/*/test/**/${CODE}`],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -158,16 +223,25 @@ export default tseslint.config(
               group: ['@onestrand/*/*', '!@onestrand/*/web', '!@onestrand/*/testing'],
               message: 'Import the public entry of a package, never a file inside it.',
             },
-            {
-              group: ['**/industries/**', '**/editions/**'],
-              message: 'The platform imports no industry and no edition (architecture 3.2).',
-            },
+            NO_INDUSTRY,
             {
               regex: '^(\\.\\./){2,}',
               message: 'Stay inside the package: other packages are imported by their name.',
             },
           ],
         },
+      ],
+      'no-restricted-syntax': [
+        'error',
+        NO_INDUSTRY_DYNAMIC,
+        dynamicImportOf(
+          '^@onestrand\\/[^\\/]+\\/(?!(web|testing)$)',
+          'Import the public entry of a package, never a file inside it.',
+        ),
+        dynamicImportOf(
+          '^(\\.\\.\\/){2,}',
+          'Stay inside the package: other packages are imported by their name.',
+        ),
       ],
     },
   },
