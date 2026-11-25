@@ -60,8 +60,16 @@ describe('sha256Hex', () => {
   });
 
   it('refuses what is no Uint8Array instead of hashing nothing', () => {
-    for (const value of ['abc', [1, 2, 3], new Uint16Array(2), new ArrayBuffer(4), undefined, null]) {
-      expect(() => sha256Hex(value as unknown as Uint8Array), String(value)).toThrow(TypeError);
+    const wrong: [what: string, value: unknown][] = [
+      ['a text', 'abc'],
+      ['a list of numbers', [1, 2, 3]],
+      ['another typed array', new Uint16Array(2)],
+      ['a buffer', new ArrayBuffer(4)],
+      ['undefined', undefined],
+      ['null', null],
+    ];
+    for (const [what, value] of wrong) {
+      expect(() => sha256Hex(value as Uint8Array), what).toThrow(TypeError);
     }
   });
 });

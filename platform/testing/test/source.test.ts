@@ -97,7 +97,13 @@ describe('withoutComments', () => {
   });
 
   it('ends a line comment at every kind of line end', () => {
-    for (const end of ['\n', '\r', '\r\n', String.fromCharCode(0x2028), String.fromCharCode(0x2029)]) {
+    for (const end of [
+      '\n',
+      '\r',
+      '\r\n',
+      String.fromCharCode(0x2028),
+      String.fromCharCode(0x2029),
+    ]) {
       expect(withoutComments(`a(); // one${end}b(); // two`), JSON.stringify(end)).toBe(
         `a(); ${end}b(); `,
       );
@@ -114,8 +120,27 @@ describe('withoutComments', () => {
     const sourceLike = fc
       .array(
         fc.constantFrom(
-          '/', '*', '//', '/*', '*/', "'", '"', '`', '${', '{', '}', BACKSLASH, '\n', ' ', 'a', '=',
-          '(', ')', 'return', '[', ']',
+          '/',
+          '*',
+          '//',
+          '/*',
+          '*/',
+          "'",
+          '"',
+          '`',
+          '${',
+          '{',
+          '}',
+          BACKSLASH,
+          '\n',
+          ' ',
+          'a',
+          '=',
+          '(',
+          ')',
+          'return',
+          '[',
+          ']',
         ),
         { maxLength: 40 },
       )
@@ -195,9 +220,9 @@ describe('literalsOf', () => {
   });
 
   it('reads no comment and no code', () => {
-    expect(literalsOf(`// 'not this'\n/* "nor this" */ const a = 'this'; const ihr = !a;`)).toEqual([
-      'this',
-    ]);
+    expect(literalsOf(`// 'not this'\n/* "nor this" */ const a = 'this'; const ihr = !a;`)).toEqual(
+      ['this'],
+    );
     expect(literalsOf('const re = /"x"/; const a = 1 / 2;')).toEqual([]);
   });
 
