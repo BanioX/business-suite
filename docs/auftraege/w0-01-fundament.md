@@ -71,7 +71,7 @@ Was gebaut ist (Pakete, Werkzeuge, Tests), was bewusst offen ist (mit Eintrag in
 
 **Abnahme**
 
-- Punkt 1 (`ALL=GREEN`): massgebend ist der Lauf der CI auf dem Pull Request. Lokal (Windows) liefen Format, Lint, Typen, Tests mit Abdeckung, Build und Wächter einzeln und grün, die Tests ohne die zwei Dateien aus TD-53. `pnpm check` selbst und die Lizenzprüfung starten unter Windows nicht (TD-47); an den Abhängigkeiten hat sich seit dem letzten Lauf der CI nichts geändert.
+- Punkt 1 (`ALL=GREEN`): **lokal erfüllt, in der CI offen.** `pnpm check` lief am 25.11.2026 in einem frischen Klon unter Linux (Container `node:24`, `pnpm install --frozen-lockfile`, `OWNERSHIP_BASE=origin/main`): alle sieben Schritte `exit=0`, `ALL=GREEN`. Die CI hat den Lauf nicht gestartet: GitHub meldet für das Konto eine fehlgeschlagene Zahlung oder ein erreichtes Ausgabenlimit. Das Repo ist zurzeit privat, und dort zählen die Minuten der Actions zum Kontingent; die Annahme im Workflow («öffentlich, ohne Kontingent») trifft so nicht zu. Das ist ein Fall der Stopp-Regel «Geld» und liegt bei Alban.
 - Punkte 2 bis 7: durch Tests belegt (`tools/test/lint-boundaries.test.ts`, Wächter «platform-words» und «provenance», `platform/storage/test/`, `platform/ledger/test/ledger.property.test.ts`).
 
 **Bewusst offen** (alle in [`../schulden.md`](../schulden.md))
