@@ -1,0 +1,26 @@
+{
+  "about": "Every identifier that reaches a device or a backup, entered before it is used and never renamed. Only the head writes this file. Format and rules: tools/src/names.ts; compared with the code by «pnpm names».",
+  "version": 1,
+  "names": [
+    { "kind": "package", "name": "@onestrand/core", "owner": "platform", "status": "active" },
+    { "kind": "package", "name": "@onestrand/contract", "owner": "platform", "status": "active" },
+    { "kind": "package", "name": "@onestrand/storage", "owner": "platform", "status": "active" },
+    { "kind": "package", "name": "@onestrand/ledger", "owner": "platform", "status": "active" },
+    { "kind": "package", "name": "@onestrand/testing", "owner": "platform", "status": "active" },
+    { "kind": "package", "name": "@onestrand/tooling", "owner": "head", "status": "active" },
+    { "kind": "table", "name": "businesses", "owner": "platform", "status": "active" },
+    { "kind": "table", "name": "events", "owner": "platform", "status": "active" },
+    { "kind": "table", "name": "commands", "owner": "platform", "status": "active" },
+    { "kind": "table", "name": "files", "owner": "platform", "status": "active" },
+    { "kind": "unit", "name": "g", "owner": "platform", "status": "active" },
+    { "kind": "unit", "name": "ml", "owner": "platform", "status": "active" },
+    { "kind": "unit", "name": "pcs", "owner": "platform", "status": "active" },
+    { "kind": "unit", "name": "h", "owner": "platform", "status": "active" },
+    { "kind": "unit", "name": "min", "owner": "platform", "status": "active" },
+    { "kind": "unit", "name": "m", "owner": "platform", "status": "active" },
+    { "kind": "unit", "name": "m2", "owner": "platform", "status": "active" },
+    { "kind": "unit", "name": "m3", "owner": "platform", "status": "active" },
+    { "kind": "unit", "name": "km", "owner": "platform", "status": "active" },
+    { "kind": "unit", "name": "flat", "owner": "platform", "status": "active" }
+  ]
+}
