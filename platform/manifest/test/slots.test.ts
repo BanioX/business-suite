@@ -65,10 +65,9 @@ describe('the slots', () => {
       const noPage: SlotEntries = { sections: [{ id: 'alpha.s', feature: 'alpha.visits' }] };
       // @ts-expect-error an entry needs the function it belongs to
       const noFeature: SlotEntries = { routes: [{ id: 'alpha.r' }] };
+      const wrongSection = { id: 'alpha.s', feature: 'x', page: 'unknown_page' } as const;
       // @ts-expect-error a page the platform does not have
-      const wrongPage: SlotEntries = {
-        sections: [{ id: 'alpha.s', feature: 'x', page: 'unknown_page' }],
-      };
+      const wrongPage: SlotEntries = { sections: [wrongSection] };
       return [wrong, noPage, noFeature, wrongPage];
     };
     expectTypeOf(probe).toBeFunction();
