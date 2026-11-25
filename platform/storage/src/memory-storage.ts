@@ -302,35 +302,36 @@ export function createMemoryStorage<
     },
   };
 
-  let depth = 0;
-  /** The first error of a transaction that had joined the one that is running. */
-  let failedInside: { error: unknown } | undefined;
+  /** The transaction that is running, with the first error of one that had joined it. */
+  let running: { failedInside?: { error: unknown } } | undefined;
   async function transaction<T>(work: () => Promise<T>): Promise<T> {
-    if (depth > 0) {
+    const outer = running;
+    if (outer !== undefined) {
       try {
         return await work();
       } catch (error) {
-        failedInside ??= { error };
+        // Noted on the transaction it joined, not on whichever runs when it fails: a late
+        // failure must never reach a transaction that started after that one was over.
+        outer.failedInside ??= { error };
         throw error;
       }
     }
+    const own: { failedInside?: { error: unknown } } = {};
     const snapshot = snapshotOf(state);
-    depth += 1;
+    running = own;
     try {
       const result = await work();
-      const inner = failedInside;
-      if (inner !== undefined) {
+      if (own.failedInside !== undefined) {
         // The inner one promised «all or nothing» for its writes and is part of this one: the
         // only way to keep that promise is to undo everything, whoever caught its error.
-        throw inner.error;
+        throw own.failedInside.error;
       }
       return result;
     } catch (error) {
       state = snapshot;
       throw error;
     } finally {
-      depth -= 1;
-      failedInside = undefined;
+      running = undefined;
     }
   }
 

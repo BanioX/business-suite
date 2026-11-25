@@ -937,6 +937,28 @@ describe('memory storage: transactions', () => {
     expect(await t.storage.table('notes').get(note.id)).toEqual(note);
   });
 
+  it('keeps a late failure of an overlapping transaction away from the next one', async () => {
+    const t = await createTestStorage();
+    let fail: (error: Error) => void = () => undefined;
+    const gate = new Promise<never>((_resolve, reject) => {
+      fail = reject;
+    });
+    let late: Promise<never> | undefined;
+    await t.storage.transaction(() => {
+      // Started while the first one runs, so it joins it; it fails when that one is long over.
+      late = t.storage.transaction(() => gate);
+      return Promise.resolve();
+    });
+    fail(new Error('late'));
+    await expect(late).rejects.toThrow('late');
+
+    const note = t.note(t.one.business.id, 'Danach');
+    await t.storage.transaction(async () => {
+      await t.storage.table('notes').add(note);
+    });
+    expect(await t.storage.table('notes').get(note.id)).toEqual(note);
+  });
+
   it('does not fail a transaction for a refused call that the work caught', async () => {
     const t = await createTestStorage();
     const note = t.note(t.one.business.id, 'Notiz');

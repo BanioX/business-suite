@@ -172,7 +172,10 @@ export function createBackupCipher<TKey>(options: BackupCipherOptions<TKey>): Ba
   async function decryptBackup(envelope: EncryptedBackup, password: string): Promise<string> {
     // Checked again: an envelope put together by hand must not get past the bound for the
     // rounds, and one of another edition is not ours to open.
-    const checked = envelope;
+    const checked = readEnvelope(envelope);
+    if (typeof checked === 'string') {
+      throw new InvalidEnvelopeError();
+    }
     const salt = fromBase64(checked.kdf.salt);
     const iv = fromBase64(checked.cipher.iv);
     const data = fromBase64(checked.data);

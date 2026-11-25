@@ -1,4 +1,4 @@
-// Origin: BanioX/Randen apps/web/src/features/settings/backup-crypto.test.ts @ e0f0907 — adapted: the cipher is built with WebCrypto of the runtime and a made-up format name; checked against a second implementation; tests for the strict envelope, composed and decomposed passwords and other formats added
+// Origin: BanioX/Randen apps/web/src/features/settings/backup-crypto.test.ts @ e0f0907 — adapted: the cipher is built with WebCrypto of the runtime and a made-up format name; checked against a second implementation; tests for the strict envelope, composed and decomposed passwords, empty inputs and other formats added
 import { createCipheriv, createDecipheriv, pbkdf2Sync, randomBytes } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import {
