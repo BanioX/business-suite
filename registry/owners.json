@@ -62,6 +62,7 @@
         "platform/i18n/**",
         "platform/business/**",
         "platform/web-data/**",
+        "platform/manifest/**",
         "industries/muster/core/**",
         "docs/herkunft.md",
         "docs/schulden.md",
