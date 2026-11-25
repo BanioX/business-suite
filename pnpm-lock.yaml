@@ -125,6 +125,27 @@ importers:
         specifier: ^4.6.7
         version: 4.6.7
 
+  platform/i18n:
+    devDependencies:
+      '@onestrand/access':
+        specifier: workspace:*
+        version: link:../access
+      '@onestrand/business':
+        specifier: workspace:*
+        version: link:../business
+      '@onestrand/contract':
+        specifier: workspace:*
+        version: link:../contract
+      '@onestrand/features':
+        specifier: workspace:*
+        version: link:../features
+      '@onestrand/testing':
+        specifier: workspace:*
+        version: link:../testing
+      fast-check:
+        specifier: ^4.10.2
+        version: 4.10.3
+
   platform/ledger:
     dependencies:
       '@onestrand/contract':

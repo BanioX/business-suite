@@ -1,0 +1,21 @@
+{
+  "name": "@onestrand/i18n",
+  "version": "0.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.src.json && tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@onestrand/access": "workspace:*",
+    "@onestrand/business": "workspace:*",
+    "@onestrand/contract": "workspace:*",
+    "@onestrand/features": "workspace:*",
+    "@onestrand/testing": "workspace:*",
+    "fast-check": "^4.10.2"
+  }
+}

@@ -9,6 +9,7 @@
     { "kind": "package", "name": "@onestrand/features", "owner": "platform", "status": "active" },
     { "kind": "package", "name": "@onestrand/access", "owner": "platform", "status": "active" },
     { "kind": "package", "name": "@onestrand/business", "owner": "platform", "status": "active" },
+    { "kind": "package", "name": "@onestrand/i18n", "owner": "platform", "status": "active" },
     { "kind": "package", "name": "@onestrand/testing", "owner": "platform", "status": "active" },
     { "kind": "package", "name": "@onestrand/tooling", "owner": "head", "status": "active" },
     { "kind": "table", "name": "businesses", "owner": "platform", "status": "active" },

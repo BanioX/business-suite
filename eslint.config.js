@@ -18,6 +18,7 @@ const PLATFORM_LAYERS = {
   features: ['contract'],
   access: ['contract', 'storage', 'features'],
   business: ['core', 'contract', 'storage', 'features', 'access'],
+  i18n: [],
 };
 
 /** What the pure TypeScript part of a package never imports: UI, databases, Node. */
