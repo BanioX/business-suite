@@ -20,7 +20,37 @@ const PLATFORM_LAYERS = {
   business: ['core', 'contract', 'storage', 'features', 'access'],
   i18n: [],
   manifest: ['core', 'contract', 'storage', 'features', 'access', 'business', 'i18n'],
+  'web-data': ['core', 'contract', 'storage', 'business', 'manifest'],
 };
+
+/**
+ * The packages of the layer «Browser» (docs/architektur.md, 3.2), by name and not by pattern, each
+ * with the globals it may reach. Everything else a pure package may not reach stays closed for them
+ * too, and so do UI, Node and every import rule of the pure part: such a package differs from a pure
+ * one in these globals only. A new browser package is a decision made in three places: here, in the
+ * test of the boundaries (tools/test/lint-boundaries.test.ts), and in the purity check of its own
+ * `tsconfig.src.json` (the DOM types).
+ *
+ * The code still takes the outside world as a parameter wherever it can; the global is only the
+ * default (`function open(factory = indexedDB)`).
+ */
+const BROWSER_PACKAGES = {
+  'web-data': ['indexedDB', 'localStorage', 'navigator', 'crypto'],
+};
+
+/** The globals the pure part of a package never reaches: the browser's and Node's. */
+const PURE_RESTRICTED_GLOBALS = [
+  'window',
+  'document',
+  'localStorage',
+  'sessionStorage',
+  'indexedDB',
+  'fetch',
+  'navigator',
+  'process',
+  'Buffer',
+  'crypto',
+];
 
 /** What the pure TypeScript part of a package never imports: UI, databases, Node. */
 const NOT_PURE = [
@@ -173,21 +203,19 @@ export default tseslint.config(
     files: [pureFiles('*')],
     languageOptions: { globals: {} },
     rules: {
-      'no-restricted-globals': [
-        'error',
-        'window',
-        'document',
-        'localStorage',
-        'sessionStorage',
-        'indexedDB',
-        'fetch',
-        'navigator',
-        'process',
-        'Buffer',
-        'crypto',
-      ],
+      'no-restricted-globals': ['error', ...PURE_RESTRICTED_GLOBALS],
     },
   },
+  // The packages of the layer «Browser» reach the globals named for them, and no others.
+  ...Object.entries(BROWSER_PACKAGES).map(([name, reach]) => ({
+    files: [pureFiles(name)],
+    rules: {
+      'no-restricted-globals': [
+        'error',
+        ...PURE_RESTRICTED_GLOBALS.filter((global) => !reach.includes(global)),
+      ],
+    },
+  })),
   {
     // Whatever stands under `platform/` and whatever form the import has: no industry and no
     // edition. The blocks below replace these two rules for the pure part and for the tests of
