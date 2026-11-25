@@ -45,6 +45,33 @@
         "CLAUDE.md"
       ]
     },
+    "W0-02": {
+      "role": "platform",
+      "write": [
+        "package.json",
+        "pnpm-lock.yaml",
+        "tsconfig*.json",
+        "eslint.config.js",
+        "vitest.config.ts",
+        "tools/**",
+        "registry/**",
+        "platform/contract/**",
+        "platform/storage/**",
+        "platform/features/**",
+        "platform/access/**",
+        "platform/i18n/**",
+        "platform/business/**",
+        "platform/web-data/**",
+        "industries/muster/core/**",
+        "docs/herkunft.md",
+        "docs/schulden.md",
+        "docs/nebenwirkungen.md",
+        "docs/lernbuch.md",
+        "docs/fahrplan.md",
+        "docs/auftraege/w0-02-zusammensetzen.md",
+        "CLAUDE.md"
+      ]
+    },
     "HEAD": {
       "role": "head",
       "write": ["*", ".github/**", "docs/**", "editions/**", "registry/**", "tools/**"]
