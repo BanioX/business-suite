@@ -59,7 +59,10 @@ function describe(value: unknown): string {
   if (value === null) {
     return 'null';
   }
-  return Array.isArray(value) ? 'a list' : `a ${typeof value}`;
+  if (Array.isArray(value)) {
+    return 'a list';
+  }
+  return typeof value === 'object' ? 'an object' : `a ${typeof value}`;
 }
 
 function report(
@@ -471,19 +474,19 @@ function readList<TEntry>(
   });
 }
 
-function readSimple<TEntry extends { id: string }>(
+function readSimple(
   sink: Sink,
   level: EntryLevel,
   pattern: RegExp,
   form: string,
-): (item: unknown) => TEntry | undefined {
+): (item: unknown) => { readonly id: string } | undefined {
   return (item) => {
     const entry = asEntry(sink, level, item, ['id']);
     if (entry === undefined) {
       return undefined;
     }
     const id = readId(sink, level, entry, pattern, form);
-    return id === undefined ? undefined : (Object.freeze({ id }) as TEntry);
+    return id === undefined ? undefined : Object.freeze({ id });
   };
 }
 

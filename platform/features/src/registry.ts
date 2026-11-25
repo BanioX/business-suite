@@ -142,17 +142,6 @@ export interface FeatureRegistry<TId extends string = string> {
   resolveOptions(featureId: string, stored?: unknown): ResolvedOptions;
 }
 
-function fail(problems: readonly FeatureProblem[]): never {
-  const [first] = problems;
-  throw new FeatureError(
-    first?.code ?? 'invalid_entry',
-    `The entries of the feature register are not well formed: ${problems
-      .map((problem) => `${problem.level} ${problem.id}: ${problem.message}`)
-      .join('; ')}`,
-    problems,
-  );
-}
-
 /**
  * What is wrong with entries, without building anything: every problem as data, in the form of
  * each entry and between all of them, together with the ones of `base` if given. The conformity
@@ -193,8 +182,14 @@ function buildRegistry<TId extends string>(
   input: unknown,
 ): FeatureRegistry<TId> {
   const { entries, problems } = checkEntries(base, input);
-  if (problems.length > 0) {
-    fail(problems);
+  const [first] = problems;
+  if (first !== undefined) {
+    const found = problems.map((problem) => `${problem.level} ${problem.id}: ${problem.message}`);
+    throw new FeatureError(
+      first.code,
+      `The entries of the feature register are not well formed: ${found.join('; ')}`,
+      problems,
+    );
   }
   return registryOf<TId>(entries);
 }
@@ -212,33 +207,6 @@ function registryOf<TId extends string>(entries: CheckedEntries): FeatureRegistr
 
   const inOrder = (members: ReadonlySet<string>): TId[] => ids.filter((id) => members.has(id));
 
-  // Through every step; the checks ruled out cycles, so the walk ends.
-  const requiredIds = new Map<string, ReadonlySet<string>>();
-  const requiredOf = (id: string): ReadonlySet<string> => {
-    const known = requiredIds.get(id);
-    if (known !== undefined) {
-      return known;
-    }
-    const all = new Set<string>();
-    for (const required of byId.get(id)?.requires ?? []) {
-      all.add(required);
-      for (const deeper of requiredOf(required)) {
-        all.add(deeper);
-      }
-    }
-    requiredIds.set(id, all);
-    return all;
-  };
-  for (const id of ids) {
-    requiredOf(id);
-  }
-  const dependentIds = new Map<string, Set<string>>(ids.map((id) => [id, new Set<string>()]));
-  for (const [id, required] of requiredIds) {
-    for (const base of required) {
-      dependentIds.get(base)?.add(id);
-    }
-  }
-
   const known = (id: string): FeatureDefinition<TId> => {
     const feature = byId.get(id);
     if (feature === undefined) {
@@ -249,6 +217,26 @@ function registryOf<TId extends string>(entries: CheckedEntries): FeatureRegistr
     }
     return feature;
   };
+
+  // Through every step; the checks ruled out cycles, so the walk ends.
+  const requiredIds = new Map<string, ReadonlySet<string>>();
+  const requiredOf = (id: string): ReadonlySet<string> => {
+    const done = requiredIds.get(id);
+    if (done !== undefined) {
+      return done;
+    }
+    const all = new Set<string>();
+    for (const required of known(id).requires) {
+      all.add(required);
+      for (const deeper of requiredOf(required)) {
+        all.add(deeper);
+      }
+    }
+    requiredIds.set(id, all);
+    return all;
+  };
+  const dependentsSet = (id: string): ReadonlySet<string> =>
+    new Set(ids.filter((other) => requiredOf(other).has(id)));
 
   const resolve = (enabled: Iterable<string>): ResolvedFeatures<TId> => {
     const wanted = new Set<string>(coreIds);
@@ -338,7 +326,7 @@ function registryOf<TId extends string>(entries: CheckedEntries): FeatureRegistr
     // Off wins over on: what an answer switches off goes, with everything that needs it.
     const removed = new Set<string>(disable);
     for (const id of disable) {
-      dependentIds.get(id)?.forEach((dependent) => removed.add(dependent));
+      dependentsSet(id).forEach((dependent) => removed.add(dependent));
     }
     const start = new Set(chosen.flatMap((kind) => kind.on));
     const without = (members: readonly TId[]): readonly TId[] =>
@@ -352,12 +340,12 @@ function registryOf<TId extends string>(entries: CheckedEntries): FeatureRegistr
   };
 
   const registry: FeatureRegistry<TId> = {
-    industries: entries.industries,
-    groups: entries.groups,
+    industries: Object.freeze([...entries.industries]),
+    groups: Object.freeze([...entries.groups]),
     features,
-    kinds: entries.kinds,
-    questions: entries.questions,
-    deviceModes: entries.deviceModes,
+    kinds: Object.freeze([...entries.kinds]),
+    questions: Object.freeze([...entries.questions]),
+    deviceModes: Object.freeze([...entries.deviceModes]),
     ids,
     has: (id): id is TId => byId.has(id),
     get: known,
@@ -373,7 +361,7 @@ function registryOf<TId extends string>(entries: CheckedEntries): FeatureRegistr
     },
     dependentsOf: (id) => {
       known(id);
-      return Object.freeze(inOrder(dependentIds.get(id) ?? new Set()));
+      return Object.freeze(inOrder(dependentsSet(id)));
     },
     switchFeature: (enabled, id, on) => {
       const feature = known(id);
@@ -384,7 +372,7 @@ function registryOf<TId extends string>(entries: CheckedEntries): FeatureRegistr
         );
       }
       const before = resolve(enabled);
-      const taken = new Set<string>(dependentIds.get(id));
+      const taken = new Set<string>(dependentsSet(id));
       taken.add(id);
       const after = on
         ? resolve([...before.features, id])
