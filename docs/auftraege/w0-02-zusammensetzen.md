@@ -57,7 +57,7 @@ Was gebaut, was geerntet (mit Randen-Commit), was selbst gebaut und von Randen s
 
 ## Stand
 
-Schritt 1 (Stand von Randen), Schritt 3 (`@onestrand/features`), Schritt 4 (`@onestrand/access`) und Schritt 5 (`@onestrand/business`) erledigt am 25.11.2026; die übrigen Schritte sind offen.
+Schritt 1 (Stand von Randen), Schritt 3 (`@onestrand/features`), Schritt 4 (`@onestrand/access`), Schritt 5 (`@onestrand/business`) und Schritt 6 (`@onestrand/i18n`) erledigt am 25.11.2026; die übrigen Schritte sind offen.
 
 **Schritt 1, Stand von Randen** (gelesen aus `BanioX/Randen` @ `5d016f1`, nur lesen):
 
@@ -129,3 +129,25 @@ Was die folgenden Schritte wissen müssen:
 - **`muster` (Schritt 8):** Einen Demo-Betrieb legt `business.create` an (`actor` = frische Kennung, `features` aus `registry.propose(...).usual`), dann `business.update` für Briefkopf und Kanton und `business.people.add` für weitere Personen. Namen in Demo-Daten: «Betrieb Muster», «Person Muster».
 - **Sprachen (Schritt 6):** Der Texttest verlangt zusätzlich Name und Satz für die Funktion und das Modul `business`, für `people_roles` und `settings`, die Wörter für `effective` und `flat_rate`, die 26 Kantone und die Sätze zu `business.last_owner` und `business.profile_refused`.
 - Neue Schulden: TD-80, TD-81, TD-82, TD-83; TD-11 erledigt; TD-52 und TD-72 teilweise, TD-31 ein Stück näher. Neue Lektionen: L-S44 bis L-S47.
+
+**Schritt 6, `@onestrand/i18n`** (selbst gebaut; in Randen gibt es dazu nichts, nichts gelesen und nichts kopiert, kein Herkunftsvermerk). Sprachen als Register, typisierte Kataloge mit Rückfall auf de-CH, Lücken als Daten, Sätze von Katalogen je Sprache (App und Dokumente), Lexikon der Branche, die Regel von der Kennung zum Schlüssel samt Prüfung gegen die Register, und die de-CH-Texte der Pakete `features`, `access` und `business`. Siehe `platform/i18n/api.md`. Schichten: `i18n` importiert **kein** Paket (Zeile `i18n: []` in `PLATFORM_LAYERS`); `features`, `access`, `business` und `testing` sind nur Entwicklungsabhängigkeiten für die Tests.
+
+Entscheide (klein, selbst getroffen):
+
+1. **Wo die Texte der Pakete ohne Bildschirm leben:** in `platform/i18n/src/messages.ts`. ADR-0007 sagt «je Paket `messages.ts`», Architektur 3.2 Regel 6 sagt «kein Text im rein-TS-Teil»; `features`, `access` und `business` haben keinen `./web`-Teil, also gibt es sonst keinen Ort. Ein Paket mit `./web` hält seine `messages.ts` dort, eine Branche in `industries/<id>/web`. Das ist eine Auslegung des ADR; der Kopf stellt es klar (TD-90). Der Wächter für Wörter einer Branche liest `messages.ts` wie jede Datei unter `platform/`.
+2. **Register ohne Abhängigkeit:** Die Prüfung gegen die Register nimmt schlichte Formen (`FeatureRegisterShape`, `RightRegisterShape`), die `FeatureRegistry` und `RightRegistry` ohne Umweg erfüllen. So braucht `i18n` weder `features` noch `access` (der Weg mit weniger Abhängigkeit); ein Test mit den echten Registern hält beides beisammen.
+3. **Schlüssel folgen den Kennungen:** `modules.<m>.{name,summary}`, `features.<f>.{name,summary}`, `options.<f>.<option>`, `kinds.<k>`, `questions.<q>.{text,answers.<a>}`, `deviceModes.<modus>` (`normal` immer), `rights.<r>.{name,summary}`; eine Kennung behält ihre Punkte als einen Schlüssel. Wörter fester Listen unter dem Code: `extents`, `levels` (dazu `none`: «Kein Zugriff»), `profiles.owner`, `vatMethods`, `cantons`, `errors`. Ein Recht hat Name **und** Satz (so steht es im Stand von `access`), auch wo der Auftrag nur «Name je Recht» nennt.
+4. **Sprachen:** Die Plattform legt nur `de-CH` fest. Das Register nimmt BCP-47-Tags in der geschriebenen Form; die Liste der Sprachen einer Ausgabe nennt die Ausgabe (S-07 ist offen; die Vorschläge stehen im Entscheid und nirgends im Code). Kein neuer Eintrag in `NAME_KINDS` (TD-95).
+5. **Rückfall:** Ein leerer Text oder ein Text der falschen Art gilt als fehlend. Ein Schlüssel, den die Quelle nicht kennt, fällt weg (nur ein Befund `unknown_key`). Ergebnis neu und tief eingefroren.
+6. **Sprache der Dokumente:** kein eigener Begriff, sondern ein zweiter `CatalogueSet` mit eigener Quelle. `forPreferences([Kundschaft, Betrieb])` nimmt die erste Sprache, die der Satz hat. Die Anrede (S-07) ist nirgends vorweggenommen.
+7. **Lexikon:** Begriff, je Sprache `{ one, many }`; Reihenfolge Ausgabe, Branche, Plattform; zuerst ein Wort in der Sprache, dann das deutsche. Zwei Branchen mit verschiedenem Wort für denselben Begriff sind ein Befund, die Ausgabe antwortet mit einem eigenen Eintrag. Die Plattform hat einen Begriff (`object`: Objekt/Objekte).
+8. **Regeln je Sprache:** bleiben in `@onestrand/testing` (nicht in den Schreibpfaden dieses Auftrags); `api.md` zeigt, wie ein Katalog damit geprüft wird. Für andere Sprachen gibt es keine Regeln, und der Test lässt keine Sprache ohne Regeln durch (TD-92).
+9. **Keine Übersetzung:** Der Test der Abnahme nimmt Platzhalter-Texte (`[pt] …`), keine erfundenen Sätze; `catalogueGaps(messages, undefined, 'pt')` listet jeden Schlüssel als Lücke.
+
+Was die folgenden Schritte wissen müssen:
+
+- **Manifeste (Schritt 2):** Eine Ausgabe setzt den Katalog mit `mergeCatalogues(messages, katalogBranche…)` zusammen und prüft ihn mit `missingTexts(katalog, registerTexts({ features, rights }))` gegen ihre Register; `check:industry` sollte beides rufen und `[]` erwarten (die Texte der Branche folgen den Schlüsseln von oben; wo sie liegen, legt `defineIndustryWeb` in W0-03 fest). Das Lexikon der Ausgabe ist `createLexicon({ base: platformTerms, industries: [...] , edition })`. Die Texte der Branche prüft der Texttest mit `textProblems(katalog, { rules: DE_CH_TEXT_RULES, productNames })`.
+- **`muster` (Schritt 8):** Der Katalog von `muster` braucht Name und Satz für sein Modul und seine Funktion, den Namen der Option, der Betriebsart und des Gerätemodus, Text für Frage und Antworten; `missingTexts` ist `[]`.
+- **Web-Daten (Schritt 7):** Die Sprache der Bedienung liegt je Person auf dem Gerät (`deviceKey`), nicht in der Sicherung; neue Zeile in `docs/nebenwirkungen.md`, wenn sie geschrieben wird. Das Paket hält keinen Zustand.
+- **W0-03:** Die Ausgabe wählt die Sprachen (`createCatalogueSet(messages, { pt: … })`) und liefert Sprache und Dokumentsprache an die Texte; die Wörter «Inhaber:in», «Sehen», «Bedienen», «Verwalten», die Kantone und die Fehlersätze stehen in `messages`.
+- Neue Schulden: TD-90 bis TD-96. Neue Lektionen: L-S60 bis L-S63.
