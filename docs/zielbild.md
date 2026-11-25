@@ -22,6 +22,18 @@ Jede Welle wird an diesen Sätzen gemessen, im Pilot neben der Person, nie über
 8. **Nichts geht verloren, wenn ein Handy vom Gerüst fällt:** Abgleich am Abend, Sicherung mit Erinnerung.
 9. **Pflichten erfüllen sich nebenbei:** Arbeitszeit, Aufbewahrung, Sicherheit, Hygiene. Pflichten hängen nie an einem Schalter für ein Abo.
 
+## Anspruch
+
+Alban, 25.11.2026: «Baue es gigantisch crazy soetwas hat die Welt noch nicht gesehen von produkt so inovativ so erweiterbar so nützlich wie nur menschenmöglich».
+
+Ungewöhnlich wird die Suite durch das, was sie den Leuten abnimmt, nicht durch die Zahl ihrer Funktionen. Der Anspruch hat drei Teile, und jeder ist prüfbar:
+
+1. **Sagen statt klicken.** Wer keine Zeit zum Tippen hat, sagt oder fotografiert, was war; die App schlägt Rapport, Stunden, Material und Rechnung vor, und ein Tipp bestätigt. Jede Handlung der App ist ein benannter Befehl, darum kann ein Assistent sie ausführen, ohne durch Bildschirme zu klicken. Was dafür ein Dienst im Netz braucht, entscheidet Alban ([S-24](entscheide.md)); die App bleibt ohne Assistent voll bedienbar.
+2. **Jede Branche auf einem Rückgrat, in Tagen statt Monaten.** Eine Branche ist ein Paket, das andockt, ohne eine Datei der Plattform zu ändern. Vorlage, Generator und Wächter machen aus dem Bau einer Branche einen wiederholbaren Ablauf, den viele Agenten gleichzeitig gehen können.
+3. **Offen und dem Betrieb gehörig.** Was die App kann, können auch die Werkzeuge des Betriebs: Client, Kommandozeile und Werkzeug-Definitionen entstehen aus der Schnittstelle ([S-23](entscheide.md)). Die Daten liegen in einer Datei, die der Betrieb lesen, mitnehmen und löschen kann.
+
+Der Anspruch hebt keinen Leitsatz auf: klein anfangen dürfen, ehrlich bei Lücken, Richtwert statt Rechtsberatung, ruhig im Ton. Gross wird das Ganze in der Reihenfolge des Fahrplans, nicht alles auf einmal.
+
 ## Leitsätze
 
 - **Arbeit abnehmen, nicht machen.** Eine Funktion, die mehr Eintippen verlangt, als sie spart, kommt nicht hinein.
