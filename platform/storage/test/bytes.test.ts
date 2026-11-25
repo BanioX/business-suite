@@ -9,21 +9,24 @@ import { base64Decode, base64Encode, hexEncode, utf8Decode, utf8Encode } from '.
 
 const nodeEncode = (text: string) => Array.from(new TextEncoder().encode(text));
 
+/** What a decoder made of some bytes: their text, or the word that it refused them. */
+type Decoded = { text: string } | 'refused';
+
 /** Strict and without touching a byte order mark, as `utf8Decode` promises. */
-function nodeDecode(bytes: Uint8Array): string | 'invalid' {
+function nodeDecode(bytes: Uint8Array): Decoded {
   try {
-    return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes);
+    return { text: new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes) };
   } catch {
-    return 'invalid';
+    return 'refused';
   }
 }
 
-function ownDecode(bytes: Uint8Array): string | 'invalid' {
+function ownDecode(bytes: Uint8Array): Decoded {
   try {
-    return utf8Decode(bytes);
+    return { text: utf8Decode(bytes) };
   } catch (error) {
     expect(error).toBeInstanceOf(TypeError);
-    return 'invalid';
+    return 'refused';
   }
 }
 
@@ -86,13 +89,13 @@ describe('utf8Encode', () => {
 
 describe('utf8Decode', () => {
   it('reads what utf8Encode wrote', () => {
-    for (const text of ['', 'Betrieb Muster', 'Zürich, Genève, Sørensen', '日本語', 'a😀b', '\u0000']) {
+    for (const text of ['', 'Betrieb Muster', 'Zürich, Genève, Tromsø', '日本語', 'a😀b', '\u0000']) {
       expect(utf8Decode(utf8Encode(text))).toBe(text);
     }
   });
 
   it('keeps a byte order mark as part of the text', () => {
-    expect(utf8Decode(Uint8Array.of(0xef, 0xbb, 0xbf, 0x41))).toBe('﻿A');
+    expect(utf8Decode(Uint8Array.of(0xef, 0xbb, 0xbf, 0x41))).toBe('\uFEFFA');
   });
 
   it.each([
@@ -109,7 +112,7 @@ describe('utf8Decode', () => {
     ['the byte 0xFF', [0xff]],
   ])('refuses %s', (_what, bytes) => {
     expect(() => utf8Decode(Uint8Array.from(bytes))).toThrow(TypeError);
-    expect(nodeDecode(Uint8Array.from(bytes))).toBe('invalid');
+    expect(nodeDecode(Uint8Array.from(bytes))).toBe('refused');
   });
 
   it('reads a long text in pieces', () => {
@@ -120,7 +123,7 @@ describe('utf8Decode', () => {
   it('agrees with the strict decoder of the runtime for any bytes', () => {
     fc.assert(
       fc.property(fc.oneof(fc.uint8Array({ maxLength: 12 }), nearlyUtf8), (bytes) => {
-        expect(ownDecode(bytes)).toBe(nodeDecode(bytes));
+        expect(ownDecode(bytes)).toEqual(nodeDecode(bytes));
       }),
       { numRuns: 2000 },
     );

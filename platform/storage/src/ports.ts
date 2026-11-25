@@ -31,15 +31,19 @@ export type {
  * field, so a row with fields a schema does not know yet is stored and read back as it is.
  */
 export interface RecordStore<TRecord extends StoredRow> {
-  /** The row with this id, of whatever business; `requireRow` checks the business too. */
+  /**
+   * The row with this id, of whatever business on the device. A use case never hands it on
+   * unchecked: `requireRow` compares the business and leaves out soft-deleted rows.
+   */
   get: (id: Id) => Promise<TRecord | undefined>;
-  /** Every row of one business, in no particular order. */
+  /** Every row of one business, soft-deleted ones included, in no particular order. */
   ofBusiness: (businessId: Id) => Promise<TRecord[]>;
-  /** Inserts a new row; fails if the id exists. */
+  /** Inserts a new row; fails if the id exists, or if the row lacks its id or its business. */
   add: (record: TRecord) => Promise<void>;
   /**
    * Inserts or replaces a row. Fails if the id belongs to a row of another business (a row
-   * never changes hands), and in an append-only table if the id exists at all.
+   * never changes hands), in an append-only table if the id exists at all, and if the row lacks
+   * its id or its business.
    */
   put: (record: TRecord) => Promise<void>;
 }
@@ -56,15 +60,25 @@ export interface BusinessStore<TBusiness extends BusinessBase = BusinessBase> {
 
 /**
  * Files as bytes with a checksum (suite ADR-0005, 7). A row refers to a file by its id. There
- * is no way to change a file: new bytes are a new file.
+ * is no way to change a file, and none to remove a single one: new bytes are a new file, and
+ * files go with their business (`purge`).
+ *
+ * `put`, `verify` and `restore` compute a checksum, which is no call of the storage. An
+ * implementation on a database must keep a running transaction open across it, or compute it
+ * before it touches the database.
  */
 export interface FileStore {
   /**
    * Stores the bytes as a new file and returns what the storage knows about it. The checksum
-   * comes from the `Hasher` of the storage. Fails if media type or name are malformed.
+   * comes from the `Hasher` of the storage. Fails with a `StorageError` `invalid_file` if the
+   * media type or the name are malformed (see `FileMetaSchema`) or the bytes are no
+   * `Uint8Array`.
    */
   put: (file: NewFile) => Promise<FileMeta>;
-  /** The file with this id, of whatever business, or nothing. */
+  /**
+   * The file with this id, of whatever business on the device, or nothing. A use case compares
+   * `meta.businessId` before it hands a file on.
+   */
   get: (id: Id) => Promise<StoredFile | undefined>;
   /** What is known about every file of one business, without the bytes, in no particular order. */
   ofBusiness: (businessId: Id) => Promise<FileMeta[]>;
@@ -74,8 +88,10 @@ export interface FileStore {
    */
   verify: (id: Id) => Promise<boolean>;
   /**
-   * Brings a file back with the id and the time it had (a backup, later another device). Fails
-   * if the id exists or the bytes do not match the checksum and the size of the meta data.
+   * Brings a file back with the id and the time it had (a backup, later another device). Meta
+   * data a newer version added is kept. Fails with a `StorageError`: `invalid_file` for
+   * malformed meta data, `checksum` if the bytes do not match the checksum and the size of the
+   * meta data, `exists` if the id is taken.
    */
   restore: (file: StoredFile) => Promise<void>;
 }
@@ -87,7 +103,8 @@ export interface TableAccess<TRows extends RowTypes = RowTypes> {
   /**
    * A table by its definition; the rows have the type of the definition. For code that owns a
    * table but not the register (a module, a ledger). Fails with `unknown_table` if the storage
-   * has no table of that name.
+   * has no table of that name, or holds another table under it (another schema, or rows that
+   * may be replaced where the definition says they may not).
    */
   <TRow extends StoredRow>(table: TableDefinition<string, TRow>): RecordStore<TRow>;
 }
@@ -96,6 +113,9 @@ export interface TableAccess<TRows extends RowTypes = RowTypes> {
  * What a module or a kit needs from the storage: its tables by their definitions, files, the
  * two logs and the transaction. It says nothing about the register or the business row, so the
  * storage of every edition fits, whatever other tables it holds.
+ *
+ * A transaction inside another joins it and shares its fate: if the inner one fails, the outer
+ * one fails too, even if it caught the error (see `Transactional`).
  */
 export interface ModuleStorage extends CommandStorage {
   table: <TRow extends StoredRow>(table: TableDefinition<string, TRow>) => RecordStore<TRow>;

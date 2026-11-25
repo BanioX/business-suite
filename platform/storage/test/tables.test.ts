@@ -10,6 +10,7 @@ import {
   StorageError,
   SYNC_KINDS,
   TABLE_NAME_PATTERN,
+  type AnyTableRegistry,
   type StorageErrorCode,
   type TableDefinition,
 } from '../src';
@@ -263,7 +264,8 @@ describe('createTableRegistry', () => {
   });
 
   it('fails for a table it does not have, and says which ones it has', () => {
-    const anyRegistry: { get: (name: string) => unknown } = REGISTRY;
+    // As code sees it that works for every register and knows no table by name.
+    const anyRegistry: AnyTableRegistry = REGISTRY;
     expect(codeOf(() => anyRegistry.get('customers'))).toBe('unknown_table');
     expect(() => anyRegistry.get('customers')).toThrow(
       'Unknown table "customers"; registered: notes, time_entries, device_settings',

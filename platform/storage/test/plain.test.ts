@@ -49,7 +49,8 @@ describe('plainCopy', () => {
     for (const value of [null, 'text', '', 0, 1.5, -3, true, false]) {
       expect(plainCopy(value)).toBe(value);
     }
-    expect(plainCopy(undefined)).toBeUndefined();
+    const nothing: unknown = undefined;
+    expect(plainCopy(nothing)).toBeUndefined();
   });
 
   it('leaves out fields without a value, as a file does', () => {
@@ -70,18 +71,22 @@ describe('plainCopy', () => {
     expect(Object.getPrototypeOf(copy)).toBe(Object.prototype);
   });
 
-  it.each([
+  class Row {
+    id = 'x';
+  }
+  const refused: [string, unknown, string][] = [
     ['NaN', Number.NaN, 'NaN is not a number a file can carry'],
     ['infinity', Number.NEGATIVE_INFINITY, '-Infinity is not a number a file can carry'],
     ['a date object', new Date(0), 'a object'],
     ['a map', new Map(), 'a object'],
     ['a set', new Set(), 'a object'],
     ['bytes', Uint8Array.of(1), 'a object'],
-    ['an instance of a class', new (class Row {})(), 'a object'],
+    ['an instance of a class', new Row(), 'a object'],
     ['a function', () => 1, 'a function'],
     ['a big integer', 1n, 'a bigint'],
     ['a symbol', Symbol('x'), 'a symbol'],
-  ])('refuses %s', (_what, value, problem) => {
+  ];
+  it.each(refused)('refuses %s', (_what, value, problem) => {
     const error = refusal(() => plainCopy({ rows: [{ value }] }));
     expect(error.code).toBe('not_plain');
     expect(error.message).toBe(`The value at $.rows[0].value is not plain data: ${problem}`);
@@ -251,7 +256,8 @@ describe('keepUnknownFields', () => {
     expect(keepUnknownFields({ a: 1 }, [1])).toStrictEqual([1]);
     expect(keepUnknownFields([1], { a: 1 })).toStrictEqual({ a: 1 });
     expect(keepUnknownFields(null, { a: 1 })).toStrictEqual({ a: 1 });
-    expect(keepUnknownFields({ a: 1 }, undefined)).toBeUndefined();
+    const nothing: unknown = undefined;
+    expect(keepUnknownFields({ a: 1 }, nothing)).toBeUndefined();
   });
 
   it('leaves out fields without a value on both sides', () => {

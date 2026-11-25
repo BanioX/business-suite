@@ -12,7 +12,7 @@ import {
 const FORMAT = 'sample-encrypted';
 const cipher = createBackupCipher({ crypto: globalThis.crypto, format: FORMAT });
 
-const plain = JSON.stringify({ format: 'sample-backup', items: [{ name: 'Müller, Zürich' }] });
+const plain = JSON.stringify({ format: 'sample-backup', items: [{ name: 'Betrieb Muster, Zürich' }] });
 
 const open = (text: string): EncryptedBackup => {
   const envelope = cipher.readEnvelope(JSON.parse(text));
@@ -88,8 +88,8 @@ describe('backup cipher', () => {
     expect(bytesOf(envelope.cipher.iv)).toHaveLength(12);
     // The ciphertext with its 16 bytes of authentication, and none of the text.
     expect(bytesOf(envelope.data)).toHaveLength(Buffer.byteLength(plain, 'utf8') + 16);
-    expect(text).not.toContain('Müller');
-    expect(text).not.toContain(Buffer.from('Müller').toString('base64'));
+    expect(text).not.toContain('Zürich');
+    expect(text).not.toContain(Buffer.from('Zürich').toString('base64'));
   });
 
   it('gives the same text back after a round trip', async () => {
@@ -126,7 +126,7 @@ describe('backup cipher', () => {
   });
 
   it('gives the text back exactly, a byte order mark at the start included', async () => {
-    const data = '﻿{"a":1}';
+    const data = '\uFEFF{"a":1}';
     const envelope = writtenElsewhere(Buffer.from(data, 'utf8'), 'correct horse', 1000);
     expect(await cipher.decryptBackup(envelope, 'correct horse')).toBe(data);
   });

@@ -36,6 +36,8 @@ describe('@onestrand/storage', () => {
         'SHA256_PATTERN',
         'MEDIA_TYPE_PATTERN',
         'FileMetaSchema',
+        'parseFileMeta',
+        'copyOfBytes',
         'sha256Of',
         'matchesChecksum',
         'assertChecksum',

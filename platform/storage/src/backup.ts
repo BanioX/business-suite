@@ -23,7 +23,9 @@ import type { AnyTableRegistry, Rows, StoredRow, TableDefinition, TableName } fr
  * and counts its own versions; both are frozen once a file was written with them.
  *
  * A backup holds one business: its row, every row of every table that is part of the backup
- * (soft-deleted ones included) and its files. Events and the command log stay on the device.
+ * (soft-deleted ones included) and its files. The events, the command log and the tables that
+ * are not part of a backup stay on the device the file is written on; a restore removes them
+ * together with the business it replaces.
  */
 
 /** What can keep a file from coming back, by kind. */
@@ -39,8 +41,8 @@ export const BACKUP_PROBLEM_KINDS = [
 ] as const;
 /**
  * - `format`: not a backup of this edition.
- * - `version`: written by a newer version of the app, no version at all, or a version no reader
- *   leads on from (`version` as written, if it could be read).
+ * - `version`: written by a newer version of the app, no version at all, or an older version
+ *   whose reader could not read the file (`version` as written, if it could be read).
  * - `field`: a field of the document itself is unknown, missing or malformed (`field`).
  * - `business`: the business row does not fit its schema.
  * - `table`: the tables are missing (no `table`), a table of the register is missing or the
@@ -74,6 +76,11 @@ export interface BackupFile {
 /** The rows of the tables of a backup, by table name. Tables outside the backup are absent. */
 export type BackupRows<TRegistry extends AnyTableRegistry = AnyTableRegistry> = {
   [TName in TableName<TRegistry>]?: Rows<TRegistry>[TName][];
+};
+
+/** The rows of a checked backup: the same, as lists nobody adds to or takes from. */
+export type CheckedRows<TRegistry extends AnyTableRegistry = AnyTableRegistry> = {
+  readonly [TName in TableName<TRegistry>]?: readonly Rows<TRegistry>[TName][];
 };
 
 /** The whole business as one document, ready to be written as JSON. */
@@ -114,15 +121,19 @@ export interface BackupPreview {
 /**
  * A backup that passed the check: the business, the rows and the files as they will be written.
  * Only `checkBackup` makes one, and `restoreBackup` takes no other.
+ *
+ * It is frozen at every depth: what was checked is what gets written, and an attempt to change
+ * a row, the business or the meta data of a file fails with a `TypeError`. The bytes of a file
+ * cannot be frozen; the storage compares them with the checksum again when it writes them.
  */
 export interface CheckedBackup<
   TRegistry extends AnyTableRegistry = AnyTableRegistry,
   TBusiness extends BusinessBase = BusinessBase,
 > {
   readonly exportedAt: IsoDateTime;
-  readonly business: TBusiness;
-  readonly tables: BackupRows<TRegistry>;
-  readonly files: readonly StoredFile[];
+  readonly business: Readonly<TBusiness>;
+  readonly tables: CheckedRows<TRegistry>;
+  readonly files: readonly Readonly<StoredFile>[];
 }
 
 /** The result of checking a file: what the preview shows, and the backup when it may come back. */
@@ -209,9 +220,11 @@ export interface BackupKit<
   checkBackup: (data: unknown) => Promise<BackupCheck<TRegistry, TBusiness>>;
   /**
    * Brings a checked backup back in one transaction: the business of the file is removed from
-   * the device if it is there, then written as the file holds it. No other business is touched;
-   * if a row or a file of the backup has the id of one that belongs to another business,
-   * nothing is written at all. Takes only what `checkBackup` of this kit returned.
+   * the device if it is there (`purge`: also its events, its entries of the command log and its
+   * rows of tables that are not part of a backup), then written as the file holds it. No other
+   * business is touched; if a row or a file of the backup has the id of one that belongs to
+   * another business, nothing is written at all. Takes only what `checkBackup` of this kit
+   * returned.
    */
   restoreBackup: (
     storage: Storage<TRegistry, TBusiness>,
@@ -236,6 +249,31 @@ interface LooseBackup {
   business: BusinessBase;
   tables: Record<string, StoredRow[]>;
   files: StoredFile[];
+}
+
+/** Freezes plain data at every depth and returns it. */
+function frozen<TValue>(value: TValue): TValue {
+  if (typeof value === 'object' && value !== null && !Object.isFrozen(value)) {
+    Object.freeze(value);
+    Object.values(value).forEach(frozen);
+  }
+  return value;
+}
+
+/**
+ * Freezes a backup that passed the check, so nothing can change between the check and the
+ * restore. The bytes of the files are left out: an array of bytes cannot be frozen, and
+ * `FileStore.restore` compares them with the frozen checksum before it stores them.
+ */
+function sealed(backup: LooseBackup): LooseBackup {
+  frozen(backup.business);
+  frozen(backup.tables);
+  for (const file of backup.files) {
+    frozen(file.meta);
+    Object.freeze(file);
+  }
+  Object.freeze(backup.files);
+  return Object.freeze(backup);
 }
 
 const isList = (value: unknown): value is readonly unknown[] => Array.isArray(value);
@@ -521,10 +559,10 @@ export function createBackupKit<
       return { preview: preview(problems) };
     }
 
-    const loose: LooseBackup = { exportedAt: exported.data, business, tables, files };
+    const loose = sealed({ exportedAt: exported.data, business, tables, files });
     // The rows were checked with the schemas of this register and the business with its schema;
     // from here on they carry those types.
-    const backup = Object.freeze(loose) as unknown as CheckedBackup<TRegistry, TBusiness>;
+    const backup = loose as unknown as CheckedBackup<TRegistry, TBusiness>;
     const further = validate === undefined ? [] : await validate(backup);
     if (further.length > 0) {
       return { preview: preview([...further]) };

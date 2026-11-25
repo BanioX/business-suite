@@ -28,7 +28,7 @@ describe('alive', () => {
   });
 
   it('returns a new list and leaves the given one alone', () => {
-    const rows = Object.freeze([{ id: 'a' }]);
+    const rows: readonly { id: string; deletedAt?: string }[] = Object.freeze([{ id: 'a' }]);
     const result = alive(rows);
     expect(result).toEqual(rows);
     expect(result).not.toBe(rows);
