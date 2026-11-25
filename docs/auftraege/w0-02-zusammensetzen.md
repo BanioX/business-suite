@@ -57,7 +57,7 @@ Was gebaut, was geerntet (mit Randen-Commit), was selbst gebaut und von Randen s
 
 ## Stand
 
-Schritt 1 (Stand von Randen) und Schritt 3 (`@onestrand/features`) erledigt am 25.11.2026; die übrigen Schritte sind offen.
+Schritt 1 (Stand von Randen), Schritt 3 (`@onestrand/features`) und Schritt 4 (`@onestrand/access`) erledigt am 25.11.2026; die übrigen Schritte sind offen.
 
 **Schritt 1, Stand von Randen** (gelesen aus `BanioX/Randen` @ `5d016f1`, nur lesen):
 
@@ -84,3 +84,25 @@ Was die folgenden Schritte wissen müssen:
 - **Betrieb (Schritt 5):** speichert die Liste der Funktionen und die Werte der Optionen; `resolve` ergänzt eine unvollständige Liste und gibt unbekannte Kennungen in `unknown` zurück, die beim Speichern wieder mitgeschrieben werden müssen. Der Gerätemodus liegt auf dem Gerät (`deviceKey`, Schritt 7; neue Zeile in `docs/nebenwirkungen.md`, wenn er geschrieben wird).
 - **`muster` (Schritt 8):** eine Funktion mit Option, eine Betriebsart, eine Frage; `featureEntryProblems(...)` muss `[]` sein.
 - Neue Schulden: TD-30, TD-31, TD-32. Neue Lektionen: L-S29, L-S41.
+
+**Schritt 4, `@onestrand/access`** (selbst gebaut nach Randen-ADR-0022, Punkt 10, und Regel R-4; in Randen ist AP-2 offen, es gab nichts zu ernten, geprüft am Commit `5d016f1`; aus Randen ist nichts kopiert, das Paket trägt keinen Herkunftsvermerk, Randen übernimmt es später aus der Suite). Stufen, Register der heiklen Rechte, Profil mit der festen Vorlage «Inhaber:in», Entscheid, Weitergabe, Hülle um die Use Cases, Filter für fremde Geräte; keine Seiten, keine Tabelle, keine Use Cases für das Verwalten (W1-01). Siehe `platform/access/api.md`. Schichten: `access` importiert `contract`, `storage` und `features`.
+
+Entscheide (klein, selbst getroffen):
+
+1. **Stufen:** «nichts» ist kein Wert, sondern das Fehlen einer Stufe (`undefined`; im Profil: die Funktion steht nicht in `levels`). `ACCESS_LEVELS` bleibt im Vertrag. Ordnung über `levelRank`.
+2. **Kennung eines Rechts:** ein bis drei Teile in der Schreibweise der Funktionen (Kleinbuchstaben, Ziffern, einzelne Unterstriche, kein camelCase), der erste ist bei einer Branche der Namensraum: `wages`, `facility.access_notes`, `facility.keys.assign` (so steht es schon im Auftrag der Facility-Branche, darum drei Teile statt zwei). `RIGHT_ID_PATTERN` steht in `@onestrand/contract` (`operation.ts`), das private Muster in `conformity.ts` ist weg; ein Eigenschaftstest vergleicht Vertrag, Register und Profil. **TD-10 ist erledigt.**
+3. **Register der Rechte:** wie das der Funktionen (`createRightRegistry(features, entries)`, `extend`, eingefroren, Befunde als Daten, `RightError` mit Code). Die Branche, die anmeldet, steht im Feld `industry` des Beitrags; sie muss im Register der Funktionen stehen (`unknown_namespace`), und jede Kennung trägt ihren Namensraum, die Plattform meldet keine mit Punkt an (`wrong_namespace`).
+4. **Profil:** `{ type: 'owner' }` oder `{ type: 'custom', levels, rights }`, strenges Zod-Schema, Kennungen nur auf die Form geprüft (ein Profil einer neueren Version bleibt lesbar; `profileProblems` nennt Unbekanntes als Daten). «Inhaber:in» ist die Kennung `owner`; das Wort ist ein Text der App.
+5. **Weitergabe:** Wer eine Stufe oder ein Recht ändert, muss es selbst halten, bei einer Stufe mindestens die höhere von alter und neuer. Das ist strenger als nur «nicht mehr vergeben»: Sonst könnte eine Mitarbeiterin mit `operate` einer Chefin mit `manage` die Stufe senken. Unverändertes bleibt unberührt. «Inhaber:in» lässt sich nicht ändern und nicht entziehen, und nur eine Inhaber:in gibt sie weiter. Wer Profile überhaupt ändern darf, ist ein Recht der Operation in W1 und steht nicht in diesem Paket.
+6. **Entscheid:** Reihenfolge Funktion eingeschaltet, Stufe, Rechte. Eine ausgeschaltete Funktion ist für alle zu, auch für die Inhaber:in. `features` im Kontext sind die aufgelösten Funktionen des Betriebs (`registry.resolve(...).features`, mit Kern).
+7. **Hülle:** `guardUseCases(vertrag, useCases, quelle)`; die Quelle ist eine Funktion `({ operation, businessId }) => { profile, features }`. Eine Eingabe ohne `businessId` ist `invalid`. Ein nicht wohlgeformter Vertrag oder ein fehlender Use Case wirft beim Umhüllen, nicht erst beim Aufruf. Zusätzlich `contractAccessProblems`: prüft, dass jede Funktion und jedes Recht in `access` angemeldet ist (nimmt die Prüfung aus TD-31 vorweg; aufgerufen wird sie noch nirgends).
+8. **Filter:** `filterRowsForDevice(tabelle, { feature, right? }, zeilen, kontext)`. Der kleinste Zusatz: Funktion und Recht der Tabelle als Parameter (TD-70), `storage` ist nicht angefasst. Ist die Tabelle als Ganzes `sensitive` und fehlt das Recht, geht nichts; sonst fallen die `sensitive` Felder weg. `internal` geht wie `normal` mit `view` (TD-71).
+9. **Nicht gebaut:** Vorlagen ausser «Inhaber:in», mehrere Profile je Person, «mindestens eine Inhaber:in bleibt», das Recht «Profile ändern» (TD-72, W1-01).
+
+Was die folgenden Schritte wissen müssen:
+
+- **Manifeste (Schritt 2):** `defineIndustry` nimmt zusätzlich `rights` als `RightEntries` (mit `industry`); die Ausgabe ruft `createRightRegistry(features, plattformRechte).extend(brancheRechte)`. `composeContract` oder `check:industry` rufen `contractAccessProblems(vertrag, { features, rights })` und erwarten `[]` (TD-31). Die Ausgabe setzt Use Cases mit `guardUseCases(vertrag, useCases, quelle)` zusammen; die Quelle liefert die App.
+- **Sprachen (Schritt 6):** Der Texttest verlangt Name und Satz je heiklem Recht unter der Kennung des Registers, dazu die Wörter «Inhaber:in», «Sehen», «Bedienen», «Verwalten» und einen Satz zum Fehlercode `forbidden`.
+- **Betrieb (Schritt 5):** liefert der Quelle der Hülle die eingeschalteten Funktionen; die Zeilen der Profile je Betrieb und wer welches Profil hält kommen mit W1-01 (`ProfileSchema` ist die Form).
+- **Web-Daten (Schritt 7), Abgleich (Welle 3):** Der Filter braucht die Zuordnung Tabelle zu Funktion und Recht (TD-70).
+- Neue Schulden: TD-70, TD-71, TD-72; TD-10 erledigt, TD-31 teilweise. Neue Lektionen: L-S42, L-S43.

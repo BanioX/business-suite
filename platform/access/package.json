@@ -18,6 +18,7 @@
   },
   "devDependencies": {
     "@onestrand/core": "workspace:*",
+    "@onestrand/testing": "workspace:*",
     "fast-check": "^4.10.2"
   }
 }

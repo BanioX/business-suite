@@ -151,7 +151,9 @@ function check(
       report('invalid_entry', UNNAMED, `the entries have the unknown field "${field}"`);
     }
   }
+  // The industry as declared, registered or not: its rights are then checked against that name, so one mistake is one problem.
   let industry: string | undefined;
+  let judgeNamespaces = true;
   if (entries.industry !== undefined) {
     if (typeof entries.industry !== 'string' || !FEATURE_SEGMENT_PATTERN.test(entries.industry)) {
       report(
@@ -159,14 +161,16 @@ function check(
         UNNAMED,
         `industry must be the id of an industry, got ${describe(entries.industry)}`,
       );
-    } else if (!industries.has(entries.industry)) {
-      report(
-        'unknown_namespace',
-        entries.industry,
-        `the industry "${entries.industry}" is not registered in the register of features`,
-      );
+      judgeNamespaces = false;
     } else {
       industry = entries.industry;
+      if (!industries.has(industry)) {
+        report(
+          'unknown_namespace',
+          industry,
+          `the industry "${industry}" is not registered in the register of features`,
+        );
+      }
     }
   }
   const list: unknown = entries.rights ?? [];
@@ -196,7 +200,7 @@ function check(
       continue;
     }
     const namespace = namespaceOf(item.id);
-    if (namespace !== industry) {
+    if (judgeNamespaces && namespace !== industry) {
       report(
         'wrong_namespace',
         item.id,
