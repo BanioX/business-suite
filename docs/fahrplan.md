@@ -38,9 +38,11 @@ W7  ───── Stufe 2 nur nach Albans JA ───────────
 - **W0-02 Zusammensetzen** ([Auftrag](auftraege/w0-02-zusammensetzen.md)): `defineIndustry`, `defineEdition`, `composeContract`, Hülle für Rechte, P-06 Register, P-07 Sprachen, P-20 Betrieb, IndexedDB aus dem Tabellen-Register mit Schema-Ledger; Referenz-Branche `muster` (rein TS); Generator für neue Branchen.
 - **W0-03 Oberfläche und erste Ausgabe** ([Auftrag](auftraege/w0-03-oberflaeche.md)): P-08 UI-Kit neutral, P-09 Shell mit Arbeitsplätzen je Rolle, P-10 Gerät, P-11 PDF, P-32 Heute; `muster` mit Seiten; Ausgabe «Vor Ort» als leerer Rahmen mit Demo, nur als Vorschau.
 
+- **W0-04 Offene Schnittstelle** ([Auftrag](auftraege/w0-04-offene-schnittstelle.md)): Client, Werkzeug-Definitionen und Vorschlag für einen Assistenten, Port für ein Modell, Kommandozeile für Sicherungsdateien (P-14 bis P-16); ohne Netz und ohne Kosten.
+
 **Abnahme:** `pnpm check` ist grün; die Referenz-Branche `muster` legt eine Tabelle, eine Operation, eine Seite, einen Eintrag in «Heute» und eine Funktion im Register an, ohne eine Datei der Plattform zu ändern; die Sicherung geht hin und zurück; zwei Betriebe auf einem Gerät sind getrennt; ein Text auf Portugiesisch erscheint, wo der Schlüssel übersetzt ist, sonst Deutsch.
 
-**Parallel möglich:** Nein, W0-01, dann W0-02, dann W0-03. Ein Agent nach dem andern. Daneben dürfen Fakten-Agenten Quellen nachprüfen (nur `docs/fakten/`).
+**Parallel möglich:** W0-01, dann W0-02, ein Agent nach dem andern; danach W0-03 und W0-04 nebeneinander (getrennte Pfade). Daneben dürfen Fakten-Agenten Quellen nachprüfen (nur `docs/fakten/`).
 
 ## Welle 1: Auftragskern
 

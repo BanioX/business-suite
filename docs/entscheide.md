@@ -82,7 +82,7 @@ Optionen:
 
 Grenzen, die bleiben: Erweiterungen sind Pakete, die mitgebaut werden, keine Plug-ins, die eine installierte App zur Laufzeit nachlädt (CSP nur `'self'`). Die Suite selbst baut weiterhin keine Anbindungen an Partner; die offene Schnittstelle ist die Tür, durch die ein Betrieb seine eigenen Werkzeuge anschliesst.
 
-**Folgen bei (a):** Der Auftrag W0-02 bekommt einen Schritt «Client und Werkzeug-Definitionen aus der Schnittstelle»; `plattform.md` bekommt ein Paket für Kommandozeile und Werkzeug-Schnittstelle; neue Kennungen ins Namensregister. Das trägt der Kopf nach deinem Wort ein.
+**Stand, 25.11.2026:** (a) ist nach [S-25](#s-25-freigabe-und-geld-was-ohne-rückfrage-geht) eingeplant: Auftrag [W0-04](auftraege/w0-04-offene-schnittstelle.md), Pakete P-14 bis P-17 in [`plattform.md`](plattform.md). (b) bleibt ein eigener Entscheid vor dem ersten Pilot.
 
 ### S-24 Sagen statt klicken: ein Assistent in der App [Geld, Datenfluss]
 
@@ -107,6 +107,19 @@ Optionen:
 - (c) Der Betrieb schliesst seinen eigenen Assistenten an (S-23, Option b).
 
 **Empfehlung: (b) jetzt, (a) als Entscheid am Ende von Welle 1,** wenn die erste Branche steht und sich an echten Abläufen zeigen lässt, was der Assistent abnimmt. Was (a) kostet und wie es verrechnet wird, steht nach [ADR-0011](adr/0011-oeffentliches-repo.md) nicht hier, sondern in Albans privater Ablage. (c) ist für Betriebe, die sich auskennen, und kein Ersatz für (a).
+
+**Stand, 25.11.2026:** (b) ist nach [S-25](#s-25-freigabe-und-geld-was-ohne-rückfrage-geht) eingeplant (Auftrag [W0-04](auftraege/w0-04-offene-schnittstelle.md)). (a) ist gewollt, sobald das Geschäft den Dienst trägt; der Kopf kommt dann mit Zweck und Betrag.
+
+### S-25 Freigabe und Geld: was ohne Rückfrage geht
+
+**Albans Wort, 25.11.2026:** «Also ich erlaube alles sofern zweckdienlich wenn ich ein scalable Business habe investiere ich gerne in server struktur usw. Weisst wie ich meine? Ich bin aktuell einfach noch Indie Entwickler».
+
+**Lesart des Kopfs** (gilt, bis Alban sie korrigiert; die Regel «Freigabe» in `CLAUDE.md` bleibt bis dahin im Wortlaut stehen):
+
+1. **Zweckdienlich und kostenlos:** wird ohne Rückfrage geplant und gebaut, auch grössere Ergänzungen des Plans. Darum sind S-23 (a) und S-24 (b) jetzt eingeplant: Auftrag [W0-04](auftraege/w0-04-offene-schnittstelle.md), Pakete P-14 bis P-17 in [`plattform.md`](plattform.md).
+2. **Geld:** heute keine laufenden Kosten. Alles wird so gebaut, dass es ohne Server läuft und ein Server später nur eingesteckt wird (Ports für das Modell, das Relais, die Konten). Lohnt sich eine Ausgabe, kommt der Kopf mit Zweck und Betrag; der Betrag steht in Albans privater Ablage, nicht hier.
+3. **Stufe 2** (Server, Konten, Relais, Assistent über einen Dienst) ist gewollt, sobald das Geschäft sie trägt. Sie ist eine Frage des Zeitpunkts, kein Tabu.
+4. **Echte Betriebsdaten** verlassen ein Gerät weiterhin nur mit eigenem ADR, Eintrag im Register der Nebenwirkungen und einer Meldung an Alban vor dem Einschalten. Vor dem ersten Pilot gibt es keine echten Betriebsdaten.
 
 ## Vor Welle 2 und 3
 
