@@ -144,6 +144,20 @@ Optionen:
 
 Passt zu den Grundsätzen aus Randen ([ADR-0009](adr/0009-grundsaetze-aus-randen.md): eine App für iPhone, iPad und Web, eine Hauptaktion pro Seite, Ziele 44 px) und zu den Prüfsteinen 2 und 5 im [Zielbild](zielbild.md) (unter zehn Sekunden, mit einer Hand). Eingetragen in den Auftrag [W0-03](auftraege/w0-03-oberflaeche.md).
 
+### S-27 Farben der Ausgabe «Vor Ort»: Silber, Weiss, Hellblau
+
+**Albans Vorgabe, 27.11.2026, wörtlich:** «Ich möchte vom UI Silber Weiss und helblaue akzente».
+
+**Was gilt** (Thema der Ausgabe «Vor Ort», nicht der Plattform: die Plattform kennt nur neutrale Tokens wie `accent`, `surface`, W0-03 Schritt 1):
+
+1. **Weiss** für Listen, Karten und Felder; **Silber** als Grund hinter der App, für Linien und für ruhige Flächen wie die Kennzahlen in «Heute» (leichter Verlauf).
+2. **Hellblau** (Richtwert `#8ccff4`) für Flächen, die handeln oder markieren: Hauptknopf, «＋ Erfassen» in der Mitte, abgehakte Kästchen, die gewählte Option. Darauf steht dunkle Schrift (`#08283b`).
+3. **Hellblau als Schrift** (Links, «Zurück», aktiver Punkt der Leiste) in einer tieferen Stufe (`#0a679f`): Hellblau selbst erreicht auf Weiss den Kontrast für Text nicht (WCAG 2.2, 4.5:1). Im dunklen Modus trägt Hellblau auch als Schrift.
+4. Bedeutungsfarben bleiben getrennt: Grün «in Ordnung», Bernstein «bald», Rot «falsch»; Hellblau heisst nie «gut» oder «schlecht».
+5. Keine fremden Schriften: Systemschrift des Geräts.
+
+**Angeschaut am Klickentwurf** (privater Link, kein Code der App), Stand 27.11.2026. Die Werte sind Richtwerte, bis die Kontrastprüfung von W0-03 sie für hell und dunkel bestätigt.
+
 ## Vor Welle 2 und 3
 
 ### S-06 Abgleich zwischen Büro und Aussendienst ohne Server [Datenfluss]

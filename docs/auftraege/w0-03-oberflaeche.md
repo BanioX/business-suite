@@ -10,7 +10,7 @@ UI-Kit, Rahmen, Gerät und PDF der Plattform stehen neutral und mit Marke als Th
 
 ## Lesestoff
 
-1. `CLAUDE.md`, `AGENTS.md`, [`../architektur.md`](../architektur.md) Abschnitte 2.4, 3, 4, 7; [`../entscheide.md`](../entscheide.md), S-26 (Bedienmuster)
+1. `CLAUDE.md`, `AGENTS.md`, [`../architektur.md`](../architektur.md) Abschnitte 2.4, 3, 4, 7; [`../entscheide.md`](../entscheide.md), S-26 (Bedienmuster) und S-27 (Farben); der Klickentwurf, den Alban dazu angeschaut hat, als Bild der Abläufe
 2. [`../plattform.md`](../plattform.md), P-08 bis P-11, P-32; ADR [0008](../adr/0008-herkunft-namen-und-adressen.md)
 3. In `BanioX/Randen` (nur lesen): `apps/web/src/ui/`, `apps/web/src/app/`, `apps/web/src/index.css`, `apps/web/src/ui/pdf/`, `ui/print.ts`, `ui/share-file.ts`, `apps/web/vite.config.ts`, `apps/web/public/_headers`, `apps/web/e2e/`, `scripts/` (Vorschaubilder, Kontrast), `docs/design.md`, `docs/regeln.md`, `docs/ui-kit.md`
 4. In `BanioX/Rettich` (nur lesen): Scanner und Kamera (`features/scan/`), App-Sperre (`app/lock/`), Zahl am Symbol, Dokument-Ansicht mit pdf.js (`features/reports/`)
@@ -28,7 +28,7 @@ UI-Kit, Rahmen, Gerät und PDF der Plattform stehen neutral und mit Marke als Th
 4. **`@onestrand/pdf`** (P-11): PDF-Kit mit Thema, Stile Übersicht, Streifen, Formular; Briefkopf mit Logo; Dokument-Ansicht vor dem Drucken; Dokument-Sprache.
 5. **`@onestrand/today`** (P-32): «Heute» aus Steckplätzen.
 6. **`industries/muster/web`:** eine Seite, ein Navigationseintrag, eine Karte in «Heute», ein Abschnitt auf einer Plattform-Seite, ein Dokument.
-7. **`editions/field`:** `edition.ts` mit Datenbank `field`, Präfix `field:`, Format `field-backup` (nie umbenennen), Arbeitstitel «Vor Ort», Thema als Platzhalter; `_headers` mit CSP `'self'` und `noindex`; Manifest; `wrangler.jsonc` für eine Vorschau; E2E mit Playwright und axe in vier Ansichten, hell und dunkel; Vorschaubilder (`pnpm preview:shots`).
+7. **`editions/field`:** `edition.ts` mit Datenbank `field`, Präfix `field:`, Format `field-backup` (nie umbenennen), Arbeitstitel «Vor Ort», Thema nach [S-27](../entscheide.md) (Silber, Weiss, hellblaue Akzente; Hellblau als Schrift in der tieferen Stufe), geprüft mit der Kontrastprüfung hell und dunkel; `_headers` mit CSP `'self'` und `noindex`; Manifest; `wrangler.jsonc` für eine Vorschau; E2E mit Playwright und axe in vier Ansichten, hell und dunkel; Vorschaubilder (`pnpm preview:shots`).
 
 ## Abnahme
 
