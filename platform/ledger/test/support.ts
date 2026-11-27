@@ -1,3 +1,5 @@
+// Origin: BanioX/Randen packages/core/src/testing/index.ts @ e0f0907 — adapted: only the counting ids; the clock that is moved by minutes, the sample ledgers and the storages of the tests are new
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { createHash } from 'node:crypto';
 import { CommandError } from '@onestrand/contract';
 import {
@@ -20,7 +22,11 @@ import {
   type Clock,
   type Hasher,
   type IdGenerator,
+  type ModuleStorage,
+  type RecordStore,
   type Storage,
+  type StoredRow,
+  type TableDefinition,
 } from '@onestrand/storage';
 import { z } from 'zod';
 import { createLedger, defineLedger, ledgerFields, type Ledger } from '../src';
@@ -245,4 +251,80 @@ export function withField<TRow extends object>(row: TRow, key: string, value: un
   const kept = Object.entries(row).filter(([name]) => name !== key);
   // The tests change rows in ways their type forbids; that is what they are for.
   return Object.fromEntries(value === undefined ? kept : [...kept, [key, value]]) as TRow;
+}
+
+/** Lets everything that is ready run, timers of no delay included. */
+export function nextTask(): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, 0);
+  });
+}
+
+/** A hasher that takes its time: every checksum arrives a task later, as in a browser. */
+export const slowHasher: Hasher = {
+  sha256: async (data) => {
+    await nextTask();
+    return hasher.sha256(data);
+  },
+};
+
+/**
+ * A storage whose transactions wait for each other, as those of a database do: the work of a
+ * transaction starts at once, but the storage answers its calls only when every transaction
+ * that was started before it is over. A transaction inside another belongs to it. Nothing is
+ * rolled back here; the helper is about who waits for whom.
+ */
+export function lockingStorage(
+  storage: Pick<ModuleStorage, 'table'>,
+): Pick<ModuleStorage, 'table' | 'transaction'> {
+  const running = new AsyncLocalStorage<{ granted: Promise<void> }>();
+  let lastOver: Promise<void> = Promise.resolve();
+  const granted = async (): Promise<void> => {
+    await running.getStore()?.granted;
+  };
+  const stores = new Map<string, RecordStore<StoredRow>>();
+  const waiting = (store: RecordStore<StoredRow>): RecordStore<StoredRow> => ({
+    get: async (id) => {
+      await granted();
+      return store.get(id);
+    },
+    ofBusiness: async (businessId) => {
+      await granted();
+      return store.ofBusiness(businessId);
+    },
+    add: async (row) => {
+      await granted();
+      return store.add(row);
+    },
+    put: async (row) => {
+      await granted();
+      return store.put(row);
+    },
+  });
+  return {
+    // One store per table, as the storage in memory hands it out.
+    table: <TRow extends StoredRow>(definition: TableDefinition<string, TRow>) => {
+      const store =
+        stores.get(definition.name) ??
+        waiting(storage.table(definition) as unknown as RecordStore<StoredRow>);
+      stores.set(definition.name, store);
+      // The rows are the ones of the storage behind it, typed by the definition.
+      return store as unknown as RecordStore<TRow>;
+    },
+    transaction: async (work) => {
+      if (running.getStore() !== undefined) {
+        return work();
+      }
+      const before = lastOver;
+      let finish = (): void => undefined;
+      lastOver = new Promise((resolve) => {
+        finish = resolve;
+      });
+      try {
+        return await running.run({ granted: before }, work);
+      } finally {
+        finish();
+      }
+    },
+  };
 }

@@ -1,15 +1,8 @@
-import {
-  isPlainRecord,
-  keepUnknownFields,
-  plainCopy,
-  StorageError,
-  type Hasher,
-} from '@onestrand/storage';
-import type { z } from 'zod';
-import { canonicalJson } from './canonical';
+import { isPlainRecord, plainCopy, type Hasher } from '@onestrand/storage';
+import { canonicalText } from './canonical';
 import { allChainProblems, type LedgerProblem } from './chain';
 import type { LedgerDefinition } from './definition';
-import type { LedgerEntry } from './entry';
+import { readBackProblem, type LedgerEntry } from './entry';
 import { effectiveEntries, foldLedger } from './fold';
 import { compareText, deepFreeze, fieldOf } from './internal';
 
@@ -28,7 +21,8 @@ export const LEDGER_INVARIANTS = ['schema', 'chain', 'fold', 'history'] as const
  *   its checksum when the row comes back from a backup.
  * - `chain`: every row is an entry of a chain that holds together (`allChainProblems`).
  * - `fold`: `reduce` accepts every stored chain, changes neither the state nor the entry it is
- *   given, and gives the same state for the same entries.
+ *   given, and gives the same state for the same entries. Asked only of chains that hold
+ *   together and whose rows fit the schema: the fold of a damaged chain says nothing.
  * - `history`: every entry that was there before is still there, unchanged (with `before`).
  */
 export type LedgerInvariant = (typeof LEDGER_INVARIANTS)[number];
@@ -72,32 +66,10 @@ function placeOf(row: unknown): { businessId?: string; stream?: string; id?: str
   return place;
 }
 
-/** The canonical text of a value, or nothing if it is not plain data. */
+/** The canonical text of a value for a comparison; nothing if it is not plain data. */
 function textOf(value: unknown): string | undefined {
-  try {
-    return value === undefined ? 'undefined' : canonicalJson(value);
-  } catch (error) {
-    if (error instanceof StorageError) {
-      return undefined;
-    }
-    throw error;
-  }
-}
-
-/** Why a row is not one the schema accepts and leaves exactly as it is stored, or nothing. */
-function schemaProblem(table: string, schema: z.ZodType, row: unknown): string | undefined {
-  const stored = textOf(row);
-  if (stored === undefined) {
-    return 'The row is not plain data';
-  }
-  const parsed = schema.safeParse(row);
-  if (!parsed.success) {
-    const fields = parsed.error.issues.map((issue) => issue.path.map(String).join('.') || 'row');
-    return `The row does not fit the schema of ${table}: ${[...new Set(fields)].join(', ')}`;
-  }
-  return textOf(keepUnknownFields(row, parsed.data)) === stored
-    ? undefined
-    : 'The schema changes the stored row, so a row brought back from a backup would no longer match its hash';
+  // No value is a value here: a state may be `undefined`, and it equals itself.
+  return value === undefined ? 'undefined' : canonicalText(value);
 }
 
 function fromChain(problem: LedgerProblem): LedgerInvariantProblem {
@@ -165,13 +137,14 @@ export async function ledgerInvariantProblems<TEntry extends LedgerEntry, TState
 
   /** The rows the schema accepts, by chain: what the fold can be asked about. */
   const chains = new Map<string, { businessId: string; stream: string; entries: TEntry[] }>();
-  /** Chains with a row the schema refuses: their fold would say nothing. */
+  /** Chains with a row the schema refuses or a break in them: their fold would say nothing. */
   const incomplete = new Set<string>();
   for (const row of rows) {
     const place = placeOf(row);
     const key = JSON.stringify([place.businessId, place.stream]);
-    const message = schemaProblem(definition.table.name, definition.table.schema, row);
-    if (message !== undefined) {
+    const problem = readBackProblem(definition.table.schema, row);
+    if (problem !== undefined) {
+      const message = `The row is no entry of ${definition.table.name}: ${problem}`;
       problems.push({ invariant: 'schema', ...place, message });
       incomplete.add(key);
       continue;
@@ -183,7 +156,10 @@ export async function ledgerInvariantProblems<TEntry extends LedgerEntry, TState
     chains.set(key, chain);
   }
 
-  problems.push(...(await allChainProblems(hasher, rows)).map(fromChain));
+  for (const problem of await allChainProblems(hasher, rows)) {
+    problems.push(fromChain(problem));
+    incomplete.add(JSON.stringify([problem.businessId, problem.stream]));
+  }
 
   const ordered = [...chains.entries()].sort(([a], [b]) => compareText(a, b));
   for (const [key, { businessId, stream, entries }] of ordered) {

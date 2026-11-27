@@ -1,10 +1,11 @@
+import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import * as ledger from '../src';
 
 /**
- * The public surface, name by name. Every later ledger (time, cash book, status) builds on it:
- * a name that disappears or appears here is a decision, not an accident. Types are not listed;
- * `tsc` guards them where they are used.
+ * The public surface, name by name. The ledgers of the modules and of every industry build on
+ * it: a name that disappears or appears here is a decision, not an accident. Types are not
+ * listed; `tsc` guards them where they are used.
  */
 describe('@onestrand/ledger', () => {
   it('exports exactly these values', () => {
@@ -12,9 +13,9 @@ describe('@onestrand/ledger', () => {
       [
         // errors
         'LedgerError',
-        // the one spelling of a value
+        // canonical JSON
         'canonicalJson',
-        // entries
+        // an entry and its checksum
         'LEDGER_FIELD_NAMES',
         'LEDGER_STREAM_PATTERN',
         'LedgerEntrySchema',
@@ -23,8 +24,9 @@ describe('@onestrand/ledger', () => {
         'hashedContent',
         'entryHash',
         'inSequence',
-        // a ledger and its state
+        // a ledger: table, initial state, rule
         'defineLedger',
+        // from entries to a state
         'effectiveEntries',
         'foldLedger',
         // checking a chain
@@ -34,23 +36,34 @@ describe('@onestrand/ledger', () => {
         // the kit on a storage
         'createLedger',
         'createLedgerReader',
-        // what a module checks in its own property test
+        // checks for the tests of other ledgers
         'LEDGER_INVARIANTS',
         'ledgerInvariantProblems',
       ].sort(),
     );
   });
 
-  it('keeps its small helpers inside', () => {
-    for (const name of ['compareText', 'fieldOf', 'deepFreeze', 'isList', 'contentHash']) {
-      expect(Object.keys(ledger), name).not.toContain(name);
+  it('builds on the layers below it and on nothing else', () => {
+    const src = new URL('../src/', import.meta.url);
+    const imported = new Set<string>();
+    for (const file of readdirSync(src)) {
+      const code = readFileSync(new URL(file, src), 'utf8');
+      for (const match of code.matchAll(/\bfrom\s+'([^']+)'/g)) {
+        imported.add(match[1] ?? '');
+      }
     }
+    const packages = [...imported].filter((name) => !name.startsWith('./')).sort();
+    // The checks for other ledgers live in src and are used in tests: they bring no test library.
+    expect(packages).toEqual([
+      '@onestrand/contract',
+      '@onestrand/core',
+      '@onestrand/storage',
+      'zod',
+    ]);
   });
 
-  it('holds no table and no ledger of its own: every module brings its ledgers', () => {
-    const ledgers = Object.values(ledger).filter(
-      (value) => typeof value === 'object' && ('table' in value || 'initial' in value),
-    );
-    expect(ledgers).toEqual([]);
+  it('names no table and no stream of its own: every ledger brings both', () => {
+    const texts = Object.values(ledger).filter((value) => typeof value === 'string');
+    expect(texts).toEqual([]);
   });
 });

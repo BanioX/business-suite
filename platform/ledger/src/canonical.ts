@@ -1,4 +1,4 @@
-import { isPlainRecord, plainCopy } from '@onestrand/storage';
+import { isPlainRecord, plainCopy, StorageError } from '@onestrand/storage';
 import { compareText, isList } from './internal';
 
 /**
@@ -40,4 +40,22 @@ export function canonicalJson(value: unknown): string {
     throw new TypeError('canonicalJson needs a value: undefined has no JSON text');
   }
   return write(plainCopy(value));
+}
+
+/**
+ * The canonical JSON text of a value, or nothing if it has none: it is not plain data, or it is
+ * `undefined`. For code of this package that compares values which may be anything.
+ */
+export function canonicalText(value: unknown): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  try {
+    return canonicalJson(value);
+  } catch (error) {
+    if (error instanceof StorageError) {
+      return undefined;
+    }
+    throw error;
+  }
 }

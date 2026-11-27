@@ -1,53 +1,53 @@
 # @onestrand/ledger (P-04)
 
-Das Ledger-Kit der Suite: Einträge nur anfügen, mit Prüfkette, Korrektur als neue Zeile und einem Zustand, der berechnet und nie gespeichert wird. Reines TypeScript ohne Browser und ohne Node; baut auf `@onestrand/core`, `@onestrand/contract`, `@onestrand/storage` und `zod`. Die Plattform kennt kein einzelnes Ledger: Zeit, Kassenbuch, Status eines Auftrags oder ausgegebene Schlüssel bringt das Modul oder die Branche mit.
+Der Helfer «nur anfügen»: Einträge in einer Tabelle, die nie ersetzt werden, je Strang eine Prüfkette, Korrektur als neue Zeile, Zustand berechnet. Ein Kit für Zeit, Kassenbuch, Status eines Auftrags, Schlüssel und Mehrfachkarten. Reines TypeScript ohne Browser und ohne Node; baut auf `@onestrand/core`, `@onestrand/contract`, `@onestrand/storage` und `zod`.
 
 ```ts
-import { createLedger, defineLedger, ledgerFields, ledgerInvariantProblems } from '@onestrand/ledger';
+import { createLedger, defineLedger, ledgerFields } from '@onestrand/ledger';
 ```
 
 ## Was das Paket exportiert
 
 | Bereich | Exporte | Wozu |
 | --- | --- | --- |
-| Eintrag | `ledgerFields`, `LedgerEntrySchema`, `LedgerEntry`, `LedgerPayload`, `LEDGER_FIELD_NAMES`, `LedgerFieldName`, `LedgerStreamSchema`, `LEDGER_STREAM_PATTERN` | die Felder, die das Kit in jede Zeile schreibt; die Nutzlast ist der Rest |
-| Prüfsumme | `canonicalJson`, `hashedContent`, `entryHash`, `inSequence` | die eine Schreibweise eines Werts (RFC 8785) und die Prüfsumme darüber |
-| Ledger | `defineLedger`, `LedgerDefinition`, `LedgerOptions` | Tabelle, Anfangszustand und Regel `reduce` |
-| Zustand | `effectiveEntries`, `foldLedger` | die Einträge, die zählen, und der Zustand daraus |
-| Kette prüfen | `chainProblems`, `allChainProblems`, `LedgerProblem`, `LedgerProblemKind`, `LEDGER_PROBLEM_KINDS`, `LedgerChain`, `LedgerAnchor` | wo und warum eine Kette bricht; Befunde sind Daten |
-| Kit auf dem Speicher | `createLedger`, `createLedgerReader`, `Ledger`, `LedgerReader`, `LedgerBooking`, `LedgerContext`, `LedgerReaderContext`, `LedgerVerification`, `LedgerBusinessVerification` | anfügen, korrigieren, lesen, Zustand, prüfen |
-| Eigenschaftstest | `ledgerInvariantProblems`, `LEDGER_INVARIANTS`, `LedgerInvariant`, `LedgerInvariantProblem`, `LedgerInvariantOptions` | was für jedes Ledger gelten muss, als Prüfung für den Test des Moduls |
+| Eintrag | `ledgerFields`, `LedgerEntrySchema`, `LedgerEntry`, `LedgerPayload`, `LEDGER_FIELD_NAMES`, `LedgerFieldName`, `LedgerStreamSchema`, `LEDGER_STREAM_PATTERN` | die Felder, die das Kit in jede Zeile schreibt; der Schlüssel eines Strangs |
+| Ledger anmelden | `defineLedger`, `LedgerDefinition`, `LedgerOptions` | Tabelle, Anfangszustand und Regel |
+| Ledger auf dem Speicher | `createLedger`, `createLedgerReader`, `Ledger`, `LedgerReader`, `LedgerContext`, `LedgerReaderContext`, `LedgerBooking`, `LedgerVerification`, `LedgerBusinessVerification` | buchen, korrigieren, lesen, Zustand rechnen, Kette prüfen |
+| Zustand ohne Speicher | `foldLedger`, `effectiveEntries`, `inSequence` | aus Einträgen rechnen, die du schon hast |
+| Prüfkette | `chainProblems`, `allChainProblems`, `LedgerProblem`, `LedgerProblemKind`, `LEDGER_PROBLEM_KINDS`, `LedgerChain`, `LedgerAnchor`, `entryHash`, `hashedContent`, `canonicalJson` | Zeilen prüfen, auch die einer Sicherung; Befunde sind Daten |
+| Für den Test eigener Ledger | `ledgerInvariantProblems`, `LEDGER_INVARIANTS`, `LedgerInvariant`, `LedgerInvariantProblem`, `LedgerInvariantOptions` | dieselben Invarianten im eigenen Eigenschaftstest |
 | Fehler | `LedgerError`, `LedgerErrorCode` | Fehler des Programms, mit Code |
 
 ## Regeln, die du kennen musst
 
-1. **Tabelle:** `defineTable({ …, appendOnly: true })` mit dem Schema `z.object({ ...ledgerFields, <Nutzlast> })`. In der Regel `sync: 'ledger'`. Ohne `appendOnly` oder ohne ein Feld aus `ledgerFields` wirft `defineLedger` (`invalid_definition`).
-2. **Kette:** Eine Kette ist ein Strang (`stream`) eines Betriebs. Jeder Eintrag trägt seinen Platz (`seq`, ab 1 ohne Lücke), die Prüfsumme des Eintrags davor (`prevHash`) und die eigene (`hash`, SHA-256 über das kanonische JSON der ganzen Zeile ohne `hash`). Auch ein Feld, das das Schema nicht kennt, gehört zur Prüfsumme.
-3. **Strang:** klein, Ziffern und `_ . : -`, höchstens 120 Zeichen (`LEDGER_STREAM_PATTERN`): meist die Kennung dessen, worum es geht (Konto, Person, Objekt), oder ein festes technisches Wort. Nie ein Text, den eine Person tippt.
-4. **Nutzlast:** `append` und `correct` nehmen nur die Felder des Ledgers. Trägt die Nutzlast ein Feld des Kits (`id`, `seq`, `hash` …), kommt `invalid_payload`. `at` ist der Zeitpunkt des Schreibens; der Tag, zu dem ein Fakt gehört, ist ein Feld der Nutzlast.
-5. **Das Schema lässt gespeicherte Zeilen, wie sie sind:** kein Vorgabewert und kein Umschreiben in der Tabelle eines Ledgers, sonst stimmt die Prüfsumme nach dem Zurückholen einer Sicherung nicht mehr. Ändert das Schema ein Feld des Kits, wirft `append` (`invalid_definition`); den Rest findet die Invariante `schema`.
-6. **`reduce` ist rein:** Es gibt einen neuen Zustand zurück und ändert weder den Zustand noch den Eintrag. Es darf einen Eintrag abweisen, indem es einen `CommandError` mit einem Code seines Moduls wirft; dann wird nichts geschrieben. Der Anfangszustand wird in jeder Tiefe eingefroren.
-7. **Korrektur:** `correct(businessId, entryId, payload)` schreibt einen neuen Eintrag ans Ende desselben Strangs; die Nutzlast ist der ganze Fakt, wie er hätte sein sollen, kein Unterschied. Für den Zustand steht die Korrektur am Platz des korrigierten Eintrags (`effectiveEntries`), der alte bleibt sichtbar. Ein Eintrag wird einmal korrigiert; wer nochmals ändert, korrigiert die Korrektur (`not_allowed` sonst, `not_found` für einen fremden oder fehlenden Eintrag).
-8. **Schreiben gehört in einen Befehl:** `append` und `correct` laufen in `runCommand` der Schnittstelle. Der Befehl gibt die Transaktion, macht die Buchung wiederholbar und schreibt das Ereignis. Der `hasher` wird in der Transaktion abgewartet: Wer eine Ausgabe zusammensetzt, gibt einen Hasher mit, der die Transaktion offen hält oder ohne Pause antwortet.
-9. **Ein Gerät schreibt eine Kette:** Fügen zwei Geräte demselben Strang an, tragen zwei Einträge dieselbe `seq`; `verify` meldet das. Der Abgleich zwischen Geräten kommt mit Welle 3.
-10. **Zustand:** `state(businessId, stream)` rechnet bei jedem Aufruf aus den Einträgen und speichert nichts. Die Kette wird dabei nicht geprüft.
-11. **Prüfen:** `verify(businessId, stream, anchor?)` prüft eine Kette, `verifyAll(businessId)` jede Zeile eines Betriebs in diesem Ledger. Gefunden werden ein geändertes Feld, ein entfernter oder eingeschobener Eintrag, eine geänderte Reihenfolge und ein Eintrag in einem anderen Strang oder Betrieb. Befunde tragen eine Art (`entry`, `business`, `stream`, `seq`, `prev_hash`, `hash`, `corrects`, `anchor`) und den Platz.
-12. **Anker:** Eine Kette allein zeigt nicht, dass am Ende Einträge fehlen oder dass sie von einer Stelle an neu geschrieben wurde. Beides zeigt sich gegen einen Anker: `head` aus einem früheren `verify`, ausserhalb der Tabelle notiert (auf einem gedruckten Abschluss, in einer Sicherung, auf einem anderen Gerät).
-13. **Sicherung:** Die Zeilen einer Ledger-Tabelle prüft `allChainProblems(hasher, rows)`, bevor eine Sicherung zurückkommt, etwa in `validate` des Sicherungs-Kits.
-14. **Eigenschaftstest des Moduls:** Buche beliebige Folgen und erwarte `ledgerInvariantProblems(definition, hasher, rows, { before })` als `[]`. Geprüft wird: jede Zeile passt zum Schema und bleibt dabei unverändert (`schema`), jede Kette hält (`chain`), `reduce` nimmt jede gespeicherte Kette an, ändert nichts und gibt für dieselben Einträge denselben Zustand (`fold`), und jeder frühere Eintrag ist unverändert noch da (`history`). Ist der Zustand keine reinen Daten, gib `sameState` mit.
-15. **Fehler:** `LedgerError` trägt einen `code` (`invalid_definition`, `invalid_stream`, `invalid_payload`) und meint einen Fehler des Programms. Was die Person beheben kann, ist ein `CommandError`; eine Nutzlast, die nicht zum Schema passt, ist ein `ZodError`: Prüfe Eingaben im Use Case.
+1. **Tabelle:** `defineTable({ name, schema: z.object({ ...ledgerFields, <Nutzlast> }), indexes: [['stream', 'seq']], sensitivity, sync: 'ledger', appendOnly: true })`. Ohne `appendOnly` weist `defineLedger` die Tabelle ab. Das Kit schreibt `id`, `businessId`, `stream`, `seq`, `prevHash`, `hash`, `at`, `actor` und `corrects`; die Nutzlast trägt keines davon. `at` ist der Zeitpunkt des Schreibens; der Tag, zu dem eine Tatsache gehört, ist ein Feld der Nutzlast.
+2. **Strang (`stream`):** welche Kette im Betrieb gemeint ist: die Kennung dessen, worum es geht (Konto, Person, Auftrag), oder ein festes technisches Wort (`main`). Klein, Ziffern und `_ . : -`, höchstens 120 Zeichen, nie ein Text einer Person. `seq` zählt je Betrieb und Strang ab 1, ohne Lücke.
+3. **Buchen gehört in einen Befehl:** `append` und `correct` laufen in einer Transaktion und lesen darin das Ende der Kette; in `runCommand` schliessen sie sich der Transaktion des Befehls an. Das Ereignis schreibt der Befehl. Buchungen auf dieselbe Tabelle warten aufeinander, auch wenn du sie zusammen startest (`Promise.all`): Nie bekommen zwei denselben Platz.
+4. **Nutzlast:** `LedgerPayload<Eintrag>` ist die Zeile ohne die Felder des Kits, so wie das Schema sie zurückgibt (ein Feld mit Vorgabewert verlangt der Typ trotzdem). Gespeichert wird, was das Schema liest (Text gekürzt), und darüber läuft die Prüfsumme. Ein Feld, das das Schema nicht kennt, wird abgewiesen statt still weggelassen, in jeder Tiefe (`invalid_payload`). Passt die Nutzlast nicht zum Schema, kommt ein `ZodError`: Prüfe die Eingabe schon im Befehl.
+5. **Das Schema liest wieder, was es schrieb:** Ein `transform`, der beim zweiten Lesen nochmals wirkt (Franken zu Rappen), wird bei der ersten Buchung abgewiesen (`invalid_definition`). Sonst käme der Eintrag aus einer Sicherung verändert zurück und passte nicht mehr zu seiner Prüfsumme.
+6. **Regel (`reduce`):** eine reine Funktion `(state, entry) => state`. Sie ändert weder den Zustand noch den Eintrag (beim Buchen kommt der neue Eintrag eingefroren; `initial` ist eingefroren). Sie darf ablehnen: `throw new CommandError('<namensraum>.<code>', …)`, dann ist nichts geschrieben. In einem Befehl scheitert damit der ganze Befehl, auch wenn du den Fehler fängst; frag vorher `state`, wenn du nur wissen willst, ob es ginge.
+7. **Korrektur:** `correct(businessId, entryId, payload)` schreibt einen neuen Eintrag ans Ende desselben Strangs, mit `corrects`. Die Nutzlast ist die ganze Tatsache, kein Unterschied. Der alte Eintrag bleibt, wie er ist. Für den Zustand steht die Korrektur am Platz des alten Eintrags (`effectiveEntries`), als wäre von Anfang an richtig gebucht worden. Ein Eintrag wird einmal korrigiert; danach korrigierst du die Korrektur (`not_allowed`), damit niemand eine Korrektur überschreibt, ohne sie gesehen zu haben. `not_found` gilt auch für den Eintrag eines anderen Betriebs. Stornieren ist eine Korrektur mit einer Nutzlast, die für die Regel nichts zählt.
+8. **Zustand:** `state(businessId, stream)` rechnet bei jedem Aufruf aus den Einträgen und speichert nichts. Ein Strang ohne Einträge hat `initial`. `state` prüft die Kette nicht, und Lesen prüft den Schlüssel des Strangs nicht.
+9. **Prüfkette:** `hash` ist SHA-256 über das kanonische JSON des Eintrags ohne `hash`: Schlüssel in jeder Tiefe sortiert, keine Leerzeichen, Zahlen wie JSON sie schreibt (RFC 8785). Darin stehen `seq`, `prevHash`, `businessId`, `stream` und jedes Feld, auch eines, das kein Schema kennt. `verify(businessId, stream)` gibt `{ ok: true, entries, head }` oder `{ ok: false, entries, problems }`; `verifyAll(businessId)` prüft jede Zeile der Tabelle und findet auch eine Zeile ohne Strang. Gefunden wird: ein geändertes Feld (auch unbekannt, auch verschachtelt), ein entfernter Eintrag am Anfang oder mitten in der Kette, vertauschte Reihenfolge, ein eingefügter Eintrag, ein geändertes `seq` oder `prevHash`, ein Eintrag in fremdem Strang oder Betrieb, eine zweite Korrektur.
+10. **Was die Kette allein nicht sieht:** dass am Ende Einträge fehlen (auch der letzte), dass ein ganzer Strang fehlt, und dass jemand die Kette ab einem Eintrag mit neuen Prüfsummen neu geschrieben hat; beim letzten Eintrag genügt dafür eine einzige Zeile. Die Kette hat kein Geheimnis: Sie zeigt Versehen und Schäden, sie beweist nichts gegen jemanden, der die Tabelle schreiben kann und die Regel kennt. Dafür braucht es einen **Anker**: `head` (`{ seq, hash }`) ausserhalb der Tabelle festhalten (Abschluss auf Papier, Sicherung, anderes Gerät) und später `verify(businessId, stream, anchor)` rufen. Das Kit speichert keinen Anker; ein Anker sagt nichts über Einträge nach ihm.
+11. **Ein Schreiber je Strang:** Schreiben zwei Geräte in denselben Strang, entsteht derselbe Platz zweimal, und `verify` meldet es. Einträge reisen darum als Befehle zum Gerät, das die Kette führt, nicht als Zeilen (ADR-0006).
+12. **Sicherung:** Ledger-Tabellen sind Tabellen und kommen mit. Ein Eintrag einer neueren Fassung behält sein unbekanntes Feld und seine Prüfsumme. Prüfe nach dem Zurückholen mit `verifyAll`, oder vorher die Zeilen der Datei mit `allChainProblems(hasher, rows)`.
+13. **Hasher und Transaktion:** Die Prüfsumme wird in der Transaktion gerechnet, nach dem Lesen des Kettenendes. Die Ausgabe übergibt einen Speicher und einen Hasher, die die Transaktion der Datenbank dabei offen halten, oder einen Hasher, der ohne Pause antwortet.
+14. **Nur lesen:** `createLedgerReader(ledger, { storage, hasher })` für Abfragen und Berichte. `entries` kommt in der Reihenfolge der Kette, mit korrigierten Einträgen und ihren Korrekturen; `effectiveEntries` nimmt die, die zählen.
+15. **Fehler:** `LedgerError` trägt einen `code` (`invalid_definition`, `invalid_stream`, `invalid_payload`) und meint einen Fehler des Programms. `CommandError` kommt aus `correct` und aus deiner Regel.
+16. **Im Test deines Ledgers:** beliebige Buchungsfolgen buchen (fast-check im eigenen Test), dann `expect(await ledgerInvariantProblems(ledger, hasher, rows, { before })).toEqual([])`. Geprüft wird: Jede Zeile passt zum Schema und kommt unverändert aus einer Sicherung zurück (`schema`), jede Kette hält (`chain`), die Regel nimmt jede gespeicherte Kette an, ändert weder Zustand noch Eintrag und rechnet zweimal dasselbe (`fold`), und was vorher da war, ist unverändert da (`history`).
 
 ## Beispiel
 
 ```ts
-import { CommandError } from '@onestrand/contract';
-import { rappen, RappenSchema, type Id, type Rappen } from '@onestrand/core';
-import { createLedger, defineLedger, ledgerFields, type LedgerContext } from '@onestrand/ledger';
-import { defineTable } from '@onestrand/storage';
+import { command, commandBase, CommandError, createCommandKit, type CommandContext } from '@onestrand/contract';
+import { IdSchema, LocalDateSchema, rappen, RappenSchema, type Rappen } from '@onestrand/core';
+import { defineTable, type Hasher, type ModuleStorage } from '@onestrand/storage';
+import { createLedger, defineLedger, ledgerFields, LedgerStreamSchema } from '@onestrand/ledger';
 import { z } from 'zod';
 
-// Ein Modul meldet die Tabelle und das Ledger an.
-const CashEntrySchema = z.object({ ...ledgerFields, amount: RappenSchema });
+// Die Zeile: die Felder des Kits und die Nutzlast.
+const CashEntrySchema = z.object({ ...ledgerFields, on: LocalDateSchema, amount: RappenSchema });
 type CashEntry = z.infer<typeof CashEntrySchema>;
 
 export const cashEntriesTable = defineTable({
@@ -59,28 +59,52 @@ export const cashEntriesTable = defineTable({
   appendOnly: true,
 });
 
+// Das Ledger: Der Zustand ist der Saldo, und die Regel lässt ihn nie unter null fallen.
 export const cashLedger = defineLedger<CashEntry, { balance: Rappen }>({
   table: cashEntriesTable,
   initial: { balance: rappen(0) },
   reduce: (state, entry) => {
     const balance = rappen(state.balance + entry.amount);
     if (balance < 0) {
-      throw new CommandError('cash.overdrawn', `Booking ${entry.id} would take the cash below zero`);
+      throw new CommandError('cash.overdrawn', `Entry ${entry.id} takes the cash below zero`);
     }
     return { balance };
   },
 });
 
-// Im Use Case, innerhalb von runCommand: `ctx` ist der Kontext des Befehls samt Hasher.
-export async function bookCash(ctx: LedgerContext, businessId: Id, amount: Rappen) {
-  const cash = createLedger(cashLedger, ctx);
-  const { entry, state } = await cash.append(businessId, 'cash', { amount });
-  return { entryId: entry.id, balance: state.balance }; // berechnet, nie gespeichert
+const book = command({
+  name: 'cash.book',
+  summary: 'Books an amount into or out of a cash book.',
+  access: { feature: 'cash', level: 'operate' },
+  input: z.object({ ...commandBase, stream: LedgerStreamSchema, on: LocalDateSchema, amount: RappenSchema }),
+  output: z.object({ entryId: IdSchema, balance: RappenSchema }),
+});
+
+interface CashContext extends CommandContext {
+  storage: ModuleStorage;
+  hasher: Hasher;
 }
 
-// Für einen Abschluss: prüfen und den Anker notieren.
-export async function closeCash(ctx: LedgerContext, businessId: Id) {
-  const result = await createLedger(cashLedger, ctx).verify(businessId, 'cash');
-  return result.ok ? result.head : result.problems; // { seq, hash } oder die Befunde
+// Im Use Case: Buchen gehört in einen Befehl.
+export function createCashUseCases(ctx: CashContext) {
+  const { emit, runCommand } = createCommandKit(ctx);
+  const cash = createLedger(cashLedger, ctx);
+  return {
+    cash,
+    'cash.book': async (raw: unknown) => {
+      const input = book.input.parse(raw);
+      return runCommand(book, input, async () => {
+        const { businessId, stream, on, amount } = input;
+        const { entry, state } = await cash.append(businessId, stream, { on, amount });
+        await emit(businessId, 'cash_entry.booked', { entryId: entry.id });
+        return { entryId: entry.id, balance: state.balance };
+      });
+    },
+  };
 }
+
+// Lesen und prüfen (Abfrage, Bericht, Seite «Daten»).
+const { cash } = createCashUseCases(ctx);
+const { balance } = await cash.state(businessId, 'main'); // gerechnet, nie gespeichert
+const check = await cash.verify(businessId, 'main'); // { ok: true, entries, head } oder { ok: false, entries, problems }
 ```

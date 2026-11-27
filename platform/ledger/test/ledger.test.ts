@@ -21,6 +21,7 @@ import {
   type LedgerPayload,
 } from '../src';
 import {
+  accountEntriesTable,
   accountLedger,
   AccountEntrySchema,
   accountRows,
@@ -124,17 +125,43 @@ describe('append', () => {
     expect(cash.state).toEqual({ balance: 300, bookings: 2 });
   });
 
-  it('stores what the schema read: text trimmed, a field it does not know left out', async () => {
+  it('stores what the schema read: a text trimmed', async () => {
     const t = await createTestLedgers();
     const { entry } = await t.account.append(
       t.one.businessId,
       'cash',
-      untyped({ amount: 500, text: '  Kasse  ', invented: true }),
+      untyped({ amount: 500, text: '  Kasse  ' }),
     );
     expect(entry.text).toBe('Kasse');
-    expect(entry).not.toHaveProperty('invented');
+    expect(await t.storage.table('account_entries').get(entry.id)).toEqual(entry);
     expect(await t.account.verify(t.one.businessId, 'cash')).toMatchObject({ ok: true });
   });
+
+  it('books -0 as 0, as it is stored', async () => {
+    const t = await createTestLedgers();
+    const { entry } = await t.account.append(t.one.businessId, 'cash', { amount: rappen(-0) });
+    expect(Object.is(entry.amount, 0)).toBe(true);
+    expect(await t.account.verify(t.one.businessId, 'cash')).toMatchObject({ ok: true });
+  });
+
+  it.each([
+    ['in the payload', { amount: 500, invented: true }, 'invented'],
+    ['inside a record of the payload', { amount: 500, ref: { kind: 'x', page: 2 } }, 'ref'],
+    ['with a misspelt name', { amount: 500, txt: 'Kasse', tag: ['a'] }, 'txt, tag'],
+  ])(
+    'refuses a field the schema does not know %s instead of dropping it',
+    async (_where, payload, fields) => {
+      const t = await createTestLedgers();
+      const ref = 'ref' in payload ? { ref: { ...payload.ref, id: t.ids.next() } } : {};
+      const append = t.account.append(t.one.businessId, 'cash', untyped({ ...payload, ...ref }));
+      await expect(append).rejects.toThrow(LedgerError);
+      await expect(append).rejects.toMatchObject({
+        code: 'invalid_payload',
+        message: expect.stringContaining(`carries in ${fields};`) as string,
+      });
+      expect(await accountRows(t)).toEqual([]);
+    },
+  );
 
   it('accepts a payload field without a value as no field', async () => {
     const t = await createTestLedgers();
@@ -409,6 +436,29 @@ describe('reading', () => {
     }
     expect(await t.account.state(t.one.businessId, 'cash')).toEqual({ balance: 300, bookings: 2 });
     expect(await t.storage.table('status_entries').ofBusiness(t.one.businessId)).toEqual([]);
+  });
+
+  it('answers for a key no entry can stand under as for a stream nobody wrote to', async () => {
+    const t = await createTestLedgers();
+    await t.account.append(t.one.businessId, 'cash', { amount: rappen(500) });
+    for (const key of ['', 'Cash', 'cash book']) {
+      expect(await t.account.entries(t.one.businessId, key)).toEqual([]);
+      expect(await t.account.state(t.one.businessId, key)).toEqual({ balance: 0, bookings: 0 });
+      expect(await t.account.verify(t.one.businessId, key)).toEqual({ ok: true, entries: 0 });
+    }
+  });
+
+  it('shows a damaged row under the key it carries, however malformed', async () => {
+    const t = await createTestLedgers();
+    const { entry } = await t.account.append(t.one.businessId, 'cash', { amount: rappen(500) });
+    const device = await deviceHolding([{ ...entry, stream: 'Other Stream' }]);
+    expect(await device.account.streams(t.one.businessId)).toEqual(['Other Stream']);
+    expect(await device.account.entries(t.one.businessId, 'Other Stream')).toHaveLength(1);
+    expect(await device.account.verify(t.one.businessId, 'Other Stream')).toMatchObject({
+      ok: false,
+      entries: 1,
+      problems: [{ kind: 'entry', id: entry.id }],
+    });
   });
 
   it('reads with a reader that cannot write', async () => {
@@ -727,6 +777,148 @@ describe('the set-up', () => {
       message: expect.stringContaining('"at"') as string,
     });
     expect(await storage.table(table).ofBusiness(businessId)).toEqual([]);
+  });
+});
+
+describe('a schema that does not read back what it wrote', () => {
+  /** A ledger on a table of its own, with one payload field read by `amount`. */
+  async function ledgerWith(amount: z.ZodType<number>) {
+    const schema = z.object({ ...ledgerFields, amount });
+    const table = defineTable({
+      name: 'sample_entries',
+      schema,
+      indexes: [],
+      sensitivity: 'normal',
+      sync: 'ledger',
+      appendOnly: true,
+    });
+    const ledger = defineLedger({
+      table,
+      initial: 0,
+      reduce: (total: number, entry: z.output<typeof schema>) => total + entry.amount,
+    });
+    const ports = { hasher, clock: fixedClock(), ids: sequentialIds() };
+    const registry = createTableRegistry([table]);
+    const storage = createMemoryStorage(registry, ports);
+    const businessId = ports.ids.next();
+    const now = ports.clock.now();
+    await storage.businesses.add({
+      id: businessId,
+      name: 'Betrieb Muster',
+      createdAt: now,
+      updatedAt: now,
+    });
+    const kit = createLedger(ledger, { storage, ...ports, actor: ports.ids.next() });
+    const backups = createBackupKit({ format: 'sample-backup', version: 1, registry, hasher });
+    return { kit, storage, businessId, table, backups, clock: ports.clock };
+  }
+
+  it('is refused at the first booking: a transform applied again on every reading', async () => {
+    // Francs in, Rappen stored: read a second time, the amount would be multiplied again.
+    const { kit, storage, businessId, table } = await ledgerWith(
+      z.number().transform((francs) => Math.round(francs * 100)),
+    );
+    const append = kit.append(businessId, 'cash', { amount: 5 });
+    await expect(append).rejects.toThrow(LedgerError);
+    await expect(append).rejects.toMatchObject({
+      code: 'invalid_definition',
+      message: expect.stringContaining('cannot read back the entry it wrote') as string,
+    });
+    expect(await storage.table(table).ofBusiness(businessId)).toEqual([]);
+  });
+
+  it('is refused at the first booking: a schema that refuses what it wrote', async () => {
+    const { kit, storage, businessId, table } = await ledgerWith(
+      z
+        .number()
+        .max(10)
+        .transform((value) => value + 10),
+    );
+    await expect(kit.append(businessId, 'cash', { amount: 5 })).rejects.toMatchObject({
+      code: 'invalid_definition',
+      message: expect.stringContaining('the schema refuses it: amount') as string,
+    });
+    expect(await storage.table(table).ofBusiness(businessId)).toEqual([]);
+  });
+
+  it('is not what a default or a transform does that changes nothing the second time', async () => {
+    const { kit, storage, businessId, backups, clock } = await ledgerWith(
+      z
+        .number()
+        .default(7)
+        .transform((value) => Math.abs(value)),
+    );
+    // The type of a payload is what the schema returns, so it asks for the amount; the schema
+    // itself fills it in.
+    await kit.append(businessId, 'cash', {} as { amount: number });
+    await kit.append(businessId, 'cash', { amount: -3 });
+    expect(await kit.state(businessId, 'cash')).toBe(10);
+
+    // What the kit accepted comes back from a backup with its chain whole.
+    const document = await backups.exportBackup(storage, businessId, { clock });
+    const check = await backups.checkBackup(JSON.parse(JSON.stringify(document)));
+    expect(check.preview.problems).toEqual([]);
+    if (check.backup !== undefined) {
+      await backups.restoreBackup(storage, check.backup);
+    }
+    expect(await kit.verifyAll(businessId)).toMatchObject({ ok: true, entries: 2 });
+    expect(await kit.state(businessId, 'cash')).toBe(10);
+  });
+});
+
+describe('a rule that changes the entry it is given', () => {
+  it('fails the booking, and nothing is stored that the checksum does not cover', async () => {
+    const t = await createTestLedgers();
+    const careless = defineLedger<AccountEntry, number>({
+      table: accountEntriesTable,
+      initial: 0,
+      reduce: (total, entry) => {
+        // Takes the sign off the amount in place instead of leaving the entry alone.
+        entry.amount = rappen(Math.abs(entry.amount));
+        return total + entry.amount;
+      },
+    });
+    const kit = createLedger(careless, {
+      storage: t.storage,
+      hasher,
+      clock: t.clock,
+      ids: t.ids,
+      actor: t.one.personId,
+    });
+    await expect(kit.append(t.one.businessId, 'cash', { amount: rappen(-5) })).rejects.toThrow(
+      TypeError,
+    );
+    expect(await accountRows(t)).toEqual([]);
+  });
+
+  it('hands the rule a frozen copy: not the entry the caller gets, and not what is stored', async () => {
+    const t = await createTestLedgers();
+    const kept: AccountEntry[] = [];
+    const keeping = defineLedger<AccountEntry, number>({
+      table: accountEntriesTable,
+      initial: 0,
+      reduce: (total, entry) => {
+        kept.push(entry);
+        return total + entry.amount;
+      },
+    });
+    const kit = createLedger(keeping, {
+      storage: t.storage,
+      hasher,
+      clock: t.clock,
+      ids: t.ids,
+      actor: t.one.personId,
+    });
+    const { entry } = await kit.append(t.one.businessId, 'cash', {
+      amount: rappen(5),
+      tags: ['a'],
+    });
+    // What the rule saw is not what the caller got and not what is stored.
+    expect(kept[0]).toEqual(entry);
+    expect(kept[0]).not.toBe(entry);
+    expect(Object.isFrozen(kept[0]?.tags)).toBe(true);
+    entry.tags?.push('b');
+    expect(await kit.verify(t.one.businessId, 'cash')).toMatchObject({ ok: true, entries: 1 });
   });
 });
 
