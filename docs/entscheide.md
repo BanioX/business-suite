@@ -176,6 +176,18 @@ Steht im Plan: P-31 Team und Zeit ist für Facility ein **Muss** ([Steckbrief](b
 
 Angeschaut am Klickentwurf, Stand 27.11.2026. Ob das Stempeln schon in Welle 1 vorgezogen wird, entscheidet der Kopf mit dem Auftrag W1-00; heute steht es in Welle 2.
 
+### S-29 Alles am Handy, ohne PC: Kundschaft und Ferienplan inbegriffen
+
+**Albans Vorgabe, 27.11.2026, wörtlich gekürzt:** «Ferien plan etc […] CRM alles am handy ohne pcs».
+
+**Was gilt:**
+
+1. **Handy zuerst, ohne Ausnahme.** Jede Funktion, auch die des Büros (Offerte, Rechnung, Monatsabschluss, Ferienplan, Lohn-Vorbereitung, Sichern), ist auf dem iPhone ganz bedienbar. iPad und Web zeigen dasselbe grösser; ein Laptop ist nie Pflicht. Das schärft ADR-0013 von Randen («eine App, vier Ansichten») und den Prüfstein 1 im [Zielbild](zielbild.md). Wo ein Papier nötig ist, entsteht es als PDF auf dem Handy und geht über das Teilen-Menü.
+2. **Kundschaft als kleines CRM** (P-22 mit P-25 und P-28): Kontakt, Objekte, Sprache der Dokumente, **Verlauf** aus dem, was ohnehin geschieht (Anfrage, Besichtigung, Offerte, Vertrag, Rapport, Rechnung, Zahlung; aus den Ereignissen gelesen, nie doppelt erfasst), Notizen und ein **nächster Schritt** mit Datum, der in «Heute» erscheint. Neue Kundschaft von Hand oder aus einem Kontakt des Handys, den die Person selbst wählt. Keine Anbindung an fremde Adressbücher oder Dienste.
+3. **Ferien und Abwesenheiten** (P-28 mit P-31): Antrag vom Handy der Mitarbeitenden, Annehmen oder Ablehnen mit Grund, Plan des Teams mit Feiertagen je Kanton (Richtwert), Guthaben je Person **gerechnet, nie gespeichert**; Mindestanspruch mit Quelle (4 Wochen, bis 20 Jahre 5 Wochen, Art. 329a OR, [`fakten/arbeit-personal.md`](fakten/arbeit-personal.md), Abschnitt 2.3). Kollidiert ein Antrag mit Einsätzen, zeigt die App die Einsätze und schlägt Ersatz vor; entscheiden tut die Inhaberin.
+
+Angeschaut am Klickentwurf, Stand 27.11.2026. Pakete und Wellen wie im [Katalog](plattform.md): Kundschaft in Welle 1, Ferien mit Team und Zeit in Welle 2.
+
 ## Vor Welle 2 und 3
 
 ### S-06 Abgleich zwischen Büro und Aussendienst ohne Server [Datenfluss]
