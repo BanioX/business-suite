@@ -2,7 +2,8 @@
 // ADR-0004, 8; docs/architektur.md, section 4; rule 10 of platform/manifest/api.md), one step
 // after the other, WITHOUT stopping at the first failure, in the style of `pnpm check`: each step
 // prints `<step> exit=<code> (<seconds> s)`, the last line is `ALL=GREEN` or `ALL=RED`, and the
-// exit code is 1 on RED.
+// exit code is 1 on RED. When the Vitest run of the conformity fails although each of its steps
+// passed (an unhandled error), the line `conformity exit=<code>` comes in addition.
 //
 //   manifest      the entry exports one manifest made by defineIndustry under the id, without a
 //                 problem; package name, Vitest project, sources of the rule sets

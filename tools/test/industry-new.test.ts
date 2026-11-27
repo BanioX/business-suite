@@ -20,6 +20,7 @@ import {
   registerNames,
   renameText,
   RESERVED_INDUSTRY_IDS,
+  SCRIPT_WORDS,
   TEMPLATE_DIR,
   type IdContext,
   type Repository,
@@ -85,6 +86,20 @@ describe('the id of a new industry', () => {
         expect.stringContaining('is reserved'),
       ]);
     }
+  });
+
+  it('is refused for a reserved word of JavaScript and for an id that holds the pattern', () => {
+    // `export const new = defineIndustry(…)` does not parse: the formatter threw before (27.11.2026).
+    for (const id of ['new', 'class', 'default', 'public']) {
+      expect(SCRIPT_WORDS.has(id)).toBe(true);
+      expect(industryIdProblems(id, EMPTY_CONTEXT), id).toEqual([
+        expect.stringContaining('is a reserved word of JavaScript'),
+      ]);
+    }
+    // Before, the leftover check refused it and asked to change the tool.
+    expect(industryIdProblems('mustermann', EMPTY_CONTEXT)).toEqual([
+      '"mustermann" holds the id of the pattern "muster": what the renaming leaves could not be told from a name of the pattern',
+    ]);
   });
 
   it('is refused for a word the pattern uses itself, which the copy would clash with', () => {

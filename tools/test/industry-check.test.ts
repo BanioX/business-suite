@@ -17,6 +17,7 @@ import {
   CODE_STEPS,
   codeArgs,
   CONFORMITY_CONFIG,
+  CONFORMITY_PROCESS,
   CONFORMITY_STEPS,
   conformityArgs,
   conformityFile,
@@ -142,6 +143,23 @@ describe('conformityResults', () => {
       'backup exit=1 (0.5 s): the step ended as «passed» without a passed test',
       'names exit=1 (0.0 s): tools/conformity/names.conformity.test.ts did not run',
     ]);
+  });
+
+  it('is red when Vitest fails although every step passed: an unhandled error is never a pass', () => {
+    // Vitest 5 reports every file as passed (and `success: true`) after an unhandled rejection,
+    // and ends with exit code 1: seen on 27.11.2026.
+    const outcomes = conformityResults(report(allSteps()), 1);
+    expect(outcomes.slice(0, -1).every(({ code }) => code === 0)).toBe(true);
+    expect(outcomes.at(-1)).toMatchObject({ step: CONFORMITY_PROCESS, code: 1 });
+    expect(outcomeLine(outcomes.at(-1) ?? { step: '', code: 0, seconds: 0 })).toContain(
+      'conformity exit=1 (0.0 s): Vitest ended with exit=1 although every step passed',
+    );
+    expect(allLine(outcomes)).toBe('ALL=RED');
+    // A failed step explains the exit code itself: no line more.
+    const failed = allSteps().map((file) =>
+      file.step === 'names' ? { ...file, status: 'failed', assertions: ['failed'] } : file,
+    );
+    expect(conformityResults(report(failed), 1)).toHaveLength(CONFORMITY_STEPS.length);
   });
 
   it('fails every step without a report, with the exit code of Vitest and at least 1', () => {

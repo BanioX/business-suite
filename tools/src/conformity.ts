@@ -518,12 +518,21 @@ export async function switchedOffConformity(subject: Subject): Promise<Finding> 
     for (const featureId of switchable) {
       const before = await rows();
       const { turnedOff } = await switchTo(featureId, false);
+      if (!turnedOff.includes(featureId)) {
+        // Without it nothing below would be asked of a function that is off: never a pass for nothing.
+        problems.push(
+          `switching ${featureId} off turned off ${turnedOff.length === 0 ? 'nothing' : turnedOff.join(', ')}, not ${featureId}`,
+        );
+      }
       const closed = operations.filter(([, operation]) =>
         turnedOff.includes(operation.access.feature),
       );
+      let refused = 0;
       for (const [name, operation] of closed) {
         const code = await codeOf(call(owner, name, inputOfOperation(operation.kind)));
-        if (code !== 'forbidden') {
+        if (code === 'forbidden') {
+          refused += 1;
+        } else {
           problems.push(
             `${name} answered ${code ?? 'without an error'} while ${featureId} was off: an operation of a function that is off is refused with forbidden, also for the owner`,
           );
@@ -569,7 +578,7 @@ export async function switchedOffConformity(subject: Subject): Promise<Finding> 
         }
       }
       notes.push(
-        `${featureId} off: ${counted(closed.length, 'operation')} refused, ${counted(manifest.tables.length, 'table')} kept`,
+        `${featureId} off: ${String(refused)} of ${counted(closed.length, 'operation')} refused, ${counted(manifest.tables.length, 'table')} kept`,
       );
     }
   } catch (error) {

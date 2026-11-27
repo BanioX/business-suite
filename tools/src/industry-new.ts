@@ -66,6 +66,62 @@ export const RESERVED_INDUSTRY_IDS: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * The reserved words of JavaScript and TypeScript in the form of an id: the manifest of the
+ * pattern is `export const muster = defineIndustry(…)`, so the id becomes the name of a constant,
+ * and `export const new = …` does not parse.
+ */
+export const SCRIPT_WORDS: ReadonlySet<string> = new Set([
+  'arguments',
+  'await',
+  'break',
+  'case',
+  'catch',
+  'class',
+  'const',
+  'continue',
+  'debugger',
+  'default',
+  'delete',
+  'do',
+  'else',
+  'enum',
+  'eval',
+  'export',
+  'extends',
+  'false',
+  'finally',
+  'for',
+  'function',
+  'if',
+  'implements',
+  'import',
+  'in',
+  'instanceof',
+  'interface',
+  'let',
+  'new',
+  'null',
+  'package',
+  'private',
+  'protected',
+  'public',
+  'return',
+  'static',
+  'super',
+  'switch',
+  'this',
+  'throw',
+  'true',
+  'try',
+  'typeof',
+  'var',
+  'void',
+  'while',
+  'with',
+  'yield',
+]);
+
+/**
  * The made-up names of the pattern that hold the word «Muster» and stay as they are in a new
  * industry: they are typed data and texts of an invented business («Betrieb Muster»), never an
  * identifier (CLAUDE.md, rule 6), and the test of the exports allows exactly them
@@ -256,6 +312,16 @@ export function industryIdProblems(id: string, context: IdContext): string[] {
   if (RESERVED_INDUSTRY_IDS.has(id)) {
     problems.push(
       `"${id}" is reserved: it names a role, a directory or a part of a package of the suite`,
+    );
+  }
+  if (SCRIPT_WORDS.has(id)) {
+    problems.push(
+      `"${id}" is a reserved word of JavaScript: the manifest of the industry is the constant of that name (export const ${id} = defineIndustry(…))`,
+    );
+  }
+  if (id !== TEMPLATE_ID && id.includes(TEMPLATE_ID)) {
+    problems.push(
+      `"${id}" holds the id of the pattern "${TEMPLATE_ID}": what the renaming leaves could not be told from a name of the pattern`,
     );
   }
   const usedBy = context.patternWords.get(id);

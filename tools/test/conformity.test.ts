@@ -136,7 +136,7 @@ describe('the conformity of muster', () => {
       'muster_entries: 2 rows there and back',
     ]);
     const off = await switchedOffConformity(muster);
-    expect(off.notes).toContain('muster.entries off: 2 operations refused, 1 table kept');
+    expect(off.notes).toContain('muster.entries off: 2 of 2 operations refused, 1 table kept');
   });
 
   it('has all its names in the register', () => {
@@ -319,6 +319,25 @@ describe('the demo of an industry', () => {
         'the check could not run to its end: layOutMusterDemo must give { businessId } back',
       ]);
     }
+  });
+});
+
+describe('a table whose schema changes a row on reading', () => {
+  it('turns the step backup red: the rows do not come back as they were', async () => {
+    // The use case stores the title as typed; restoring a file parses every row with the schema
+    // of its table, and this one changes the title.
+    const root = brokenCopy({
+      'industries/muster/core/src/model.ts': (text) =>
+        text.replace(
+          '  title: nameSchema(200),\n',
+          '  title: nameSchema(200).transform((title) => title.toUpperCase()),\n',
+        ),
+    });
+    const broken = await loadSubject(root, 'muster');
+    expect(broken.loadProblems).toEqual([]);
+    expect((await backupConformity(broken)).problems).toEqual([
+      'the rows of muster_entries come back changed',
+    ]);
   });
 });
 

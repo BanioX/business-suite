@@ -114,13 +114,34 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+/** The line of the conformity process when it failed although every step passed. */
+export const CONFORMITY_PROCESS = 'conformity';
+
 /**
  * The outcome of every conformity step from the JSON report of Vitest and the exit code of its
  * process. A step whose file is not in the report did not run and has failed: a check that does
  * not run must never look like a pass. Without a report every step takes the exit code of the
- * process, and at least 1.
+ * process, and at least 1. When Vitest ends with an exit code other than 0 although every step
+ * passed (an unhandled error or rejection: Vitest reports the files as passed and even
+ * `success: true`, but exits with 1), one more outcome `conformity` carries that exit code, so
+ * the line `ALL=` cannot be green.
  */
 export function conformityResults(report: unknown, exitCode: number): StepOutcome[] {
+  const outcomes = stepResults(report, exitCode);
+  return exitCode !== 0 && outcomes.every(({ code }) => code === 0)
+    ? [
+        ...outcomes,
+        {
+          step: CONFORMITY_PROCESS,
+          code: exitCode,
+          seconds: 0,
+          reason: `Vitest ended with exit=${String(exitCode)} although every step passed: an error outside the tests (an unhandled error or rejection, see above)`,
+        },
+      ]
+    : outcomes;
+}
+
+function stepResults(report: unknown, exitCode: number): StepOutcome[] {
   const files = isRecord(report) && Array.isArray(report.testResults) ? report.testResults : [];
   const byFile = new Map<string, Record<string, unknown>>();
   for (const file of files) {
