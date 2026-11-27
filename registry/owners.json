@@ -2,16 +2,46 @@
   "about": "Who owns which path, and which order may write where. The first owner pattern that matches wins. Format and rules: tools/src/ownership.ts; checked for every commit by «pnpm ownership».",
   "version": 1,
   "owners": [
-    { "pattern": "docs/fakten/**", "owner": "facts" },
-    { "pattern": "docs/branchen/README.md", "owner": "head" },
-    { "pattern": "docs/branchen/_vorlage.md", "owner": "head" },
-    { "pattern": "docs/branchen/gastro*", "owner": "head" },
-    { "pattern": "docs/branchen/weitere*", "owner": "head" },
-    { "pattern": "docs/branchen/**", "owner": "industry:*" },
-    { "pattern": "platform/*/**", "owner": "platform:*" },
-    { "pattern": "industries/muster/**", "owner": "head" },
-    { "pattern": "industries/*/**", "owner": "industry:*" },
-    { "pattern": "**", "owner": "head" }
+    {
+      "pattern": "docs/fakten/**",
+      "owner": "facts"
+    },
+    {
+      "pattern": "docs/branchen/README.md",
+      "owner": "head"
+    },
+    {
+      "pattern": "docs/branchen/_vorlage.md",
+      "owner": "head"
+    },
+    {
+      "pattern": "docs/branchen/gastro*",
+      "owner": "head"
+    },
+    {
+      "pattern": "docs/branchen/weitere*",
+      "owner": "head"
+    },
+    {
+      "pattern": "docs/branchen/**",
+      "owner": "industry:*"
+    },
+    {
+      "pattern": "platform/*/**",
+      "owner": "platform:*"
+    },
+    {
+      "pattern": "industries/muster/**",
+      "owner": "head"
+    },
+    {
+      "pattern": "industries/*/**",
+      "owner": "industry:*"
+    },
+    {
+      "pattern": "**",
+      "owner": "head"
+    }
   ],
   "orders": {
     "W0-01": {
@@ -63,13 +93,49 @@
         "platform/business/**",
         "platform/web-data/**",
         "platform/manifest/**",
-        "industries/muster/core/**",
         "docs/herkunft.md",
         "docs/schulden.md",
         "docs/nebenwirkungen.md",
         "docs/lernbuch.md",
         "docs/fahrplan.md",
         "docs/auftraege/w0-02-zusammensetzen.md",
+        "CLAUDE.md",
+        "pnpm-workspace.yaml",
+        ".github/workflows/**",
+        "industries/muster/**"
+      ]
+    },
+    "W0-03": {
+      "role": "platform",
+      "write": [
+        "package.json",
+        "pnpm-workspace.yaml",
+        "pnpm-lock.yaml",
+        "tsconfig*.json",
+        "eslint.config.js",
+        "vitest.config.ts",
+        ".prettierrc.json",
+        ".prettierignore",
+        ".gitignore",
+        ".github/workflows/**",
+        "tools/**",
+        "registry/**",
+        "platform/ui/**",
+        "platform/shell/**",
+        "platform/web-device/**",
+        "platform/pdf/**",
+        "platform/today/**",
+        "platform/manifest/**",
+        "platform/i18n/**",
+        "platform/web-data/**",
+        "industries/muster/**",
+        "editions/field/**",
+        "docs/herkunft.md",
+        "docs/schulden.md",
+        "docs/nebenwirkungen.md",
+        "docs/lernbuch.md",
+        "docs/fahrplan.md",
+        "docs/auftraege/w0-03-oberflaeche.md",
         "CLAUDE.md"
       ]
     },
