@@ -1,4 +1,4 @@
-// Origin: BanioX/Randen packages/core/src/application/command.ts @ e0f0907 — adapted: the kit takes the operation itself instead of a name in a fixed contract; a commandId of another operation or business is refused; the result is checked against the output schema and recorded with its business; error, context and row helper live elsewhere
+// Origin: BanioX/Randen packages/core/src/application/command.ts @ e0f0907 — adapted: the kit takes the operation itself instead of a name in a fixed contract; a commandId of another operation or business is refused; the result is checked against the output schema and recorded with its business; a query is refused; error, context and row helper live elsewhere
 import type { Id, IsoDateTime } from '@onestrand/core';
 import type { z } from 'zod';
 import { CommandError } from './errors';
@@ -22,9 +22,21 @@ export interface CommandKit {
    *
    * The result is parsed with `operation.output` before it is recorded and returned: fields the
    * schema does not know are dropped, and a result that does not fit fails with a `ZodError` and
-   * undoes the command. A `commandId` already recorded for another operation or another business
-   * is a `CommandError` with the code `invalid`. A query is refused with a `TypeError`. Pass the
-   * parsed input as `command`; it carries both ids.
+   * undoes the command. A stored result is parsed with it again when the command is repeated, so
+   * an output schema must take its own results and leave them as they are (no transform; checks
+   * that need no waiting). A `commandId` already recorded for another operation or another
+   * business is a `CommandError` with the code `invalid`. A query is refused with a `TypeError`.
+   * Pass the parsed input as `command`; it carries both ids.
+   *
+   * What `execute` throws is handed on as it was thrown, after everything is undone. Inside a
+   * transaction that is already open the command joins it and shares its fate (`Transactional`):
+   * a command that failed there fails the whole of it, even if its error was caught.
+   *
+   * Two calls with the same `commandId` at the same moment run once, because the storage lets the
+   * second transaction wait for the first: the second finds the entry and returns the stored
+   * result, or runs the command itself if the first one failed and left nothing. The kit relies
+   * on the storage for this and does not queue by itself; on a storage in memory, which cannot
+   * let a transaction wait, await a command before starting the next.
    */
   runCommand: <TOutput extends z.ZodType>(
     operation: CommandOperation<z.ZodType, TOutput>,
