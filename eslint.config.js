@@ -71,8 +71,15 @@ function pureFiles(name) {
   return `platform/${name}/src/**/${CODE}`;
 }
 
+/**
+ * The scope of the packages of the industries (`industries/<id>/core` is `@onestrand-industry/<id>`).
+ * It lies outside `@onestrand/`, so no rule written for the platform's own packages lets an
+ * industry through by accident; every rule below names it.
+ */
+const INDUSTRY_SCOPE = '@onestrand-industry';
+
 const NO_INDUSTRY = {
-  group: ['**/industries/**', '**/editions/**'],
+  group: ['**/industries/**', '**/editions/**', `${INDUSTRY_SCOPE}/*`, `${INDUSTRY_SCOPE}/**`],
   message: 'The platform imports no industry and no edition (architecture 3.2, rule 2).',
 };
 
@@ -86,7 +93,7 @@ function dynamicImportOf(pattern, message) {
 }
 
 const NO_INDUSTRY_DYNAMIC = dynamicImportOf(
-  '(^|\\/)(industries|editions)(\\/|$)',
+  `(^|\\/)(industries|editions)(\\/|$)|^${INDUSTRY_SCOPE}\\/`,
   NO_INDUSTRY.message,
 );
 
@@ -149,6 +156,114 @@ function platformBoundaries(name, allowed, { pure }) {
       },
     ],
     ...(pure ? { 'no-restricted-syntax': STATIC_IMPORTS_ONLY } : {}),
+  };
+}
+
+/**
+ * The industries (suite ADR-0004, «Was eine Branche nicht darf»; docs/architektur.md, 3.2). An
+ * industry lies in `industries/<id>/`; its pure part, `industries/<id>/core`, is the package
+ * `@onestrand-industry/<id>` and is held to the rules of the pure part of the platform: no UI, no
+ * database, no Node, no browser global, import statements only. On top of that:
+ *
+ * - it imports the platform by the public entry of a package, never a file inside one, and only
+ *   packages of the pure layers: not the layer «Browser» (`BROWSER_PACKAGES`) and not the test kit;
+ * - it imports no other industry, by path or by name, and itself only by relative path;
+ * - it imports no edition: the edition lists the industry, never the other way round.
+ *
+ * The React part (`industries/<id>/web`) gets its rules with W0-03.
+ */
+function industryCoreFiles(part) {
+  return `industries/*/core/${part}/**/${CODE}`;
+}
+
+/** Platform packages the pure part of an industry never imports: the browser layer and the test kit. */
+const NOT_FOR_INDUSTRY_CORE = [...Object.keys(BROWSER_PACKAGES), 'testing'];
+
+const NO_OTHER_INDUSTRY = {
+  group: ['**/industries/**', `${INDUSTRY_SCOPE}/*`, `${INDUSTRY_SCOPE}/**`],
+  message:
+    'An industry imports no other industry, and its own files by relative path (suite ADR-0004).',
+};
+
+const NO_EDITION = {
+  group: ['**/editions/**'],
+  message: 'An industry imports no edition: the edition lists the industry (suite ADR-0004, 2).',
+};
+
+const NO_OTHER_INDUSTRY_DYNAMIC = dynamicImportOf(
+  `(^|\\/)(industries|editions)(\\/|$)|^${INDUSTRY_SCOPE}\\/`,
+  'An industry imports no other industry and no edition (suite ADR-0004).',
+);
+
+function industryBoundaries({ pure }) {
+  return {
+    'no-restricted-imports': [
+      'error',
+      {
+        paths: pure
+          ? [
+              ...NOT_PURE,
+              ...NOT_FOR_INDUSTRY_CORE.map((name) => ({
+                name: `@onestrand/${name}`,
+                message:
+                  name === 'testing'
+                    ? 'The test kit belongs in tests, never in what an industry ships.'
+                    : `@onestrand/${name} belongs to the layer «Browser»; the pure part of an industry runs without a browser (architecture 3.2).`,
+              })),
+            ]
+          : [],
+        patterns: [
+          {
+            group: pure
+              ? ['@onestrand/*/*']
+              : ['@onestrand/*/*', '!@onestrand/*/web', '!@onestrand/*/testing'],
+            message: pure
+              ? 'The pure part of an industry imports the public entry of a platform package: no file inside it and no React part.'
+              : 'Import the public entry of a package, never a file inside it.',
+          },
+          NO_OTHER_INDUSTRY,
+          NO_EDITION,
+          pure
+            ? {
+                // Out of `src` into the tests, the web part or anything beside the package.
+                regex:
+                  '^(\\.\\./)+(.*/)?(industries|platform|editions|tools|core|web|src|test|node_modules)(/|$)',
+                message: 'Stay inside the package: other packages are imported by their name.',
+              }
+            : {
+                regex: '^(\\.\\./){2,}',
+                message: 'Stay inside the package: other packages are imported by their name.',
+              },
+          ...(pure
+            ? [
+                {
+                  regex: '^node:',
+                  message: 'The pure part of an industry runs without Node (architecture 3.2).',
+                },
+                {
+                  group: NOT_PURE.map((entry) => `${entry.name}/**`),
+                  message:
+                    'The pure part of an industry knows no UI and no database (architecture 3.2).',
+                },
+              ]
+            : []),
+        ],
+      },
+    ],
+    'no-restricted-syntax': pure
+      ? STATIC_IMPORTS_ONLY
+      : [
+          'error',
+          NO_OTHER_INDUSTRY_DYNAMIC,
+          dynamicImportOf(
+            '^@onestrand\\/[^\\/]+\\/(?!(web|testing)$)',
+            'Import the public entry of a package, never a file inside it.',
+          ),
+          dynamicImportOf(
+            '^(\\.\\.\\/){2,}',
+            'Stay inside the package: other packages are imported by their name.',
+          ),
+        ],
   };
 }
 
@@ -277,5 +392,32 @@ export default tseslint.config(
         ),
       ],
     },
+  },
+  {
+    // Whatever stands under `industries/` (a configuration, a part without rules of its own
+    // yet): no edition, in any form. The blocks below replace this for the core of an industry.
+    files: [`industries/**/${CODE}`],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [NO_EDITION] }],
+      'no-restricted-syntax': [
+        'error',
+        dynamicImportOf('(^|\\/)editions(\\/|$)', NO_EDITION.message),
+      ],
+    },
+  },
+  {
+    // The pure part of an industry: the globals of neither the browser nor Node.
+    files: [industryCoreFiles('src')],
+    languageOptions: { globals: {} },
+    rules: {
+      'no-restricted-globals': ['error', ...PURE_RESTRICTED_GLOBALS],
+      ...industryBoundaries({ pure: true }),
+    },
+  },
+  {
+    // The tests of an industry run on Node and may use the test kit; they stay in their package
+    // and reach no other industry and no edition, in any form.
+    files: [industryCoreFiles('test')],
+    rules: industryBoundaries({ pure: false }),
   },
 );

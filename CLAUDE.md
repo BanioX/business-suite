@@ -61,7 +61,7 @@ node tools/provenance.mjs       # docs/herkunft.md aus den Herkunftsvermerken ne
 node tools/hash-name.mjs <wort> # Prüfsumme für die Liste der verbotenen Namen
 ```
 
-Jeder Commit endet mit `Order: <Auftrag>` und `Role: <head|platform|industry:<id>|facts>`; `registry/owners.json` sagt, welcher Auftrag wo schreiben darf. Ein einzelnes Paket prüfen: `pnpm exec vitest run --project <ordner>` und `pnpm --filter @onestrand/<paket> typecheck`.
+Jeder Commit endet mit `Order: <Auftrag>` und `Role: <head|platform|industry:<id>|facts>`; `registry/owners.json` sagt, welcher Auftrag wo schreiben darf. Ein einzelnes Paket prüfen: `pnpm exec vitest run --project <ordner>` und `pnpm --filter @onestrand/<paket> typecheck`; eine Branche: `pnpm exec vitest run --project <id>-core` und `pnpm --filter @onestrand-industry/<id> typecheck` (mit `--coverage --coverage.include='src/**'` für die Abdeckung).
 
 ## Definition of Done
 - [ ] Abnahme des Auftrags erfüllt, nur in den eigenen Pfaden geändert

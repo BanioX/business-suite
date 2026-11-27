@@ -35,11 +35,11 @@ Branchen und Ausgaben erklären sich mit Manifesten, und die Plattform setzt dar
 
 ## Abnahme
 
-- [ ] `muster` legt Tabelle, Operationen, Funktion und Betriebsart an, ohne eine Datei unter `platform/` zu ändern.
-- [ ] Eine Operation ohne `access` lässt den Test rot werden; eine Operation mit fehlendem Recht wird abgewiesen.
-- [ ] Zwei Branchen mit derselben Operation lassen `composeContract` scheitern.
-- [ ] Eine ausgeschaltete Funktion hat keine Einstiege; ihre Daten bleiben.
-- [ ] Ein Katalog mit fehlendem portugiesischem Schlüssel fällt auf Deutsch zurück; der Texttest listet die Lücke.
+- [x] `muster` legt Tabelle, Operationen, Funktion und Betriebsart an, ohne eine Datei unter `platform/` zu ändern.
+- [x] Eine Operation ohne `access` lässt den Test rot werden; eine Operation mit fehlendem Recht wird abgewiesen.
+- [x] Zwei Branchen mit derselben Operation lassen `composeContract` scheitern.
+- [x] Eine ausgeschaltete Funktion hat keine Einstiege; ihre Daten bleiben.
+- [x] Ein Katalog mit fehlendem portugiesischem Schlüssel fällt auf Deutsch zurück; der Texttest listet die Lücke.
 - [ ] `pnpm industry:new probe` erzeugt eine Branche, die `pnpm check:industry probe` besteht; danach wieder entfernt.
 - [ ] `pnpm check`: `ALL=GREEN`.
 
@@ -57,7 +57,7 @@ Was gebaut, was geerntet (mit Randen-Commit), was selbst gebaut und von Randen s
 
 ## Stand
 
-Schritt 1 (Stand von Randen), Schritt 2 (Manifeste und Zusammensetzen), Schritt 3 (`@onestrand/features`), Schritt 4 (`@onestrand/access`), Schritt 5 (`@onestrand/business`), Schritt 6 (`@onestrand/i18n`) und Schritt 7 (`@onestrand/web-data`) erledigt am 25.11.2026; die übrigen Schritte (8 und 9) sind offen.
+Schritt 1 (Stand von Randen), Schritt 2 (Manifeste und Zusammensetzen), Schritt 3 (`@onestrand/features`), Schritt 4 (`@onestrand/access`), Schritt 5 (`@onestrand/business`), Schritt 6 (`@onestrand/i18n`) und Schritt 7 (`@onestrand/web-data`) erledigt am 25.11.2026, Schritt 8 (Referenz-Branche `muster`) am 27.11.2026; Schritt 9 (Generator) ist offen.
 
 **Schritt 1, Stand von Randen** (gelesen aus `BanioX/Randen` @ `5d016f1`, nur lesen):
 
@@ -203,3 +203,48 @@ Was die folgenden Schritte wissen müssen:
 - **Shell (P-09):** liest `DEVICE_NAMES.openBusiness` und `DEVICE_NAMES.actor(businessId)`, schreibt `deviceMode` und `language`; ist der Speicher leer (Browser hat gelöscht), fragt sie neu (TD-108).
 - **Namensregister:** `registry/names.json` trägt das Paket. Die Namen auf dem Gerät, die nicht dort stehen (`files.bytes`, Namen der Indizes), sind TD-106.
 - Neue Schulden: TD-103 bis TD-108; TD-28 erledigt, TD-23 und TD-24 teilweise. Neue Lektionen: L-S68 bis L-S71.
+
+**Schritt 8, Referenz-Branche `industries/muster/core`** (selbst gebaut, nichts aus Randen gelesen oder kopiert, kein Herkunftsvermerk). Das Paket `@onestrand-industry/muster` erklärt sich mit `defineIndustry` und nutzt jeden Teil des Manifests einmal; es dockt an, **ohne dass eine Datei unter `platform/` geändert wurde** (kein Befund der Plattform, der eine Änderung dort verlangt hätte). Fachlich: ein Journal mit Einträgen zu einem Kalendertag. Siehe [`industries/muster/README.md`](../../industries/muster/README.md).
+
+| Teil | Kennung |
+| --- | --- |
+| Tabelle | `muster_entries` (als Ganzes `sensitive`, `single_writer`, Index `on`) |
+| Befehl, Abfrage | `muster.entries.add` (`operate`), `muster.entries.list` (`view` und Recht `muster.journal_read`) |
+| Modul, Funktion, Option | `muster.journal`, `muster.entries`, `newestFirst` (`boolean`, Vorgabe `true`) |
+| Betriebsart, Frage, Gerätemodus | `muster.standard` (startet mit der Funktion), `muster.keeps_journal` (ja/nein), `muster.capture` |
+| Heikles Recht, Ereignis | `muster.journal_read`, `muster_entry.added` |
+| Vorlage, Regelwerk, Demo | `muster.staff` (Art `profile`), `muster.retention` (OR 958f Abs. 1, 10 Jahre, Quelle `docs/fakten/geld-steuern.md`, Abschnitt 3, geprüft am 24.11.2026), «Betrieb Muster» mit «Person Muster» und «Person Beispiel» |
+| Migration | keine (die Tabelle hatte erst eine Form) |
+
+Entscheide (klein, selbst getroffen):
+
+1. **Paketname `@onestrand-industry/<id>`.** Nicht im Scope `@onestrand/`, der der Plattform gehört: So kann keine Regel, die die Schichten der Plattform über `@onestrand/*` öffnet, eine Branche durchlassen, und der Name sagt, was das Paket ist. Der Name ist die Kennung der Branche, weil der reine Teil das ist, was eine Ausgabe listet; der React-Teil heisst mit W0-03 vermutlich `@onestrand-industry/<id>-web` (Entscheid von W0-03). Jede Stelle, die Scopes kennt, nennt den neuen (Lernbuch L-S75): `NO_INDUSTRY` im Lint, `NAME_FORM.package` und `PACKAGE_SCOPES` im Namensregister.
+2. **Workspace und Prüfungen:** `pnpm-workspace.yaml` nimmt `industries/*/core`; die Wurzel-`vitest.config.ts` nimmt das Projekt und dieselben Schwellen der Abdeckung wie die Plattform (`industries/*/core/src/**`, einmal mit einer zu hohen Schwelle als greifend gesehen). Das Projekt heisst `<id>-core` (`muster-core`), weil der Name des Ordners allein mit `platform/core` zusammenfiele; `vitestProject` in `tools/src/affected.ts` folgt (L-S74). `pnpm check --affected` behandelt den Ordner wie ein Paket: eine Änderung in `industries/muster/core` prüft nur `muster`, eine in `platform/manifest` prüft `muster` mit, das README ist Doku, eine Datei direkt unter `industries/muster/` prüft alles. Die Tests von `affected` (auch die gegen das echte Repo) sind grün und um diese Fälle ergänzt.
+3. **Grenzen im Lint** (`eslint.config.js`, Beleg in `tools/test/lint-boundaries.test.ts`): Der reine Teil einer Branche ist rein wie die Plattform (kein UI, keine Datenbank, kein Node, keine Globalen des Browsers, nur `import`-Anweisungen), importiert die Plattform nur über den öffentlichen Einstieg und nur Pakete der reinen Schichten (nicht `web-data`, nicht `testing`), keine andere Branche (über Pfad oder Scope, sich selbst nur relativ), keine Ausgabe, nicht den eigenen React-Teil und nicht die eigenen Tests. Die Tests einer Branche dürfen Node und `@onestrand/testing`, bleiben aber im Paket. Die Plattform weist jetzt auch den Scope der Branchen ab, in jeder Form eines Imports. Jede dieser Regeln wurde einmal ausgeschaltet und der Test rot gesehen.
+4. **Texte:** Die de-CH-Texte von `muster` stehen in `industries/muster/core/test/messages.ts`, als Testdaten. Gründe: Der reine Teil hält keinen Text (ADR-0004, Architektur 3.2, Regel 6), der Ort eines Branchen-Katalogs ist `industries/<id>/web` (`@onestrand/i18n`, Regel 8), und den bringt erst W0-03; bis dahin liest ihn nur der Konformitätstest. W0-03 verschiebt die Datei (TD-111). Der Vorschlag aus Schritt 2 ist damit umgesetzt. Mit diesem Katalog ist `editionProblems` einer Ausgabe aus Betrieb und `muster` gleich `[]`.
+5. **Namensregister:** Paket, Tabelle, zwei Operationen, Ereignis, Funktion, Modul und Recht stehen in `registry/names.json` (`owner: "industry:muster"`). Der Wächter findet jede Branche unter `industries/` auf der Platte und liest ihr Manifest (`tools/src/industries.ts`, `industryNames` in `tools/src/names.ts`): Eine neue Branche braucht im Wächter keine Zeile (L-S76). Für Betriebsart, Frage, Gerätemodus, Option, Vorlage und Regelwerk hat das Register keine Art (TD-52, nachgeführt).
+6. **Regelwerk nur mit Quelle:** ein Fakt, der mit Quelle und Prüfdatum in `docs/fakten/` steht und für jede Branche gilt (Aufbewahrung nach OR 958f Abs. 1). Ein neuer Wächter (`tools/guards/industries.guard.test.ts`) prüft für jede Branche, dass die Quelle jedes Regelwerks als Datei unter `docs/fakten/` dasteht (TD-113: den Wert prüft er nicht). Das Zitat des Artikels steht in der Quelle, nicht in den Daten, weil es je Sprache anders geschrieben wird.
+7. **Heikles Recht an der Abfrage:** Das ganze Journal einsehen zeigt, was andere schrieben; darum verlangt `muster.entries.list` neben `view` das Recht `muster.journal_read`, und die Tabelle ist als Ganzes `sensitive`, sodass auch der Filter für fremde Geräte dasselbe Recht verlangt. Funktion und Recht der Tabelle stehen als `musterTableAccess` neben den Tabellen, weil das Manifest kein Feld dafür hat (TD-70, nachgeführt). Die Vorlage `muster.staff` erfasst und liest nichts der anderen; zusammen mit dem Gerätemodus `muster.capture` («Nur erfassen») ergibt das ein stimmiges Bild.
+8. **Option von einem Use Case gelesen:** `muster.entries.list` ordnet nach der Option `newestFirst`, gelesen mit `BusinessSchema.safeParse` und `resolveOptions` aus der Zeile des Betriebs (Kandidat für die Plattform nach der Regel der zwei, TD-114). Ein Wert einer neueren Version, den das Register nicht annimmt, gilt als Vorgabe.
+9. **Demo über die Operationen:** `layOutMusterDemo(useCases, { ids, clock, features })` legt «Betrieb Muster» mit `business.create` (Funktionen aus dem Vorschlag «Üblich»), `business.update` (Briefkopf «Musterweg 12, 8000 Beispielstadt», Kanton), `business.people.add` (Profil der Vorlage) und zwei Einträgen an; die Titel sind erfundene Namen («Eintrag Muster»), getippte Daten, kein Text der App. Das Manifest hat für diesen Inhalt keinen Haken (TD-112).
+10. **Keine Wortliste für `muster`** in `tools/src/words/`: `muster` hat kein Fach, und «Muster» ist das Wort der erfundenen Namen, das die Plattform selbst braucht («Betrieb Muster» im Seed von `@onestrand/testing`). Der Wächter für Wörter einer Branche in der Plattform ist grün. Eine echte Branche bekommt ihre Liste vor ihrem ersten Code (README, Schritt 9).
+
+Abnahme, soweit sie `muster` betrifft, je als Test in `industries/muster/core/test/` (51 Fälle; jeder Bruch unten wurde einmal auf einer Kopie im Scratchpad gemacht und rot gesehen, L-S78):
+
+- **Andocken ohne Plattform-Datei** (`industry.test.ts`): Der Unterschied zwischen einer Ausgabe mit und ohne `muster` ist genau eine Tabelle, zwei Operationen, eine Funktion, ein Modul, eine Betriebsart, eine Frage, ein Gerätemodus und ein Recht; alles der Plattform bleibt, wie es war. Rot mit einer zweiten Betriebsart.
+- **`editionProblems` ist `[]`** (`edition.test.ts`); ohne Katalog nennt es jeden der zwölf Schlüssel, ohne einen Text genau diesen. Rot mit einem fehlenden Text und mit einem Ausrufezeichen.
+- **Operation ohne `access`** (`industry.test.ts`): auf einer Kopie des Vertrags ein Befund `invalid_entry`, `defineIndustry` wirft; `muster` bleibt unberührt. Rot, wenn die Kopie ihr `access` behält.
+- **Operation ohne Recht** (`use-cases.test.ts`): Die Vorlage `muster.staff` erfasst, wird beim Lesen mit `forbidden` abgewiesen (das Recht fehlt), mit dem Recht geht es; mit Recht, aber nur `view`, wird das Erfassen abgewiesen; ohne Stufe und als fremde Person alles. Rot ohne das Recht an der Abfrage.
+- **Zwei Branchen mit derselben Operation:** `defineIndustry` weist sie schon ab (`wrong_namespace`), `defineEdition` eine doppelt genannte Branche (`duplicate_id`), `composeContract` zwei Teile mit derselben Operation und nennt beide (`duplicate_operation`), und `composeEdition` scheitert an einem Teil, der eine Operation von `muster` bringt (`namespace_taken`, `duplicate_operation`). Zwei Branchen erreichen `composeEdition` nie (L-S77). Rot, wenn der zweite Teil eine andere Operation bringt.
+- **Ausgeschaltet** (`use-cases.test.ts`): Befehl und Abfrage mit `forbidden` abgewiesen, auch für die Inhaber:in; `availableSlotEntries` lässt keinen Eintrag durch; die Zeilen stehen im Speicher und in der Sicherung, die auf einem zweiten Gerät ganz zurückkommt; eingeschaltet ist alles wieder da, auch der Wert der Option. Rot mit einer Abfrage, die die Kern-Funktion nennt, mit einem Eintrag eines Steckplatzes ebenso und mit einer Tabelle ausserhalb der Sicherung.
+- **Portugiesisch fehlt** (`edition.test.ts`): Der Katalog fällt auf Deutsch zurück, `catalogueGaps` listet jeden fehlenden Schlüssel und nicht den vorhandenen, auch im Satz der Ausgabe. Rot, wenn die Übersetzung den Schlüssel hat.
+- **Demo über die Operationen** (`demo.test.ts`): Betrieb, Briefkopf, Kanton, zwei Personen und zwei Einträge entstehen über den Vertrag, mit den Ereignissen jedes Befehls; die Person der Demo wird beim Lesen abgewiesen. Rot mit einem Betrieb ohne die Funktion und mit einer Person, die ein anderes Profil bekommt.
+- **Sicherung hin und zurück** (`demo.test.ts`): Format `muster-backup`, Version 1, Betrieb und Tabellen kommen gleich zurück, ein Feld einer neueren Version in einem Eintrag bleibt, eine Datei einer anderen Ausgabe wird abgewiesen. Rot mit einer Tabelle ausserhalb der Sicherung.
+- Dazu: die Option ordnet (rot, wenn sie nicht gelesen wird), der Filter für fremde Geräte gibt die Tabelle nur mit dem Recht heraus (rot mit einer Tabelle, die nicht `sensitive` ist), das Ereignis trägt die Kennung, die Vorlage ist ein Profil, das die Register kennen, das Regelwerk trägt den Fakt (rot mit 7 statt 10 Jahren), zwei Betriebe auf einem Speicher bleiben getrennt.
+
+Was die folgenden Schritte wissen müssen:
+
+- **Generator und `check:industry` (Schritt 9):** Die Vorlage ist `industries/muster/core` (ohne `node_modules`). Wo die Kennung `muster` steht, steht im README unter «Eine neue Branche nach dem Muster»; jede Kennung trägt das Präfix, und `defineIndustry` weist alles ab, was nicht im Namensraum liegt. Was der Generator ändern muss: den Paketnamen (`@onestrand-industry/<id>`), das Projekt (`<id>-core`), die Kennungen und Namen der Exporte, die Texte in `test/messages.ts`, die Einträge in `registry/names.json` (sonst ist `pnpm names` rot, gewollt). Was er nicht ändern muss: `pnpm-workspace.yaml`, die Wurzel-`vitest.config.ts`, `eslint.config.js`, die Wächter (sie finden jede Branche unter `industries/`). `check:industry <id>` findet die Branche mit `industryFolders`/`loadIndustries` aus `tools/src/industries.ts` (Vitest führt den Einstieg aus; plain Node nicht) und ruft die Tests der Branche mit `vitest run --project <id>-core` sowie `editionProblems` einer Ausgabe nach `test/support.ts`. Den Katalog nimmt es bis W0-03 aus `test/messages.ts` (Export `<id>Messages`); den Filter für fremde Geräte kann es nur mit `<id>TableAccess` prüfen (TD-70). Nach `pnpm industry:new probe` braucht es `pnpm install`, damit `industries/probe/core/node_modules` entsteht.
+- **W0-03:** `industries/muster/web` mit `defineIndustryWeb({ messages, … })` aus `test/messages.ts` (TD-111) und den Einträgen der Steckplätze, die heute im Test stehen (`routes`, `capture`, `sections` mit der Seite `today`); die Regeln im Lint für `industries/*/web`; der Scope des React-Teils; wie die Shell `layOutMusterDemo` ruft (TD-112). Eine Ausgabe mit `muster` gibt `texts: [musterMessages]`.
+- Neue Schulden: TD-111 bis TD-116; TD-52, TD-70 und TD-98 nachgeführt. Neue Lektionen: L-S74 bis L-S78.
+

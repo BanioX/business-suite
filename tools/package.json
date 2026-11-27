@@ -12,6 +12,7 @@
     "@onestrand/contract": "workspace:*",
     "@onestrand/core": "workspace:*",
     "@onestrand/ledger": "workspace:*",
+    "@onestrand/manifest": "workspace:*",
     "@onestrand/storage": "workspace:*",
     "@onestrand/testing": "workspace:*"
   }

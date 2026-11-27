@@ -74,6 +74,40 @@
     { "kind": "feature", "name": "business", "owner": "platform", "status": "active" },
     { "kind": "module", "name": "business", "owner": "platform", "status": "active" },
     { "kind": "right", "name": "people_roles", "owner": "platform", "status": "active" },
-    { "kind": "right", "name": "settings", "owner": "platform", "status": "active" }
+    { "kind": "right", "name": "settings", "owner": "platform", "status": "active" },
+    {
+      "kind": "package",
+      "name": "@onestrand-industry/muster",
+      "owner": "industry:muster",
+      "status": "active",
+      "note": "The pure part of the reference industry, industries/muster/core."
+    },
+    { "kind": "table", "name": "muster_entries", "owner": "industry:muster", "status": "active" },
+    {
+      "kind": "operation",
+      "name": "muster.entries.add",
+      "owner": "industry:muster",
+      "status": "active"
+    },
+    {
+      "kind": "operation",
+      "name": "muster.entries.list",
+      "owner": "industry:muster",
+      "status": "active"
+    },
+    {
+      "kind": "event",
+      "name": "muster_entry.added",
+      "owner": "industry:muster",
+      "status": "active"
+    },
+    { "kind": "feature", "name": "muster.entries", "owner": "industry:muster", "status": "active" },
+    { "kind": "module", "name": "muster.journal", "owner": "industry:muster", "status": "active" },
+    {
+      "kind": "right",
+      "name": "muster.journal_read",
+      "owner": "industry:muster",
+      "status": "active"
+    }
   ]
 }

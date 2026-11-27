@@ -27,7 +27,9 @@ export const musterTemplates = [
  * A rule set is law only with a source (CLAUDE.md, «Recht nur mit Quelle»). This one holds a fact
  * that stands with its source in `docs/fakten/geld-steuern.md`, section 3 (checked on 24.11.2026):
  * books and vouchers are kept for 10 years from the end of the business year (OR 958f para. 1).
- * The app never judges by it; it reminds, documents and points to the source.
+ * The citation of the article stays in the source: it is written differently in every language.
+ * The app never judges by it; it reminds, documents and points to the source. Whether a value is
+ * law or a guideline the form cannot say yet (debt TD-98); this one is law.
  */
 export const RETENTION_SOURCE = 'docs/fakten/geld-steuern.md';
 
@@ -35,7 +37,7 @@ export const musterRuleSets = [
   {
     id: 'muster.retention',
     source: RETENTION_SOURCE,
-    data: { article: 'OR 958f Abs. 1', years: 10, countedFrom: 'end_of_business_year' },
+    data: { years: 10, countedFrom: 'end_of_business_year' },
   },
 ] as const satisfies readonly RuleSetInput[];
 

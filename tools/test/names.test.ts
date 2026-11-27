@@ -1,13 +1,17 @@
 import { DomainEventSchema } from '@onestrand/contract';
-import { describe, expect, it } from 'vitest';
+import type { Industry } from '@onestrand/manifest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 import {
   EVENT_TYPE_PATTERN,
   NAME_KINDS,
   NAME_STATUSES,
   NAMES_PATH,
+  PACKAGE_SCOPES,
+  industryNames,
   namesProblems,
   packageNames,
   readNames,
+  type IndustryShape,
   type NameEntry,
   type UsedName,
 } from '../src/names.ts';
@@ -123,6 +127,9 @@ describe('readNames', () => {
     ['package', 'onestrand-core'],
     ['package', '@other/core'],
     ['package', '@onestrand/Core'],
+    ['package', '@onestrand-industries/muster'],
+    ['package', '@onestrand-industry/Muster'],
+    ['package', '@onestrand-edition/field'],
     ['table', 'facility-keys'],
     ['table', 'Businesses'],
     ['table', 'keys_'],
@@ -161,6 +168,8 @@ describe('readNames', () => {
     ['feature', 'team_time'],
     ['feature', 'facility.keys'],
     ['module', 'muster.visits'],
+    ['package', '@onestrand-industry/muster'],
+    ['package', '@onestrand-industry/muster-web'],
     ['right', 'export_delete'],
     ['right', 'facility.keys.assign'],
   ])('takes a %s in the form of the contract: %s', (kind, name) => {
@@ -200,11 +209,63 @@ describe('packageNames', () => {
       { path: 'platform/broken/package.json', text: '{ "name": ' },
       { path: 'platform/odd/package.json', text: '[]' },
       { path: 'platform/nameless/package.json', text: '{ "private": true }' },
+      {
+        path: 'industries/sample/core/package.json',
+        text: '{ "name": "@onestrand-industry/sample" }',
+      },
+      { path: 'industries/other/core/package.json', text: '{ "name": "@onestrand-other/x" }' },
     ];
     expect(packageNames(files)).toEqual([
       { kind: 'package', name: '@onestrand/core', path: 'platform/core/package.json' },
       { kind: 'package', name: '@onestrand/tooling', path: 'tools/package.json' },
+      {
+        kind: 'package',
+        name: '@onestrand-industry/sample',
+        path: 'industries/sample/core/package.json',
+      },
     ]);
+    expect(PACKAGE_SCOPES).toEqual(['@onestrand/', '@onestrand-industry/']);
+  });
+});
+
+describe('industryNames', () => {
+  const sample: IndustryShape = {
+    kind: 'industry',
+    id: 'sample',
+    tables: [{ name: 'sample_rounds' }],
+    contract: { 'sample.rounds.add': {}, 'sample.rounds.list': {} },
+    events: ['sample_round.added'],
+    catalog: { groups: [{ id: 'sample.rounds' }], features: [{ id: 'sample.rounds' }] },
+    rights: { rights: [{ id: 'sample.keys' }] },
+  };
+  const at = 'industries/sample/core/src/index.ts';
+
+  it('reads what a manifest sets for good, kind by kind', () => {
+    expect(industryNames(sample, at).map(({ kind, name }) => `${kind} ${name}`)).toEqual([
+      'table sample_rounds',
+      'operation sample.rounds.add',
+      'operation sample.rounds.list',
+      'event sample_round.added',
+      'feature sample.rounds',
+      'module sample.rounds',
+      'right sample.keys',
+    ]);
+    expect(industryNames(sample, at).every(({ path }) => path === at)).toBe(true);
+  });
+
+  it('reads a manifest without functions, modules or rights', () => {
+    const bare: IndustryShape = { ...sample, catalog: {}, rights: {} };
+    expect(industryNames(bare, at).map(({ kind }) => kind)).toEqual([
+      'table',
+      'operation',
+      'operation',
+      'event',
+    ]);
+  });
+
+  it('has the shape of a manifest made by defineIndustry', () => {
+    // If the manifest changes its shape, the guard would read nothing: this does not compile then.
+    expectTypeOf<Industry>().toExtend<IndustryShape>();
   });
 });
 

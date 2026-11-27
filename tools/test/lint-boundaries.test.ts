@@ -162,21 +162,34 @@ beforeAll(async () => {
 const CONFIG = 'platform/core/vitest.config.ts';
 const ELSEWHERE = 'platform/core/web/boundary-probe.tsx';
 
+/** A file of the pure part of an industry, one of its tests and its configuration; none exists. */
+const industrySource = (id: string, file = 'boundary-probe.ts'): string =>
+  `industries/${id}/core/src/${file}`;
+const industryTest = (id: string): string => `industries/${id}/core/test/boundary-probe.test.ts`;
+const INDUSTRY_CONFIG = 'industries/muster/core/vitest.config.ts';
+
 describe('the probe', () => {
-  it.each([source('core'), source('ledger'), source('unlisted'), test('core'), CONFIG, ELSEWHERE])(
-    'keeps the boundary rules of the real config for %s',
-    async (file) => {
-      const path = join(REPO_ROOT, file);
-      const [before, after] = (await Promise.all([
-        real.calculateConfigForFile(path),
-        linter.calculateConfigForFile(path),
-      ])) as { rules?: Record<string, unknown> }[];
-      expect(before?.rules?.['no-restricted-imports']).toBeDefined();
-      for (const rule of BOUNDARY_RULES) {
-        expect(after?.rules?.[rule], rule).toEqual(before?.rules?.[rule]);
-      }
-    },
-  );
+  it.each([
+    source('core'),
+    source('ledger'),
+    source('unlisted'),
+    test('core'),
+    CONFIG,
+    ELSEWHERE,
+    industrySource('muster'),
+    industryTest('muster'),
+    INDUSTRY_CONFIG,
+  ])('keeps the boundary rules of the real config for %s', async (file) => {
+    const path = join(REPO_ROOT, file);
+    const [before, after] = (await Promise.all([
+      real.calculateConfigForFile(path),
+      linter.calculateConfigForFile(path),
+    ])) as { rules?: Record<string, unknown> }[];
+    expect(before?.rules?.['no-restricted-imports']).toBeDefined();
+    for (const rule of BOUNDARY_RULES) {
+      expect(after?.rules?.[rule], rule).toEqual(before?.rules?.[rule]);
+    }
+  });
 
   it('accepts code that respects every boundary', async () => {
     await expectAccepted(source('core'), importing('./ids'));
@@ -539,6 +552,220 @@ describe('the packages of the layer «Browser»', () => {
     }
   });
 });
+describe('the platform imports no industry by the scope of the industries', () => {
+  // The packages of the industries are `@onestrand-industry/<id>`, outside `@onestrand/`: no rule
+  // of the platform's own layers would see them, so the rule against industries names the scope.
+  it.each(['@onestrand-industry/muster', '@onestrand-industry/muster/src/index'])(
+    'refuses %s in the pure part, in a test and in any other file under platform/',
+    async (specifier) => {
+      for (const file of [
+        source('core'),
+        source('manifest'),
+        source('web-data'),
+        source('unlisted'),
+        test('core'),
+        CONFIG,
+        ELSEWHERE,
+      ]) {
+        await expectNoImport(file, specifier);
+      }
+    },
+  );
+
+  it('refuses the scope in every other form of an import', async () => {
+    await expectRefusedBy(source('core'), loading('@onestrand-industry/muster'), DYNAMIC);
+    await expectRefusedBy(test('core'), loading('@onestrand-industry/muster'), DYNAMIC);
+    await expectRefusedBy(CONFIG, loading('@onestrand-industry/muster'), DYNAMIC);
+    await expectRefusedBy(test('core'), typeOf('@onestrand-industry/muster'), TYPE_FORM);
+    await expectRefusedBy(test('core'), requiring('@onestrand-industry/muster'), REQUIRE);
+  });
+});
+
+describe('the pure part of an industry', () => {
+  // `industries/<id>/core/src`: pure like the platform, importing the public entries of the pure
+  // layers of the platform, never another industry, never an edition (suite ADR-0004).
+  const SOURCES = [
+    industrySource('muster'),
+    industrySource('muster', 'deep/probe.ts'),
+    industrySource('other'),
+  ];
+  const PURE_PLATFORM = [
+    'core',
+    'contract',
+    'storage',
+    'ledger',
+    'features',
+    'access',
+    'business',
+    'i18n',
+    'manifest',
+  ];
+
+  it.each(PURE_PLATFORM)('may import @onestrand/%s by its public entry', async (name) => {
+    await expectAccepted(industrySource('muster'), importing(`@onestrand/${name}`));
+  });
+
+  it('may import a library without UI and its own files', async () => {
+    await expectAccepted(industrySource('muster'), importing('zod'));
+    await expectAccepted(industrySource('muster'), importing('./model'));
+    await expectAccepted(industrySource('muster', 'deep/probe.ts'), importing('../model'));
+  });
+
+  it.each(['@onestrand/web-data', '@onestrand/testing'])(
+    'refuses %s: no package of the layer «Browser», no test kit',
+    async (specifier) => {
+      for (const file of SOURCES) {
+        await expectNoImport(file, specifier);
+      }
+    },
+  );
+
+  it.each([
+    '@onestrand/contract/src/index',
+    '@onestrand/manifest/web',
+    '@onestrand/storage/testing',
+    '../../../../platform/core/src/index',
+  ])('refuses %s: only the public entry of a platform package', async (specifier) => {
+    for (const file of SOURCES) {
+      await expectNoImport(file, specifier);
+    }
+  });
+
+  it.each([
+    'react',
+    'react-dom',
+    'react-dom/client',
+    'react/jsx-runtime',
+    'dexie',
+    'dexie-react-hooks',
+    'node:fs',
+    'node:crypto',
+  ])('refuses %s: no UI, no database, no Node', async (specifier) => {
+    for (const file of SOURCES) {
+      await expectNoImport(file, specifier);
+    }
+  });
+
+  it.each([
+    '@onestrand-industry/other',
+    '@onestrand-industry/other/src/index',
+    '@onestrand-industry/muster',
+    '../../../other/core/src/index',
+    '../../../../industries/other/core/src/index',
+  ])('refuses %s: no other industry, and itself by relative path only', async (specifier) => {
+    await expectNoImport(industrySource('muster'), specifier);
+    await expectNoImport(industrySource('muster', 'probe.mjs'), specifier);
+  });
+
+  it.each(['../../web/messages', '../test/messages'])(
+    'refuses %s: the pure part stays in its src, away from its React part and its tests',
+    async (specifier) => {
+      await expectNoImport(industrySource('muster'), specifier);
+    },
+  );
+
+  it.each(['../../../../editions/field/edition', 'editions/field/edition'])(
+    'refuses the edition %s: the edition lists the industry',
+    async (specifier) => {
+      await expectNoImport(industrySource('muster'), specifier);
+    },
+  );
+
+  it('holds for every extension of code', async () => {
+    await expectNoImport(industrySource('muster', 'widget.tsx'), 'react');
+    await expectNoImport(industrySource('muster', 'probe.mts'), 'node:fs');
+    await expectNoImport(industrySource('muster', 'probe.cjs'), '@onestrand-industry/other');
+    await expectNoImport(industrySource('muster', 'probe.js'), '@onestrand/web-data');
+  });
+
+  it.each(['./model', '@onestrand/manifest', '@onestrand-industry/other', 'react'])(
+    "refuses import('%s'), the type import('%s').Thing and require('%s')",
+    async (specifier) => {
+      await expectRefusedBy(industrySource('muster'), loading(specifier), DYNAMIC);
+      await expectRefusedBy(industrySource('muster'), typeOf(specifier), TYPE_FORM);
+      await expectRefusedBy(industrySource('muster'), requiring(specifier), REQUIRE);
+    },
+  );
+
+  it.each([
+    'window',
+    'document',
+    'localStorage',
+    'sessionStorage',
+    'indexedDB',
+    'fetch',
+    'navigator',
+    'process',
+    'Buffer',
+    'crypto',
+  ])('refuses the global %s', async (name) => {
+    await expectRefused(industrySource('muster'), reading(name), 'no-restricted-globals', name);
+  });
+
+  it('accepts the same name as a parameter: the outside world comes in through ports', async () => {
+    await expectAccepted(
+      industrySource('muster'),
+      'export function randomByte(crypto: { random(): number }): number {\n  return crypto.random();\n}\n',
+    );
+  });
+});
+
+describe('the tests of an industry', () => {
+  it.each([
+    'node:fs',
+    'vitest',
+    'zod',
+    '@onestrand/testing',
+    '@onestrand/manifest',
+    '@onestrand/storage/testing',
+    '../src',
+    './support',
+  ])('may import %s', async (specifier) => {
+    await expectAccepted(industryTest('muster'), importing(specifier));
+  });
+
+  it('may read the globals of Node', async () => {
+    await expectAccepted(industryTest('muster'), reading('process'));
+  });
+
+  it.each([
+    '@onestrand-industry/other',
+    '@onestrand-industry/muster',
+    '../../../other/core/src/index',
+    '../../web/messages',
+    '../../../../editions/field/edition',
+    '@onestrand/contract/src/index',
+    '../../../../platform/storage/src/memory',
+  ])(
+    'refuses %s: no other industry, no edition, nothing outside the package',
+    async (specifier) => {
+      await expectNoImport(industryTest('muster'), specifier);
+    },
+  );
+
+  it.each([
+    '@onestrand-industry/other',
+    '../../../other/core/src/index',
+    '../../../../editions/field/edition',
+    '@onestrand/contract/src/index',
+  ])("refuses import('%s') as well", async (specifier) => {
+    await expectRefusedBy(industryTest('muster'), loading(specifier), DYNAMIC);
+  });
+
+  it('lets a test load its own package with import()', async () => {
+    await expectAccepted(industryTest('muster'), loading('../src/index'));
+    await expectAccepted(industryTest('muster'), loading('@onestrand/manifest'));
+  });
+});
+
+describe('whatever else stands under industries/', () => {
+  it('reaches no edition, in any form', async () => {
+    await expectNoImport(INDUSTRY_CONFIG, '../../../editions/field/edition');
+    await expectRefusedBy(INDUSTRY_CONFIG, loading('../../../editions/field/edition'), DYNAMIC);
+    await expectAccepted(INDUSTRY_CONFIG, importing('vitest/config'));
+  });
+});
+
 describe('the tests of a package', () => {
   it.each(['node:fs', 'node:crypto', 'node:path', 'vitest', 'fast-check'])(
     'may import %s',
