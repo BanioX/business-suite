@@ -24,7 +24,8 @@ import { PRICE_RULES, PRICE_WINDOW, type PriceRuleData } from './words/prices.ts
  * - an amount that stands apart from its words: in another line or another table cell, unless a
  *   heading above names the price of the suite; more than `PRICE_WINDOW` characters away;
  * - a business model, a market share as a goal or a comparison told without an amount;
- * - pictures, PDF and other binary files;
+ * - what is inside pictures, PDF and other binary files (their paths are read, and a text file
+ *   cannot pass for a binary one: `unreadFileProblems` in `repo-files.ts`);
  * - commit messages, branch names and PR texts, and everything already in the history.
  * A false alarm is settled by clearer wording or by the head tuning the rules in
  * `words/prices.ts`, never by leaving a file out.
@@ -130,6 +131,24 @@ export function nameHashes(name: string): NameHashes {
     : { name: hashName(words.join('')), firstWord: hashName(first) };
 }
 
+/**
+ * Every listed name in the given paths. For the files whose text no guard reads (pictures,
+ * fonts): the name of such a file is all of it that can be read. Line 0 is the path.
+ */
+export function forbiddenPathProblems(
+  paths: readonly string[],
+  names: ReadonlySet<string> = FORBIDDEN_NAMES,
+  firstWords: ReadonlySet<string> = FORBIDDEN_FIRST_WORDS,
+): Problem[] {
+  return paths.flatMap((path) =>
+    namesIn(path, names, firstWords).map((hit) => ({
+      path,
+      line: 0,
+      message: `the path holds a listed name (hash ${hit.hash}, column ${hit.column})`,
+    })),
+  );
+}
+
 /** Every listed name in the text or in the path of the given files. Line 0 is the path. */
 export function forbiddenNameProblems(
   files: readonly RepoFile[],
@@ -137,11 +156,7 @@ export function forbiddenNameProblems(
   firstWords: ReadonlySet<string> = FORBIDDEN_FIRST_WORDS,
 ): Problem[] {
   return files.flatMap((file) => [
-    ...namesIn(file.path, names, firstWords).map((hit) => ({
-      path: file.path,
-      line: 0,
-      message: `the path holds a listed name (hash ${hit.hash}, column ${hit.column})`,
-    })),
+    ...forbiddenPathProblems([file.path], names, firstWords),
     ...namesIn(file.text, names, firstWords).map((hit) => ({
       path: file.path,
       line: hit.line,

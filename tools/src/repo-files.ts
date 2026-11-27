@@ -8,6 +8,10 @@ import { join, resolve } from 'node:path';
  * What is left out is what never reaches the public repository or is not ours to read: the Git
  * store, installed packages and the output of builds and test runs (the same list as
  * `.gitignore`). Everything else counts, also files without an extension and dot files.
+ *
+ * Text is told from binary by the content, not by the name. That alone would let one stray NUL
+ * byte hide a file from every guard, so a file taken for binary must also be of a binary kind
+ * (`unreadFileProblems`); the guard of the public repository holds the whole repository to it.
  */
 
 /** A text file of the repository. */
@@ -116,22 +120,86 @@ function bytesOf(file: string): Buffer | undefined {
   }
 }
 
+/** The files of the repository as the guards see them: the text of some, of the others the path. */
+export interface ReadFiles {
+  /** Every text file with its content, sorted by path. */
+  text: RepoFile[];
+  /**
+   * The files whose content is binary, sorted. No guard reads what is in them, so each must be
+   * of a kind that holds no text (`unreadFileProblems`).
+   */
+  binary: string[];
+}
+
+/**
+ * Every file of the repository below `under`: the text files with their content (a byte order
+ * mark is removed), the binary ones by their path. A file that disappears while the repository
+ * is read (another process is writing) is left out: it is not there.
+ */
+export function readFiles(root: string, under = ''): ReadFiles {
+  const text: RepoFile[] = [];
+  const binary: string[] = [];
+  for (const path of listFiles(root, under).filter(isRead)) {
+    const bytes = bytesOf(join(root, path));
+    if (bytes === undefined) {
+      continue;
+    }
+    if (isBinary(bytes)) {
+      binary.push(path);
+      continue;
+    }
+    const content = bytes.toString('utf8');
+    text.push({ path, text: content.startsWith('\uFEFF') ? content.slice(1) : content });
+  }
+  return { text, binary };
+}
+
 /**
  * Every text file of the repository below `under`, with its content, sorted by path. Binary
- * files (images, fonts) are left out; a byte order mark is removed. A file that disappears while
- * the repository is read (another process is writing) is left out as well: it is not there.
+ * files (images, fonts) are left out; `readFiles` names them.
  */
 export function readTextFiles(root: string, under = ''): RepoFile[] {
-  return listFiles(root, under)
-    .filter(isRead)
-    .flatMap((path) => {
-      const bytes = bytesOf(join(root, path));
-      if (bytes === undefined || isBinary(bytes)) {
-        return [];
-      }
-      const text = bytes.toString('utf8');
-      return [{ path, text: text.startsWith('\uFEFF') ? text.slice(1) : text }];
-    });
+  return readFiles(root, under).text;
+}
+
+/**
+ * The kinds of files that are binary by nature (by the end of their name, lower case): pictures,
+ * fonts and PDF. Only these may be left unread. A new kind gets its line here on purpose.
+ */
+export const BINARY_KINDS: ReadonlySet<string> = new Set([
+  'png',
+  'jpg',
+  'jpeg',
+  'gif',
+  'webp',
+  'avif',
+  'ico',
+  'woff',
+  'woff2',
+  'ttf',
+  'otf',
+  'pdf',
+]);
+
+/**
+ * A file that was taken for binary and is not of a binary kind is a text file no guard has
+ * read: one NUL byte near its start (or an encoding other than UTF-8) would hide a whole source
+ * file or document from every check. So each such file is a problem.
+ */
+export function unreadFileProblems(binary: readonly string[]): Problem[] {
+  return binary
+    .filter((path) => {
+      const name = path.slice(path.lastIndexOf('/') + 1);
+      const dot = name.lastIndexOf('.');
+      return dot === -1 || !BINARY_KINDS.has(name.slice(dot + 1).toLowerCase());
+    })
+    .map((path) => ({
+      path,
+      line: 0,
+      message:
+        'holds a NUL byte near its start, so the guards take it for binary and do not read it: ' +
+        'write it as UTF-8 text, or (a new kind of picture or font) add its kind to BINARY_KINDS in tools/src/repo-files.ts',
+    }));
 }
 
 /**

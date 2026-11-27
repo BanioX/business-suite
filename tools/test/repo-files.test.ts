@@ -3,12 +3,15 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
+  BINARY_KINDS,
   formatProblem,
   isBinary,
   linesOf,
   listFiles,
+  readFiles,
   readTextFiles,
   REPO_ROOT,
+  unreadFileProblems,
 } from '../src/repo-files.ts';
 
 /** A made-up repository on disk: what is ours, what is installed, what is built. */
@@ -30,6 +33,9 @@ const FIXTURE: Record<string, string | Uint8Array> = {
   'pnpm-lock.yaml': 'lockfileVersion: 9\n',
   'docs/bild.png': new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x00, 0x01, 0x02]),
   'docs/bom.md': '\uFEFF# Mit Marke\n',
+  // A document with one stray NUL byte, and one saved in UTF-16: text that reads as binary.
+  'docs/kaputt.md': '# Notiz\n\u0000\nmehr Text\n',
+  'docs/breit.md': new Uint8Array([0xff, 0xfe, 0x4e, 0x00, 0x6f, 0x00, 0x74, 0x00]),
 };
 
 let root: string;
@@ -56,6 +62,8 @@ describe('listFiles', () => {
       'README.md',
       'docs/bild.png',
       'docs/bom.md',
+      'docs/breit.md',
+      'docs/kaputt.md',
       'docs/plan.md',
       'platform/core/package.json',
       'platform/core/src/index.ts',
@@ -123,6 +131,54 @@ describe('readTextFiles', () => {
       'platform/core/package.json',
       'platform/core/src/index.ts',
     ]);
+  });
+});
+
+describe('readFiles', () => {
+  it('names the files it takes for binary, so none is left out unseen', () => {
+    const { text, binary } = readFiles(root);
+    expect(binary).toEqual(['docs/bild.png', 'docs/breit.md', 'docs/kaputt.md']);
+    expect(text).toEqual(readTextFiles(root));
+    // Every file is in one of the two lists, apart from the two kinds left out by name.
+    expect([...text.map((file) => file.path), ...binary].sort()).toEqual(
+      listFiles(root).filter((path) => path !== 'pnpm-lock.yaml' && !path.endsWith('.tsbuildinfo')),
+    );
+    expect(readFiles(root, 'platform').binary).toEqual([]);
+  });
+});
+
+describe('unreadFileProblems', () => {
+  it('lets a picture, a font and a PDF be binary', () => {
+    expect(
+      unreadFileProblems([
+        'docs/bild.png',
+        'editions/muster/public/icon-512.PNG',
+        'platform/ui/fonts/schrift.woff2',
+        'docs/fakten/merkblatt.pdf',
+        'favicon.ico',
+      ]),
+    ).toEqual([]);
+  });
+
+  it('reports a text file that was taken for binary: no guard has read it', () => {
+    const problems = unreadFileProblems(readFiles(root).binary);
+    expect(problems.map(({ path, line }) => ({ path, line }))).toEqual([
+      { path: 'docs/breit.md', line: 0 },
+      { path: 'docs/kaputt.md', line: 0 },
+    ]);
+    expect(problems[0]?.message).toContain('the guards take it for binary and do not read it');
+  });
+
+  it('reports every kind it does not know, also a file without an extension', () => {
+    for (const path of ['platform/core/src/money.ts', 'LICENSE', 'docs/a.png.md', '.env', 'a.']) {
+      expect(unreadFileProblems([path]), path).toHaveLength(1);
+    }
+  });
+
+  it('knows only kinds that hold no text', () => {
+    for (const kind of ['md', 'ts', 'json', 'yml', 'svg', 'html', 'txt', 'csv', '']) {
+      expect(BINARY_KINDS.has(kind), kind).toBe(false);
+    }
   });
 });
 

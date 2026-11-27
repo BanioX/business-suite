@@ -903,7 +903,7 @@ describe('checkOwnership: a range of commits', () => {
     );
   });
 
-  it('skips a merge with a note and does not count it as checked', () => {
+  it('skips a clean merge with a note and does not count it as checked', () => {
     const merge = commit({
       subject: 'Merge the work of an order',
       message: 'Merge the work of an order\n',
@@ -920,9 +920,31 @@ describe('checkOwnership: a range of commits', () => {
       {
         commit: merge.hash,
         subject: 'Merge the work of an order',
-        reason: 'a merge: the commits it merges are checked on their own',
+        reason: 'a clean merge: the commits it merges are checked on their own',
       },
     ]);
+  });
+
+  it('judges a merge that changes paths itself like every other commit', () => {
+    // The paths of a merge are what differs from every parent: a change made inside the merge.
+    const parents = ['a'.repeat(40), 'b'.repeat(40)];
+    const silent = commit({
+      subject: 'Merge the work of an order',
+      message: 'Merge the work of an order\n',
+      parents,
+      paths: ['docs/plan.md'],
+    });
+    const foreign = commit({ order: 'W0-01', role: 'platform', parents, paths: ['docs/plan.md'] });
+    const fine = commit({ order: 'W0-01', role: 'platform', parents, paths: ['tools/check.mjs'] });
+    const report = checkOwnership([silent, foreign, fine], REGISTER);
+    expect(report.checked).toBe(3);
+    expect(report.skipped).toEqual([]);
+    expect(report.problems.map(({ commit: hash, path }) => ({ hash, path }))).toEqual([
+      { hash: silent.hash, path: '' },
+      { hash: silent.hash, path: '' },
+      { hash: foreign.hash, path: 'docs/plan.md' },
+    ]);
+    expect(report.problems[0]?.reason).toContain('no trailer «Order: <order>»');
   });
 
   it('checks the first commit of a repository like any other', () => {
@@ -1253,7 +1275,7 @@ describe('readCommit', () => {
     expect(readCommit(root, hash).paths).toEqual(['docs/über uns "neu".md']);
   });
 
-  it('reads a merge with its parents and without paths', () => {
+  it('reads a clean merge with its parents and without paths', () => {
     const { root, start } = repository();
     git(root, 'switch', '--quiet', '--create', 'work');
     write(root, 'tools/check.mjs');
@@ -1270,6 +1292,45 @@ describe('readCommit', () => {
       paths: [],
     });
     expect(start).not.toBe(merge);
+  });
+
+  it('reads the paths a merge changes itself: an edit made inside it, both names of a move', () => {
+    const { root } = repository();
+    git(root, 'switch', '--quiet', '--create', 'work');
+    write(root, 'tools/check.mjs');
+    save(root, 'feat: tools');
+    git(root, 'switch', '--quiet', 'main');
+    write(root, 'LICENSE');
+    save(root, 'docs: licence');
+    git(root, 'merge', '--quiet', '--no-ff', '--no-commit', 'work');
+    // Neither branch touched these: the merge does, by hand.
+    write(root, 'docs/plan.md', 'changed inside the merge\n');
+    write(root, 'registry/names.json', '{}\n');
+    renameSync(join(root, 'README.md'), join(root, 'LIESMICH.md'));
+    const merge = save(root, 'Merge work');
+    expect(readCommit(root, merge).parents).toHaveLength(2);
+    expect(readCommit(root, merge).paths).toEqual([
+      'LIESMICH.md',
+      'README.md',
+      'docs/plan.md',
+      'registry/names.json',
+    ]);
+  });
+
+  it('reads the path of a conflict that a merge settles', () => {
+    const { root } = repository();
+    git(root, 'switch', '--quiet', '--create', 'work');
+    write(root, 'docs/plan.md', 'the plan of the branch\n');
+    write(root, 'tools/check.mjs');
+    save(root, 'docs: plan of the branch');
+    git(root, 'switch', '--quiet', 'main');
+    write(root, 'docs/plan.md', 'the plan of main\n');
+    save(root, 'docs: plan of main');
+    expect(() => git(root, 'merge', '--quiet', '--no-ff', 'work')).toThrow();
+    write(root, 'docs/plan.md', 'the plan of both\n');
+    const merge = save(root, 'Merge work');
+    expect(readCommit(root, merge).parents).toHaveLength(2);
+    expect(readCommit(root, merge).paths).toEqual(['docs/plan.md']);
   });
 
   it('reads a commit without changes', () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { forbiddenNameProblems, priceProblems } from '../src/public-repo.ts';
-import { formatProblem, readTextFiles, REPO_ROOT } from '../src/repo-files.ts';
+import { forbiddenNameProblems, forbiddenPathProblems, priceProblems } from '../src/public-repo.ts';
+import { formatProblem, readFiles, REPO_ROOT, unreadFileProblems } from '../src/repo-files.ts';
 
 /**
  * This repository is public (ADR-0011; docs/zusammenarbeit.md, 10.11): no name of another
@@ -9,7 +9,7 @@ import { formatProblem, readTextFiles, REPO_ROOT } from '../src/repo-files.ts';
  * whoever writes.
  */
 describe('the public repository (ADR-0011)', () => {
-  const files = readTextFiles(REPO_ROOT);
+  const { text: files, binary } = readFiles(REPO_ROOT);
 
   it('reads the repository', () => {
     // A guard that reads nothing would pass for the wrong reason.
@@ -23,8 +23,15 @@ describe('the public repository (ADR-0011)', () => {
     expect(paths.filter((path) => path.includes('node_modules/'))).toEqual([]);
   });
 
+  it('leaves no text file unread: only pictures, fonts and PDF are binary', () => {
+    // This holds for every guard that reads the repository: they all take their files from
+    // the same place, and a file that is taken for binary is read by none of them.
+    expect(unreadFileProblems(binary).map(formatProblem)).toEqual([]);
+  });
+
   it('names no listed name, in no file and no path', () => {
     expect(forbiddenNameProblems(files).map(formatProblem)).toEqual([]);
+    expect(forbiddenPathProblems(binary).map(formatProblem)).toEqual([]);
   });
 
   it('states no price of the suite or of one of its apps', () => {

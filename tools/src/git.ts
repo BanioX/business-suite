@@ -15,7 +15,12 @@ export interface GitCommit {
   /**
    * The paths the commit changes against its parent, from the root with forward slashes, sorted.
    * An added, changed or deleted file counts with its path, a moved file with both, the old and
-   * the new one. Empty for a merge: what a merge brings was changed by the commits it merges.
+   * the new one.
+   *
+   * For a merge: only the paths whose content differs from every parent, which is what was
+   * changed by hand inside the merge (a conflict that was settled, an edit made on the way).
+   * What a merge only brings along was changed by the commits it merges, so a merge that went
+   * through cleanly has no paths.
    */
   readonly paths: readonly string[];
 }
@@ -121,24 +126,24 @@ export function readCommit(root: string, hash: string): GitCommit {
     .split('\n')
     .filter((line) => line.startsWith('parent '))
     .map((line) => line.slice('parent '.length).trim());
-  const paths =
-    parents.length > 1
-      ? []
-      : pathList(
-          git(root, [
-            'diff-tree',
-            '--no-commit-id',
-            '--name-only',
-            '-r',
-            // The first commit has no parent: its paths are all it holds.
-            '--root',
-            // A moved file is listed as a deleted and an added one: both paths, whatever git
-            // would guess about their likeness.
-            '--no-renames',
-            '-z',
-            hash,
-          ]),
-        ).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  const paths = pathList(
+    git(root, [
+      'diff-tree',
+      '--no-commit-id',
+      '--name-only',
+      '-r',
+      // The first commit has no parent: its paths are all it holds.
+      '--root',
+      // A moved file is listed as a deleted and an added one: both paths, whatever git
+      // would guess about their likeness.
+      '--no-renames',
+      // A merge: the paths that differ from every parent (the combined diff). Without this,
+      // git prints nothing for a merge, and a change made by hand inside one would be unseen.
+      ...(parents.length > 1 ? ['-c'] : []),
+      '-z',
+      hash,
+    ]),
+  ).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
   return { hash, parents, message: cut === -1 ? '' : stored.slice(cut + 2), paths };
 }
 
