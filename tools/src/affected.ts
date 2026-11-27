@@ -96,7 +96,16 @@ const NARROWED = {
   build: (affected) => [...filters(affected), '--if-present', 'run', 'build'],
 } satisfies Partial<Record<StepName, (affected: readonly WorkspacePackage[]) => readonly string[]>>;
 
-type CodeStep = keyof typeof NARROWED;
+export type CodeStep = keyof typeof NARROWED;
+
+/**
+ * The arguments for pnpm that run one of the steps lint, typecheck, test:coverage and build
+ * narrowed to the given packages: what `pnpm check --affected` runs for them, so another runner
+ * (`pnpm check:industry`) applies exactly the same rules.
+ */
+export function narrowedArgs(step: CodeStep, packages: readonly WorkspacePackage[]): string[] {
+  return [...NARROWED[step](packages)];
+}
 
 /** The steps that look at code only: skipped for docs, narrowed for packages. */
 function isCodeStep(step: StepName): step is CodeStep {
