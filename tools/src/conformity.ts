@@ -703,13 +703,14 @@ export async function deviceFilterConformity(subject: Subject): Promise<Finding>
         );
         continue;
       }
-      if (!composed.features.has(feature)) {
+      // `ids.includes`, not `has`: the type guard would narrow the id to never in this branch.
+      if (!composed.features.ids.includes(feature)) {
         problems.push(
           `${name} gives ${table.name} the function ${feature}, which nobody registered`,
         );
         continue;
       }
-      if (right !== undefined && !composed.rights.has(right)) {
+      if (right !== undefined && !composed.rights.ids.includes(right)) {
         problems.push(`${name} gives ${table.name} the right ${right}, which nobody registered`);
         continue;
       }
