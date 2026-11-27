@@ -163,6 +163,19 @@ Passt zu den Grundsätzen aus Randen ([ADR-0009](adr/0009-grundsaetze-aus-randen
 
 Dazu: Bedeutungsfarben bleiben getrennt (Grün «in Ordnung», Bernstein «bald», Rot «falsch»; Blau heisst nie «gut» oder «schlecht»); Systemschrift wie bei Onestrand, keine fremden Schriften. Die Kontraste sind nach WCAG 2.2 gerechnet; die Kontrastprüfung von W0-03 bestätigt sie für jede Ausgabe. Angeschaut am Klickentwurf, Stand 27.11.2026. Eine andere Ausgabe (Gastro, Haus, Studio) darf ihr Blau verschieben, bleibt aber im hellen Ton von Onestrand, bis Alban anders entscheidet.
 
+### S-28 Zeitstempeln gehört zum ersten Pilot
+
+**Albans Vorgabe, 27.11.2026, wörtlich:** «Es muss auch Zeitstempeln drin haben.»
+
+Steht im Plan: P-31 Team und Zeit ist für Facility ein **Muss** ([Steckbrief](branchen/facility.md), Abschnitt 5) und kommt mit Welle 2, vor dem Pilot. Was gilt:
+
+1. **Kommen, Pause, Weiter, Gehen** mit einem Tipp, auf «Heute» für jede Rolle sichtbar, dazu unter «＋ Erfassen». Am Objekt geht es mit dem QR-Code schneller. **Nie ein Standort** (CLAUDE.md, harte Regeln).
+2. **Zeit als Ledger:** Einträge werden nur angefügt; eine Korrektur ist eine neue Zeile mit Grund, die alte bleibt sichtbar (Kit `@onestrand/ledger`).
+3. **Pflicht mit Quelle:** erfasst werden Beginn, Ende und Pausen ab 30 Minuten, aufbewahrt mindestens 5 Jahre (Art. 73 ArGV 1, [`fakten/arbeit-personal.md`](fakten/arbeit-personal.md), Abschnitt 1.3). Den Erfassungsmodus je Person (vollständig, vereinfacht, Verzicht) wählt der Betrieb; ob die Voraussetzungen erfüllt sind, beurteilt die App nicht.
+4. Mitarbeitende sehen nur ihre eigenen Stunden, nie Löhne oder Stunden anderer.
+
+Angeschaut am Klickentwurf, Stand 27.11.2026. Ob das Stempeln schon in Welle 1 vorgezogen wird, entscheidet der Kopf mit dem Auftrag W1-00; heute steht es in Welle 2.
+
 ## Vor Welle 2 und 3
 
 ### S-06 Abgleich zwischen Büro und Aussendienst ohne Server [Datenfluss]
