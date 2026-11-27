@@ -5,8 +5,9 @@
 //
 // Two kinds of steps:
 //
-// - The conformity of the industry as data (manifest, edition, texts, switched off, backup, side
-//   effects, names) needs its manifest, and the manifest is TypeScript that imports the platform:
+// - The conformity of the industry as data (manifest, edition, texts, switched off, backup, filter
+//   for other devices, side effects, names) needs its manifest (all but the texts), and the
+//   manifest is TypeScript that imports the platform:
 //   Vitest runs it as it is, plain Node does not (the platform imports its files without
 //   extension). So these steps are test files under tools/conformity/, one per step, run in one
 //   Vitest process with tools/vitest.conformity.config.ts; the industry comes in the environment
