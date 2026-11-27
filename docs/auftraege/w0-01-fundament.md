@@ -76,7 +76,7 @@ Was gebaut ist (Pakete, Werkzeuge, Tests), was bewusst offen ist (mit Eintrag in
 
 **Bewusst offen** (alle in [`../schulden.md`](../schulden.md))
 
-- Kern, Schnittstelle und Speicher sind von einem zweiten Agenten geprüft. Ledger und Test-Kit hat eine zweite Sitzung gelesen und fertig getestet, aber nicht gezielt geprüft (TD-60).
+- Kern und Speicher sind von einem zweiten Agenten geprüft, Ledger und Test-Kit seit dem 27.11.2026 ebenso (TD-60 erledigt; im Ledger bekamen zusammen gestartete Buchungen alle den Platz 1). Die Prüfung der Schnittstelle und der Werkzeuge brach am Nutzungslimit ab; was fehlt, steht in TD-109.
 - Das Namensregister liest erst Pakete, Tabellen des Speichers und Einheiten (TD-52); die Schlüssel im Speicher des Browsers prüft der Wächter erst mit einer Ausgabe (TD-50).
 - Die Liste der verbotenen Namen für die Branchen der Suite fehlt (TD-40).
 - Die Karte in `AGENTS.md` («Stand: nur Plan») und die Tabelle in `docs/auftraege/README.md` gehören dem Kopf und sind nicht nachgeführt.
