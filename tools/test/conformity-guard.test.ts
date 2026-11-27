@@ -1,3 +1,4 @@
+import type * as Access from '@onestrand/access';
 import type { ContractFragment, UseCasesOf } from '@onestrand/contract';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { loadSubject, switchedOffConformity } from '../src/conformity.ts';
@@ -10,10 +11,13 @@ import { REPO_ROOT } from '../src/repo-files.ts';
 // `@onestrand/access` is wrapped, for every package that imports it (`@onestrand/manifest`
 // guards the use cases of an edition with it).
 
-const breakage = vi.hoisted(() => ({ mode: 'none' as 'none' | 'open' | 'stuck' }));
+/** How the edition is broken: not at all, operations of muster go through, the switch is stuck. */
+type Breakage = 'none' | 'open' | 'stuck';
+
+const breakage = vi.hoisted((): { mode: Breakage } => ({ mode: 'none' }));
 
 vi.mock('@onestrand/access', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@onestrand/access')>();
+  const actual = await importOriginal<typeof Access>();
   function guardUseCases<TContract extends ContractFragment>(
     contract: TContract,
     useCases: UseCasesOf<TContract>,
