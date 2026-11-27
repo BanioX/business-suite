@@ -4,7 +4,7 @@ Die Onestrand Business Suite ist eine local-first Plattform für Schweizer Klein
 
 ## Stand
 
-Stand 27.11.2026: **Fundament und Zusammensetzen gebaut, noch keine Oberfläche.** Fertig sind W0-01 (Werkzeuge, `pnpm check`, Wächter, Kern, Schnittstelle, Speicher mit Sicherung, Ledger, Test-Kit) und W0-02 (Register der Funktionen, Rechte, Betrieb und Personen, Sprachen, Manifeste und Zusammensetzen, Speicher im Browser, Referenz-Branche `industries/muster`, Generator `pnpm industry:new` und Prüfung `pnpm check:industry`). Als Nächstes kommt W0-03 (UI-Kit, Rahmen, erste Ausgabe «Vor Ort»), sobald Alban den Klickentwurf freigibt. Den Weg zeigt der [Fahrplan](docs/fahrplan.md).
+Stand 27.11.2026: **Fundament und Zusammensetzen gebaut, noch keine Oberfläche.** Fertig sind W0-01 (Werkzeuge, `pnpm check`, Wächter, Kern, Schnittstelle, Speicher mit Sicherung, Ledger, Test-Kit) und W0-02 (Register der Funktionen, Rechte, Betrieb und Personen, Sprachen, Manifeste und Zusammensetzen, Speicher im Browser, Referenz-Branche `industries/muster`, Generator `pnpm industry:new` und Prüfung `pnpm check:industry`). W0-03 (UI-Kit, Rahmen, erste Ausgabe «Vor Ort») läuft seit dem 27.11.2026. Den Weg zeigt der [Fahrplan](docs/fahrplan.md).
 
 **Eine neue Branche** beginnt mit `pnpm industry:new <id>`, wird mit `pnpm check:industry <id>` geprüft und folgt [`industries/muster/README.md`](industries/muster/README.md). Ihre Kennungen schlägt sie in `industries/<id>/NAMES.md` vor; der Kopf trägt sie ins Namensregister ein.
 

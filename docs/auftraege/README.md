@@ -7,8 +7,8 @@ Fertige Aufträge zum Weitergeben an Agenten. Jeder Auftrag nennt Ziel, Lesestof
 | Nr. | Auftrag | Wer | Voraussetzung | Stand |
 | --- | --- | --- | --- | --- |
 | W0-01 | [Werkzeuge und Fundament](w0-01-fundament.md) | Plattform-Agent | – | erledigt 25.11.2026, Prüfungen nachgetragen 27.11.2026 |
-| W0-02 | [Zusammensetzen](w0-02-zusammensetzen.md) | Plattform-Agent | W0-01 | gebaut 27.11.2026, letzte Prüfung läuft |
-| W0-03 | [Oberfläche und erste Ausgabe](w0-03-oberflaeche.md) | Plattform-Agent | W0-02 | offen, **als Nächstes** nach Albans Ja zum Klickentwurf |
+| W0-02 | [Zusammensetzen](w0-02-zusammensetzen.md) | Plattform-Agent | W0-01 | erledigt 27.11.2026, geprüft |
+| W0-03 | [Oberfläche und erste Ausgabe](w0-03-oberflaeche.md) | Plattform-Agent | W0-02 | läuft seit 27.11.2026 (Albans Ja zum Klickentwurf) |
 | W0-04 | [Offene Schnittstelle und Vorbereitung für den Assistenten](w0-04-offene-schnittstelle.md) | Plattform-Agent | W0-02 (parallel zu W0-03) | offen |
 | W1-00 | [Verträge des Auftragskerns (alpha)](w1-auftragskern.md#w1-00) | Kopf oder Plattform-Agent | W0-03 | offen |
 | W1-01 bis W1-06 | [Pakete des Auftragskerns](w1-auftragskern.md) | je ein Plattform-Agent, parallel | W1-00 | offen |
