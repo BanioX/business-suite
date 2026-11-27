@@ -28,7 +28,7 @@ UI-Kit, Rahmen, Gerät und PDF der Plattform stehen neutral und mit Marke als Th
 4. **`@onestrand/pdf`** (P-11): PDF-Kit mit Thema, Stile Übersicht, Streifen, Formular; Briefkopf mit Logo; Dokument-Ansicht vor dem Drucken; Dokument-Sprache.
 5. **`@onestrand/today`** (P-32): «Heute» aus Steckplätzen.
 6. **`industries/muster/web`:** eine Seite, ein Navigationseintrag, eine Karte in «Heute», ein Abschnitt auf einer Plattform-Seite, ein Dokument.
-7. **`editions/field`:** `edition.ts` mit Datenbank `field`, Präfix `field:`, Format `field-backup` (nie umbenennen), Arbeitstitel «Vor Ort», Thema nach [S-27](../entscheide.md) (Silber, Weiss, hellblaue Akzente; Hellblau als Schrift in der tieferen Stufe), geprüft mit der Kontrastprüfung hell und dunkel; `_headers` mit CSP `'self'` und `noindex`; Manifest; `wrangler.jsonc` für eine Vorschau; E2E mit Playwright und axe in vier Ansichten, hell und dunkel; Vorschaubilder (`pnpm preview:shots`).
+7. **`editions/field`:** `edition.ts` mit Datenbank `field`, Präfix `field:`, Format `field-backup` (nie umbenennen), Arbeitstitel «Vor Ort», Thema nach [S-27](../entscheide.md) (der helle Ton von Onestrand: Weiss und Silber, das Blau von Onestrand eine Stufe heller; dunkel wie Onestrand selbst), geprüft mit der Kontrastprüfung hell und dunkel; `_headers` mit CSP `'self'` und `noindex`; Manifest; `wrangler.jsonc` für eine Vorschau; E2E mit Playwright und axe in vier Ansichten, hell und dunkel; Vorschaubilder (`pnpm preview:shots`).
 
 ## Abnahme
 

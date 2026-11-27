@@ -144,19 +144,24 @@ Optionen:
 
 Passt zu den Grundsätzen aus Randen ([ADR-0009](adr/0009-grundsaetze-aus-randen.md): eine App für iPhone, iPad und Web, eine Hauptaktion pro Seite, Ziele 44 px) und zu den Prüfsteinen 2 und 5 im [Zielbild](zielbild.md) (unter zehn Sekunden, mit einer Hand). Eingetragen in den Auftrag [W0-03](auftraege/w0-03-oberflaeche.md).
 
-### S-27 Farben der Ausgabe «Vor Ort»: Silber, Weiss, Hellblau
+### S-27 Farben der Ausgaben: der helle Ton von Onestrand
 
-**Albans Vorgabe, 27.11.2026, wörtlich:** «Ich möchte vom UI Silber Weiss und helblaue akzente».
+**Albans Vorgaben, 27.11.2026, wörtlich:** «Ich möchte vom UI Silber Weiss und helblaue akzente» und «Onestrand ist dagegen Premium Schwarz und blau es muss einen ton heller sein..».
 
-**Was gilt** (Thema der Ausgabe «Vor Ort», nicht der Plattform: die Plattform kennt nur neutrale Tokens wie `accent`, `surface`, W0-03 Schritt 1):
+**Lesart:** Die Dachmarke Onestrand ist Schwarz, Silber und Blau (Website, `BanioX/onestrand`, `site/assets/css/main.css`: Schwarz der Raum, Silber der Mensch, Blau die Maschine; Blau `#0a6cff`, Verlauf `#8dbdff` bis `#0a5bea`). Eine Ausgabe ist ihr heller Ton: Weiss und Silber statt Schwarz, dasselbe Blau eine Stufe heller. Der dunkle Modus einer Ausgabe ist Onestrand selbst.
 
-1. **Weiss** für Listen, Karten und Felder; **Silber** als Grund hinter der App, für Linien und für ruhige Flächen wie die Kennzahlen in «Heute» (leichter Verlauf).
-2. **Hellblau** (Richtwert `#8ccff4`) für Flächen, die handeln oder markieren: Hauptknopf, «＋ Erfassen» in der Mitte, abgehakte Kästchen, die gewählte Option. Darauf steht dunkle Schrift (`#08283b`).
-3. **Hellblau als Schrift** (Links, «Zurück», aktiver Punkt der Leiste) in einer tieferen Stufe (`#0a679f`): Hellblau selbst erreicht auf Weiss den Kontrast für Text nicht (WCAG 2.2, 4.5:1). Im dunklen Modus trägt Hellblau auch als Schrift.
-4. Bedeutungsfarben bleiben getrennt: Grün «in Ordnung», Bernstein «bald», Rot «falsch»; Hellblau heisst nie «gut» oder «schlecht».
-5. Keine fremden Schriften: Systemschrift des Geräts.
+**Was gilt** (Thema einer Ausgabe; die Plattform kennt nur neutrale Tokens wie `accent`, `surface`, W0-03 Schritt 1):
 
-**Angeschaut am Klickentwurf** (privater Link, kein Code der App), Stand 27.11.2026. Die Werte sind Richtwerte, bis die Kontrastprüfung von W0-03 sie für hell und dunkel bestätigt.
+| Rolle | Hell | Dunkel |
+| --- | --- | --- |
+| Grund hinter der App | Silber `#e6e9ee` | Schwarz `#000000` |
+| Grund der App | Silber, beleuchtet `#f4f6f9` | Nacht `#05070b` |
+| Listen, Karten, Felder | Weiss `#ffffff` | `#10141b` |
+| Flächen, die handeln oder markieren (Hauptknopf, «＋ Erfassen», abgehakt, gewählt) | helles Blau `#8dbdff`, Schrift Nachtblau `#061633` (9.3 zu 1) | Blau `#5aa2ff`, Schrift `#061633` (6.9 zu 1) |
+| Blau als Schrift (Links, «Zurück», aktiver Punkt) | `#0a5bea` (5.7 zu 1 auf Weiss, 5.3 auf Silber) | `#8dbdff` (9.5 zu 1) |
+| Ruhige Flächen (Kennzahlen in «Heute») | Verlauf Silber `#ffffff` bis `#e6e9ee` | `#161b23` bis `#0b0f15` |
+
+Dazu: Bedeutungsfarben bleiben getrennt (Grün «in Ordnung», Bernstein «bald», Rot «falsch»; Blau heisst nie «gut» oder «schlecht»); Systemschrift wie bei Onestrand, keine fremden Schriften. Die Kontraste sind nach WCAG 2.2 gerechnet; die Kontrastprüfung von W0-03 bestätigt sie für jede Ausgabe. Angeschaut am Klickentwurf, Stand 27.11.2026. Eine andere Ausgabe (Gastro, Haus, Studio) darf ihr Blau verschieben, bleibt aber im hellen Ton von Onestrand, bis Alban anders entscheidet.
 
 ## Vor Welle 2 und 3
 
