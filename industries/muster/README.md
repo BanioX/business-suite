@@ -71,7 +71,9 @@ Was nicht im Manifest steht, aber zur Branche gehört: `musterTableAccess` nennt
 
 ## Eine neue Branche nach dem Muster
 
-Am einfachsten mit dem Generator (`pnpm industry:new <id>`, sobald er da ist). Von Hand, mit `<id>` für die Kennung der Branche (Kleinbuchstaben und Ziffern, etwa `facility`):
+Am einfachsten mit dem Generator: `pnpm industry:new <id>` kopiert `core/` nach `industries/<id>/core`, benennt jede Kennung in den Namensraum von `<id>` um (die erfundenen Namen wie «Betrieb Muster» bleiben), formatiert die Dateien und schreibt den Vorschlag der Namen nach `industries/<id>/NAMES.md`; das Register, die Wortliste und `docs/branchen/` berührt er nicht. Er weist eine Kennung ab, die es schon gibt, die ein Plattform-Paket, ein reserviertes Wort oder ein Wort ist, das dieses Muster selbst braucht (etwa `zwilling` aus dem Test zweier Branchen). Danach `pnpm install` und `pnpm check:industry <id>`; die Kopie ist grün, bevor das Fach beginnt (Schritte 5 bis 10 unten). Wer hier eine neue Form der Kennung einführt, die der Generator nicht umbenennt, macht den Test der Werkzeuge rot (`tools/test/industry-new.test.ts`).
+
+Von Hand, mit `<id>` für die Kennung der Branche (Kleinbuchstaben und Ziffern, etwa `facility`):
 
 1. **Auftrag und Steckbrief lesen.** Ohne Auftrag in `docs/auftraege/` kein Code; die Fakten der Branche stehen im Steckbrief in `docs/branchen/`.
 2. **Ordner kopieren:** `industries/muster/core` nach `industries/<id>/core`, ohne `node_modules`.
@@ -82,7 +84,7 @@ Am einfachsten mit dem Generator (`pnpm industry:new <id>`, sobald er da ist). V
 7. **Texte schreiben:** `test/messages.ts` mit einem Text für jede Kennung, de-CH, mit «du» und «ss», ohne Ausrufezeichen. Der Test `edition.test.ts` nennt jeden fehlenden Schlüssel.
 8. **Namen anmelden:** die neuen Kennungen in `industries/<id>/NAMES.md` vorschlagen; der Kopf trägt sie in `registry/names.json` ein (`owner: "industry:<id>"`). Bis dahin ist `pnpm names` rot, und das ist Absicht.
 9. **Wörter der Branche:** der Kopf legt die Liste der Wörter, die die Branche verraten, in `tools/src/words/<id>.ts` an, damit keines davon in die Plattform rutscht.
-10. **Prüfen:** `pnpm install`, dann `pnpm --filter @onestrand-industry/<id> typecheck`, `pnpm exec vitest run --project <id>-core` und `pnpm check` bis `ALL=GREEN` (später `pnpm check:industry <id>`).
+10. **Prüfen:** `pnpm install`, dann `pnpm --filter @onestrand-industry/<id> typecheck`, `pnpm exec vitest run --project <id>-core` dann `pnpm check:industry <id>` (alles, was eine Branche vor dem Landen besteht) und `pnpm check` bis `ALL=GREEN`.
 
 Was die Tests jeder Branche zeigen, und woran sie rot werden: Das Manifest wird ohne Befund angenommen; die Ausgabe aus Betrieb und Branche hat `editionProblems` gleich `[]`; eine Operation ohne `access` wird abgewiesen (geprüft an einer Kopie); eine Operation ohne das Recht wird mit `forbidden` abgewiesen; zwei Teile mit derselben Operation scheitern; eine ausgeschaltete Funktion hat keine Einstiege, ihre Daten bleiben, auch in der Sicherung; ein fehlender Text einer anderen Sprache fällt auf Deutsch zurück und steht in der Liste der Lücken; der Demo-Betrieb entsteht über die Operationen; die Sicherung geht hin und zurück.
 
