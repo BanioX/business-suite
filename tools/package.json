@@ -8,6 +8,7 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "devDependencies": {
+    "@onestrand/access": "workspace:*",
     "@onestrand/business": "workspace:*",
     "@onestrand/contract": "workspace:*",
     "@onestrand/core": "workspace:*",

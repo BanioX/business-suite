@@ -21,7 +21,9 @@
     "guards": "vitest run --config tools/vitest.guards.config.ts",
     "ownership": "vitest run --config tools/vitest.guards.config.ts ownership",
     "names": "vitest run --config tools/vitest.guards.config.ts names",
-    "check": "node tools/check.mjs"
+    "check": "node tools/check.mjs",
+    "check:industry": "node tools/check-industry.mjs",
+    "industry:new": "node tools/industry-new.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

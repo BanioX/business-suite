@@ -10,6 +10,7 @@
 //   texts         the catalogue in de-CH: du, ss, no exclamation mark, no product name, own ids only
 //   switched-off  a function switched off has no way in, its rows stay (in the backup too)
 //   backup        the demo business goes there and back through a file
+//   device-filter every table names its function and right; its rows go to other devices only as the profile allows
 //   side-effects  no side effect in the shipped code without its row in docs/nebenwirkungen.md
 //   names         every identifier is in registry/names.json or proposed in industries/<id>/NAMES.md
 //   format, lint (with the boundaries), typecheck (with the purity check), tests (with coverage)
@@ -71,7 +72,9 @@ function readReport(file) {
 
 function main(args) {
   if (args.length !== 1 || args[0].startsWith('-')) {
-    return refuse('Usage: pnpm check:industry <id>   (an industry under industries/, for example muster)');
+    return refuse(
+      'Usage: pnpm check:industry <id>   (an industry under industries/, for example muster)',
+    );
   }
   const [id] = args;
   const folders = industryFolders(root);
@@ -86,10 +89,14 @@ function main(args) {
   try {
     core = readWorkspace(root).find((candidate) => candidate.dir === folder.core);
   } catch (error) {
-    return refuse(`check:industry: cannot read the workspace: ${error instanceof Error ? error.message : String(error)}`);
+    return refuse(
+      `check:industry: cannot read the workspace: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
   if (core === undefined) {
-    return refuse(`check:industry: ${folder.core} is not a package of the workspace (pnpm-workspace.yaml)`);
+    return refuse(
+      `check:industry: ${folder.core} is not a package of the workspace (pnpm-workspace.yaml)`,
+    );
   }
   if (!existsSync(join(root, folder.core, 'node_modules'))) {
     return refuse(`check:industry: ${folder.core} is not installed yet: run pnpm install first`);
@@ -111,7 +118,11 @@ function main(args) {
     process.stdout.write(`conformity exit=${String(code)} (${seconds.toFixed(1)} s)\n`);
     conformityResults(readReport(report), code).forEach(print);
 
-    const input = { dir: `${INDUSTRIES_DIR}/${id}`, core, reportsDirectory: join(scratch, 'coverage') };
+    const input = {
+      dir: `${INDUSTRIES_DIR}/${id}`,
+      core,
+      reportsDirectory: join(scratch, 'coverage'),
+    };
     for (const step of CODE_STEPS) {
       process.stdout.write(`\n=== ${step} ===\n`);
       const begun = performance.now();
@@ -121,7 +132,9 @@ function main(args) {
 
     // The summary once more at the very end: read the line `ALL=`, and on RED every line whose
     // `exit=` is not 0.
-    process.stdout.write(`\n=== check:industry ${id} ===\n${outcomes.map(outcomeLine).join('\n')}\n`);
+    process.stdout.write(
+      `\n=== check:industry ${id} ===\n${outcomes.map(outcomeLine).join('\n')}\n`,
+    );
     const all = allLine(outcomes);
     process.stdout.write(`${all}\n`);
     return all === 'ALL=GREEN' ? 0 : 1;

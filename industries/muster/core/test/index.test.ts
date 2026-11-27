@@ -8,34 +8,38 @@ import * as muster from '../src';
  */
 describe('@onestrand-industry/muster', () => {
   it('exports exactly these values', () => {
-    expect(Object.keys(muster).sort()).toEqual([
-      'CAPTURE_MODE',
-      'ENTRIES_FEATURE',
-      'EntrySchema',
-      'JOURNAL_MODULE',
-      'KEEPS_JOURNAL_QUESTION',
-      'MUSTER',
-      'MUSTER_DEMO_ENTRIES',
-      'MUSTER_DEMO_LETTERHEAD',
-      'MUSTER_EVENT_TYPES',
-      'NEWEST_FIRST_OPTION',
-      'RETENTION_SOURCE',
-      'RIGHT_JOURNAL_READ',
-      'STAFF_PROFILE',
-      'STANDARD_KIND',
-      'createMusterUseCases',
-      'entriesTable',
-      'layOutMusterDemo',
-      'muster',
-      'musterCatalog',
-      'musterContract',
-      'musterDemo',
-      'musterRights',
-      'musterRuleSets',
-      'musterTableAccess',
-      'musterTables',
-      'musterTemplates',
-    ]);
+    // Both sides sorted: a new industry renames these names (`pnpm industry:new`), and the
+    // renaming changes their alphabetical order, not the list.
+    expect(Object.keys(muster).sort()).toEqual(
+      [
+        'CAPTURE_MODE',
+        'ENTRIES_FEATURE',
+        'EntrySchema',
+        'JOURNAL_MODULE',
+        'KEEPS_JOURNAL_QUESTION',
+        'MUSTER',
+        'MUSTER_DEMO_ENTRIES',
+        'MUSTER_DEMO_LETTERHEAD',
+        'MUSTER_EVENT_TYPES',
+        'NEWEST_FIRST_OPTION',
+        'RETENTION_SOURCE',
+        'RIGHT_JOURNAL_READ',
+        'STAFF_PROFILE',
+        'STANDARD_KIND',
+        'createMusterUseCases',
+        'entriesTable',
+        'layOutMusterDemo',
+        'muster',
+        'musterCatalog',
+        'musterContract',
+        'musterDemo',
+        'musterRights',
+        'musterRuleSets',
+        'musterTableAccess',
+        'musterTables',
+        'musterTemplates',
+      ].sort(),
+    );
   });
 
   it('exports one manifest, made by defineIndustry under the id of the industry', () => {

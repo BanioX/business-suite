@@ -25,7 +25,8 @@ import {
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 
-const USAGE = 'Usage: pnpm industry:new <id>   (lower-case letters and digits, for example facility)';
+const USAGE =
+  'Usage: pnpm industry:new <id>   (lower-case letters and digits, for example facility)';
 
 /** The text as the repository formats it, or as it is for a file the formatter leaves alone. */
 async function formatted(path, text) {
@@ -69,14 +70,18 @@ async function main(args) {
   }
 
   const out = (line = '') => process.stdout.write(`${line}\n`);
-  out(`industry:new: made ${naming.dir}/ from the pattern of ${TEMPLATE_DIR} (${files.length} files)`);
+  out(
+    `industry:new: made ${naming.dir}/ from the pattern of ${TEMPLATE_DIR} (${files.length} files)`,
+  );
   for (const { path } of files) {
     out(`  ${path}`);
   }
   out();
   out(`Package ${naming.packageName}, Vitest project ${naming.project}.`);
   out();
-  out(`Names for registry/names.json: only the head writes the register. Proposed in ${naming.dir}/NAMES.md:`);
+  out(
+    `Names for registry/names.json: only the head writes the register. Proposed in ${naming.dir}/NAMES.md:`,
+  );
   for (const line of registerLines(proposal, id)) {
     out(`  ${line},`);
   }

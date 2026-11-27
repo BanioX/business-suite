@@ -304,6 +304,9 @@ importers:
 
   tools:
     devDependencies:
+      '@onestrand/access':
+        specifier: workspace:*
+        version: link:../platform/access
       '@onestrand/business':
         specifier: workspace:*
         version: link:../platform/business

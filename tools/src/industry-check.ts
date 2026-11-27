@@ -36,6 +36,7 @@ export const CONFORMITY_STEPS = [
   'texts',
   'switched-off',
   'backup',
+  'device-filter',
   'side-effects',
   'names',
 ] as const;
@@ -77,7 +78,11 @@ export function conformityArgs(reportFile: string): string[] {
  */
 export function codeArgs(
   step: IndustryCodeStep,
-  input: { readonly dir: string; readonly core: WorkspacePackage; readonly reportsDirectory: string },
+  input: {
+    readonly dir: string;
+    readonly core: WorkspacePackage;
+    readonly reportsDirectory: string;
+  },
 ): string[] {
   switch (step) {
     case 'format':

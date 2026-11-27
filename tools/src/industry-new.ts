@@ -450,7 +450,8 @@ export function planIndustry(
   if (repository.binary.length > 0) {
     return {
       problems: repository.binary.map(
-        (path) => `${path} is binary: the pattern holds text only, so nothing in it escapes the renaming`,
+        (path) =>
+          `${path} is binary: the pattern holds text only, so nothing in it escapes the renaming`,
       ),
     };
   }
