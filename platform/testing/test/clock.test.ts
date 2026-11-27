@@ -1,4 +1,3 @@
-// Origin: BanioX/Randen packages/core/src/testing/index.ts @ e0f0907 — adapted: the origin has no test of its own for the fixed clock; the first two tests pin what its clock gives
 import type { Clock } from '@onestrand/contract';
 import { addDays, IsoDateTimeSchema, localDate, toLocalDate } from '@onestrand/core';
 import fc from 'fast-check';

@@ -1,4 +1,6 @@
-// Origin: BanioX/Randen apps/web/src/side-effects.test.ts @ e0f0907 — adapted: the kinds, the reading of the register and the comparison as functions over given sources and a given register text, without the file system; problems as data with English messages; comments are removed by a reader that knows strings; the rules for a well-formed register and for storage keys take the kinds and the prefix as parameters
+// Origin: BanioX/Randen apps/web/src/side-effects.test.ts @ e0f0907 — adapted: the kinds, the reading of the register and the comparison as functions over given sources and a given register text, without the file system; problems as data with English messages; comments are removed by a reader that knows strings; the rules for a well-formed register and for storage keys take the kinds and the prefix as parameters; a date must be a day of the calendar; a row without an id and a test without sources are findings
+import { LocalDateSchema } from '@onestrand/core';
+import { frozenList } from './frozen';
 import type { StandardProblem } from './problem';
 import { withoutComments } from './source';
 
@@ -28,7 +30,7 @@ export interface SideEffectKind {
 }
 
 /** The kinds the standard test knows. An edition that needs another passes its own list. */
-export const SIDE_EFFECT_KINDS: readonly SideEffectKind[] = [
+export const SIDE_EFFECT_KINDS: readonly SideEffectKind[] = frozenList<SideEffectKind>([
   // Network
   { key: 'fetch(', pattern: /\bfetch\s*\(/, network: true },
   { key: 'XMLHttpRequest', pattern: /\bXMLHttpRequest\b/, network: true },
@@ -62,7 +64,7 @@ export const SIDE_EFFECT_KINDS: readonly SideEffectKind[] = [
   { key: 'window.open', pattern: /\bwindow\s*\.\s*open\s*\(/ },
   { key: 'download', pattern: /<a\b[^>]*\bdownload\b|\bdownload\s*=(?!=)/ },
   { key: 'createObjectURL', pattern: /\bcreateObjectURL\b/ },
-];
+]);
 
 /** A file of shipped code, as the caller read it. */
 export interface SourceFile {
@@ -95,7 +97,7 @@ export function occurrences(
 }
 
 /** The columns of every table of the register, in this order. */
-export const REGISTER_COLUMNS = [
+export const REGISTER_COLUMNS = Object.freeze([
   'Kennung',
   'Nebenwirkung',
   'Im Code',
@@ -103,7 +105,7 @@ export const REGISTER_COLUMNS = [
   'Daten verlassen das Gerät?',
   'Entscheid',
   'Seit',
-] as const;
+] as const);
 
 /** A row of the register. */
 export interface RegisterRow {
@@ -131,10 +133,20 @@ function cells(line: string): string[] {
 
 const lines = (text: string) => text.split(/\r?\n/);
 
-/** Every row `| SE-nn | … |` of every table in the register. */
+/** A line of a table, the head of a table of the register, and a row with an id of the register. */
+const TABLE_LINE = /^\s*\|/;
+const TABLE_HEAD = /^\s*\|\s*Kennung\s*\|/;
+const REGISTER_ROW = /^\s*\|\s*SE-/;
+/** The line between the head of a table and its rows: `| --- | :---: |`. */
+const isSeparator = (line: string) => cells(line).every((cell) => /^:?-+:?$/.test(cell));
+
+/**
+ * Every row `| SE-nn | … |` of every table in the register, whatever else the row lacks: what
+ * is wrong with a row is the business of `registerProblems`.
+ */
 export function parseRegister(markdown: string): RegisterRow[] {
   return lines(markdown)
-    .filter((line) => /^\|\s*SE-/.test(line))
+    .filter((line) => REGISTER_ROW.test(line))
     .map((line) => {
       const [id = '', , inCode = '', , leaves = '', decision = '', since = ''] = cells(line);
       return {
@@ -156,16 +168,36 @@ export interface SideEffectProblem extends StandardProblem {
   paths: string[];
 }
 
-const DECIDED_BY_OWNER = /\bAlban, \d{1,2}\.\d{1,2}\.\d{4}\b/;
+const SWISS_DATE = /(\d{1,2})\.(\d{1,2})\.(\d{4})/;
+const DECIDED_BY_OWNER = new RegExp(`\\bAlban, ${SWISS_DATE.source}\\b`, 'g');
 const ADR = /\bADR-\d{4}\b/;
 const YES = /^ja(?![a-zäöü])/;
 const YES_OR_NO = /^(ja|nein)(?![a-zäöü])/;
 const ROW_ID = /^SE-\d{2,}$/;
-const SINCE = /^(\d{1,2}\.\d{1,2}\.\d{4}|geplant)$/;
+const PLANNED = 'geplant';
+
+/** True for a day of the calendar written `TT.MM.JJJJ`: the 30.02. is none. */
+function isCalendarDay(day = '', month = '', year = ''): boolean {
+  return LocalDateSchema.safeParse(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`)
+    .success;
+}
+
+/** «Seit»: a real day `TT.MM.JJJJ`, or «geplant». */
+function isSince(since: string): boolean {
+  const match = new RegExp(`^${SWISS_DATE.source}$`).exec(since);
+  return since === PLANNED || (match !== null && isCalendarDay(match[1], match[2], match[3]));
+}
+
+/** «Entscheid» says that the product owner decided, and on which day: «Alban, TT.MM.JJJJ». */
+function isDecidedByOwner(decision: string): boolean {
+  return [...decision.matchAll(DECIDED_BY_OWNER)].some((match) =>
+    isCalendarDay(match[1], match[2], match[3]),
+  );
+}
 
 /** A row that carries the decision a request to a server needs. */
 function isDecidedRequest(row: RegisterRow): boolean {
-  return YES.test(row.leaves) && DECIDED_BY_OWNER.test(row.decision) && ADR.test(row.decision);
+  return YES.test(row.leaves) && isDecidedByOwner(row.decision) && ADR.test(row.decision);
 }
 
 function networkKeys(kinds: readonly SideEffectKind[]): ReadonlySet<string> {
@@ -175,13 +207,18 @@ function networkKeys(kinds: readonly SideEffectKind[]): ReadonlySet<string> {
 /**
  * What is wrong with the register itself, whatever the code does:
  *
- * - `register.table`: it holds no table, or a table with other columns than `REGISTER_COLUMNS`;
- * - `register.row`: a row has another number of cells, an id that is not `SE-nn` or occurs
- *   twice, no clear «ja» or «nein», no ADR, or neither a date nor «geplant» in «Seit»;
+ * - `register.table`: it holds no table, a table with other columns than `REGISTER_COLUMNS`,
+ *   or a row `SE-nn` in a table without that head;
+ * - `register.row`: a row of such a table has no id `SE-nn`, another number of cells, an id
+ *   that occurs twice, no clear «ja» or «nein», no ADR, or neither a day of the calendar
+ *   (`TT.MM.JJJJ`) nor «geplant» in «Seit»;
  * - `register.kind`: a row names a kind the test does not know, so a typo cannot hide a side
  *   effect;
  * - `register.request`: a row for a request to a server lacks «ja» or the decision of the
  *   product owner («Alban, TT.MM.JJJJ»).
+ *
+ * A row marked «geplant» is entered ahead of its code and counts like any other: its kinds may
+ * arrive in the code without a change of the register.
  */
 export function registerProblems(
   markdown: string,
@@ -192,18 +229,43 @@ export function registerProblems(
     problems.push({ rule, subject, paths: [], message });
   };
 
-  const headers = lines(markdown).filter((line) => /^\|\s*Kennung\s*\|/.test(line));
-  if (headers.length === 0) {
-    report('register.table', 'register', 'The register holds no table that starts with «Kennung».');
-  }
-  for (const header of headers) {
-    if (cells(header).join(' | ') !== REGISTER_COLUMNS.join(' | ')) {
+  let tables = 0;
+  let inRegisterTable = false;
+  for (const line of lines(markdown)) {
+    if (!TABLE_LINE.test(line)) {
+      inRegisterTable = false;
+    } else if (TABLE_HEAD.test(line)) {
+      tables += 1;
+      inRegisterTable = true;
+      if (cells(line).join(' | ') !== REGISTER_COLUMNS.join(' | ')) {
+        report(
+          'register.table',
+          'register',
+          `A table has the columns «${cells(line).join(' | ')}»; expected «${REGISTER_COLUMNS.join(' | ')}».`,
+        );
+      }
+    } else if (!inRegisterTable) {
+      if (REGISTER_ROW.test(line)) {
+        // Its cells are read by their place, so they need the head that says which is which.
+        const [id = ''] = cells(line);
+        report(
+          'register.table',
+          id,
+          `${id} stands in no table with the head of the register: «${REGISTER_COLUMNS.join(' | ')}».`,
+        );
+      }
+    } else if (!REGISTER_ROW.test(line) && !isSeparator(line)) {
+      // Such a row is read by nobody: whatever it registers would not count.
+      const [first = ''] = cells(line);
       report(
-        'register.table',
-        'register',
-        `A table has the columns «${cells(header).join(' | ')}»; expected «${REGISTER_COLUMNS.join(' | ')}».`,
+        'register.row',
+        first,
+        `A row of the register starts with «${first}»: every row needs an id of the form SE-nn.`,
       );
     }
+  }
+  if (tables === 0) {
+    report('register.table', 'register', 'The register holds no table that starts with «Kennung».');
   }
 
   const known = new Set(kinds.map((kind) => kind.key));
@@ -228,8 +290,8 @@ export function registerProblems(
     if (!YES_OR_NO.test(row.leaves)) {
       reportRow('«Daten verlassen das Gerät?» must start with «ja» or «nein».');
     }
-    if (!SINCE.test(row.since)) {
-      reportRow('«Seit» must be a date TT.MM.JJJJ or «geplant».');
+    if (!isSince(row.since)) {
+      reportRow('«Seit» must be a day of the calendar, TT.MM.JJJJ, or «geplant».');
     }
     if (!ADR.test(row.decision)) {
       reportRow('«Entscheid» must name the ADR that carries the row (ADR-NNNN).');
@@ -245,7 +307,7 @@ export function registerProblems(
     }
     if (
       row.keys.some((key) => network.has(key)) &&
-      !(YES.test(row.leaves) && DECIDED_BY_OWNER.test(row.decision))
+      !(YES.test(row.leaves) && isDecidedByOwner(row.decision))
     ) {
       report(
         'register.request',
@@ -346,4 +408,51 @@ export function storageKeyProblems(
       paths,
       message: `The storage key \`${key}\` in ${paths.join(', ')} is not in the register of side effects: list it in the row of its storage.`,
     }));
+}
+
+/** What `sideEffectRegisterProblems` checks besides the kinds of the standard test. */
+export interface SideEffectCheckOptions {
+  /** The kinds to look for. Default: `SIDE_EFFECT_KINDS`. */
+  kinds?: readonly SideEffectKind[];
+  /**
+   * The storage prefixes of the editions whose code is among the sources (`sample` for keys
+   * such as `sample:last-backup`): every key under them must stand in the register. Default:
+   * none.
+   */
+  storagePrefixes?: readonly string[];
+}
+
+/**
+ * The whole standard test of side effects in one call: the shipped sources against the text of
+ * the register. It returns the problems of the register itself (`registerProblems`), of the
+ * code against it (`sideEffectProblems`) and of the storage keys (`storageKeyProblems`); a test
+ * or a guard expects `[]`.
+ *
+ * `side_effect.no_sources`: no source was given. A guard that reads nothing would pass for the
+ * wrong reason.
+ */
+export function sideEffectRegisterProblems(
+  sources: readonly SourceFile[],
+  register: string,
+  options: SideEffectCheckOptions = {},
+): SideEffectProblem[] {
+  const { kinds = SIDE_EFFECT_KINDS, storagePrefixes = [] } = options;
+  const rows = parseRegister(register);
+  const noSources: SideEffectProblem[] =
+    sources.length === 0
+      ? [
+          {
+            rule: 'side_effect.no_sources',
+            subject: 'sources',
+            paths: [],
+            message: 'No source was given: the test must read the code that ships.',
+          },
+        ]
+      : [];
+  return [
+    ...noSources,
+    ...registerProblems(register, kinds),
+    ...sideEffectProblems(occurrences(sources, kinds), rows, kinds),
+    ...storagePrefixes.flatMap((prefix) => storageKeyProblems(sources, rows, prefix)),
+  ];
 }

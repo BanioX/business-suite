@@ -132,7 +132,7 @@ describe('sideEffectGuardProblems', () => {
     const problems = sideEffectGuardProblems({ files: [], register: register(DATABASE, broken) });
     expect(problems.map(formatProblem)).toEqual([
       `${SIDE_EFFECTS_DOCUMENT}:6: SE-02: «Daten verlassen das Gerät?» must start with «ja» or «nein».`,
-      `${SIDE_EFFECTS_DOCUMENT}:6: SE-02: «Seit» must be a date TT.MM.JJJJ or «geplant».`,
+      `${SIDE_EFFECTS_DOCUMENT}:6: SE-02: «Seit» must be a day of the calendar, TT.MM.JJJJ, or «geplant».`,
     ]);
   });
 

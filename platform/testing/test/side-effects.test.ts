@@ -227,7 +227,7 @@ describe('registerProblems', () => {
     [
       'neither a date nor «geplant»',
       '| SE-01 | Datenbank | `indexedDB` | `platform/web-data` | nein | ADR-0009 | bald |',
-      'SE-01: «Seit» must be a date TT.MM.JJJJ or «geplant».',
+      'SE-01: «Seit» must be a day of the calendar, TT.MM.JJJJ, or «geplant».',
     ],
     [
       'no ADR',

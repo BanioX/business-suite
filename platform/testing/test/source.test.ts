@@ -68,6 +68,36 @@ describe('withoutComments', () => {
     expect(withoutComments(`const flags = /a/g; // why`)).toBe(`const flags = /a/g; `);
   });
 
+  it('knows the words after which a slash starts a regular expression', () => {
+    for (const word of [
+      'return',
+      'typeof',
+      'case',
+      'do',
+      'else',
+      'in',
+      'of',
+      'void',
+      'delete',
+      'throw',
+      'new',
+      'instanceof',
+      'yield',
+      'await',
+    ]) {
+      // Read as a division, the `/*` of the class would open a comment and hide `go()`.
+      expect(withoutComments(`${word} /[/*]/.test(a); go(); /* why */`), word).toBe(
+        `${word} /[/*]/.test(a); go();  `,
+      );
+    }
+    // A name that ends like such a word, or a member called like one, is a value.
+    expect(withoutComments('const half = preturn / 2; // why')).toBe('const half = preturn / 2; ');
+    expect(withoutComments('const half = range.in / 2; // why')).toBe(
+      'const half = range.in / 2; ',
+    );
+    expect(withoutComments('const half = $of / 2; // why')).toBe('const half = $of / 2; ');
+  });
+
   it('reads a division as a division', () => {
     expect(withoutComments('const half = total / 2; // why')).toBe('const half = total / 2; ');
     expect(withoutComments('const part = (a + b) / c / d; // why')).toBe(
@@ -224,6 +254,7 @@ describe('literalsOf', () => {
       ['this'],
     );
     expect(literalsOf('const re = /"x"/; const a = 1 / 2;')).toEqual([]);
+    expect(literalsOf(`return /"/.test(a) ? 'ja' : "nein";`)).toEqual(['ja', 'nein']);
   });
 
   it('copes with a text that is cut off', () => {

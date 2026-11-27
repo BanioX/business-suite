@@ -41,12 +41,14 @@ describe('catalogueTexts', () => {
     ]);
   });
 
-  it('leaves out the literals of a function that hold no letter and no digit', () => {
+  it('keeps the literals of a function that hold only a sign, so a lone «!» is found', () => {
     const catalogue = {
       list: (parts: string[]) => parts.join(', '),
       pair: (a: string, b: string) => `${a} · ${b}`,
+      shout: (name: string) => name + '!',
     };
-    expect(catalogueTexts(catalogue)).toEqual([]);
+    expect(catalogueTexts(catalogue).map((entry) => entry.text)).toEqual([', ', '{} · {}', '!']);
+    expect(textProblems(catalogue).map((problem) => problem.rule)).toEqual(['exclamation']);
   });
 
   it('never reads the code of a function: a negation and a variable break no rule', () => {

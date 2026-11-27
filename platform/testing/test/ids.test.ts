@@ -1,4 +1,3 @@
-// Origin: BanioX/Randen packages/core/src/testing/index.ts @ e0f0907 — adapted: the origin has no test of its own for the counting ids; the first test pins the ids its generator gives
 import { IdSchema, isUuidV7, uuidV7Timestamp } from '@onestrand/core';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
