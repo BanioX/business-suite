@@ -35,6 +35,7 @@ export { needsPdf, printMode, printPage, type PrintMode, type PrintOutcome } fro
 export {
   CAMERA_PROBLEMS,
   cameraAvailability,
+  cameraPermission,
   cameraFeatures,
   cameraProblemOf,
   openBackCamera,

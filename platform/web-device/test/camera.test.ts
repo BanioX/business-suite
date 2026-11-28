@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   CAMERA_PROBLEMS,
   cameraAvailability,
+  cameraPermission,
   cameraFeatures,
   cameraProblemOf,
   openBackCamera,
@@ -179,5 +180,19 @@ describe('tuning for codes', () => {
     expect(() => {
       stopStream(null);
     }).not.toThrow();
+  });
+});
+
+describe('cameraPermission', () => {
+  it('tells the state without asking, and what makes asking impossible', async () => {
+    const opening = fakeCamera(() => Promise.resolve(fakeStream()), [], 'denied');
+    expect(await cameraPermission(createFakeDevice({ camera: opening }))).toBe('denied');
+    expect(opening.asked).toEqual([]);
+    expect(
+      await cameraPermission(createFakeDevice({ camera: opening, secureContext: false })),
+    ).toBe('insecure');
+    expect(await cameraPermission(createFakeDevice({ camera: undefined }))).toBe('unsupported');
+    const broken = { ...opening, permission: () => Promise.reject(new Error('no')) };
+    expect(await cameraPermission(createFakeDevice({ camera: broken }))).toBe('unknown');
   });
 });

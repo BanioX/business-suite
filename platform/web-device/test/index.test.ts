@@ -20,6 +20,7 @@ describe('the entries of @onestrand/web-device', () => {
         'VIDEO_SIZE',
         'bundledQrDecoder',
         'cameraAvailability',
+        'cameraPermission',
         'cameraFeatures',
         'cameraProblemOf',
         'canShareFiles',

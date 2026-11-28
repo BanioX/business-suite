@@ -2,7 +2,13 @@
 import { Camera, CameraOff, ImageUp } from 'lucide-react';
 import { Button, Notice, TextField } from '@onestrand/ui';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { startCamera, stopStream, tuneForCodes, type CameraProblem } from '../camera';
+import {
+  cameraPermission,
+  startCamera,
+  stopStream,
+  tuneForCodes,
+  type CameraProblem,
+} from '../camera';
 import { createQrReader, readQrFromFile, typedCode, type QrReader } from '../qr';
 import { holdWakeLock, type TaskWakeLock } from '../screen';
 import { useDevice, useDeviceTexts } from './context';
@@ -46,6 +52,20 @@ export function QrReaderPanel({ onCode, typedLabel, typedHint }: QrReaderProps) 
   const readerOf = useCallback(() => {
     reader.current ??= createQrReader(device);
     return reader.current;
+  }, [device]);
+
+  // Before any tap: a camera that is refused already, or cannot be, says so with the ways that
+  // work. Reading the state asks nothing.
+  useEffect(() => {
+    let current = true;
+    void cameraPermission(device).then((state) => {
+      if (current && (state === 'denied' || state === 'insecure' || state === 'unsupported')) {
+        setProblem(state);
+      }
+    });
+    return () => {
+      current = false;
+    };
   }, [device]);
 
   const stop = useCallback(() => {

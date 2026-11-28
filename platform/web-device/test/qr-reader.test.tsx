@@ -148,4 +148,11 @@ describe('QrReaderPanel', () => {
     expect(await screen.findByText(/liess sich nicht öffnen/)).toBeTruthy();
     expect(stream.track.stopped).toBe(true);
   });
+
+  it('says before any tap that the camera is refused, and still opens nothing', async () => {
+    const camera = fakeCamera(() => Promise.resolve(fakeStream()), [], 'denied');
+    renderWithDevice(<QrReaderPanel onCode={vi.fn()} />, createFakeDevice({ camera }));
+    expect(await screen.findByText(/gesperrt/)).toBeTruthy();
+    expect(camera.asked).toEqual([]);
+  });
 });

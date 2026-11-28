@@ -1,5 +1,5 @@
 // Origin: BanioX/Rettich apps/web/src/features/scan/camera.ts @ 0ac1fd2 — adapted: through the port `Device`; every state of the permission as data (granted, denied, not available, no camera, insecure page) instead of two; the lens and the zoom for codes kept, the torch left out
-import type { CameraPort, Device } from './ports';
+import type { CameraPermission, CameraPort, Device } from './ports';
 import { errorName } from './share';
 
 /**
@@ -46,6 +46,26 @@ export function cameraAvailability(device: Device): CameraAvailability {
     return { available: false, problem: 'unsupported' };
   }
   return { available: true, camera: device.camera };
+}
+
+/**
+ * What can be known about the camera without asking: `insecure` or `unsupported` as above, else
+ * the state of the permission (`granted`, `denied`, `prompt`, or `unknown` where the browser does
+ * not tell). Never opens the camera and never makes the browser ask; never throws. A page shows
+ * the way that works before the tap when the camera is already refused.
+ */
+export async function cameraPermission(
+  device: Device,
+): Promise<CameraPermission | 'insecure' | 'unsupported'> {
+  const availability = cameraAvailability(device);
+  if (!availability.available) {
+    return availability.problem;
+  }
+  try {
+    return await availability.camera.permission();
+  } catch {
+    return 'unknown';
+  }
 }
 
 /** What a refusal of `getUserMedia` means for the person. */
