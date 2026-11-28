@@ -158,10 +158,11 @@ Passt zu den Grundsätzen aus Randen ([ADR-0009](adr/0009-grundsaetze-aus-randen
 | Grund der App | Silber, beleuchtet `#f4f6f9` | Nacht `#05070b` |
 | Listen, Karten, Felder | Weiss `#ffffff` | `#10141b` |
 | Flächen, die handeln oder markieren (Hauptknopf, «＋ Erfassen», abgehakt, gewählt) | helles Blau `#8dbdff`, Schrift Nachtblau `#061633` (9.3 zu 1) | Blau `#5aa2ff`, Schrift `#061633` (6.9 zu 1) |
-| Blau als Schrift (Links, «Zurück», aktiver Punkt) | `#0a5bea` (5.7 zu 1 auf Weiss, 5.3 auf Silber) | `#8dbdff` (9.5 zu 1) |
+| Blau als Schrift (Links, «Zurück», aktiver Punkt) | `#0a5bea` (5.7 zu 1 auf Weiss, 5.2 auf Silber) | `#8dbdff` (9.5 zu 1) |
+| Rand der Bedienelemente, die abgehakt oder gewählt sind (Kästchen, Schalter, gewählter Abschnitt) | `#0a5bea` (5.7 zu 1 auf Weiss) | `#8dbdff` (9.5 zu 1) |
 | Ruhige Flächen (Kennzahlen in «Heute») | Verlauf Silber `#ffffff` bis `#e6e9ee` | `#161b23` bis `#0b0f15` |
 
-Dazu: Bedeutungsfarben bleiben getrennt (Grün «in Ordnung», Bernstein «bald», Rot «falsch»; Blau heisst nie «gut» oder «schlecht»); Systemschrift wie bei Onestrand, keine fremden Schriften. Die Kontraste sind nach WCAG 2.2 gerechnet; die Kontrastprüfung von W0-03 bestätigt sie für jede Ausgabe. Angeschaut am Klickentwurf, Stand 27.11.2026. Eine andere Ausgabe (Gastro, Haus, Studio) darf ihr Blau verschieben, bleibt aber im hellen Ton von Onestrand, bis Alban anders entscheidet.
+Dazu: Bedeutungsfarben bleiben getrennt (Grün «in Ordnung», Bernstein «bald», Rot «falsch»; Blau heisst nie «gut» oder «schlecht»); Systemschrift wie bei Onestrand, keine fremden Schriften. Die Kontraste sind nach WCAG 2.2 gerechnet; die Kontrastprüfung von W0-03 bestätigt sie für jede Ausgabe. Nachtrag 28.11.2026 (W0-03 Schritt 1): Das helle Blau `#8dbdff` hat auf Weiss nur 1.9 zu 1 und genügt allein nicht, wo es einen Zustand anzeigt (WCAG 1.4.11 verlangt 3 zu 1); darum bekommen abgehakte und gewählte Bedienelemente einen Rand in der Rolle `accent-edge`. Die Zahl «5.3 auf Silber» war gerundet, richtig ist 5.2 zu 1. Angeschaut am Klickentwurf, Stand 27.11.2026. Eine andere Ausgabe (Gastro, Haus, Studio) darf ihr Blau verschieben, bleibt aber im hellen Ton von Onestrand, bis Alban anders entscheidet.
 
 ### S-28 Zeitstempeln gehört zum ersten Pilot
 
