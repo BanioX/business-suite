@@ -1,0 +1,3 @@
+/* The styles of the kit, and the classes of the gallery itself. */
+@import '../src/kit.css';
+@source './';

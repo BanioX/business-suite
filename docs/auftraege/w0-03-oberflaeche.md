@@ -55,4 +55,24 @@ Bilder, was gebaut ist, was für die Branchen bereitsteht (Steckplätze), Schuld
 
 ## Stand
 
-offen
+Schritt 1 (`@onestrand/ui`, P-08) gebaut, 28.11.2026; Schritte 2 bis 7 offen. Geerntet aus `BanioX/Randen` @ `e0f0907` (`apps/web/src/ui`, `index.css`, `test-setup.ts`, `scripts/check-contrast.mjs`), jede Datei mit Herkunftsvermerk ([`../herkunft.md`](../herkunft.md)).
+
+**Schritt 1, `@onestrand/ui`:** Werkzeuge für React-Pakete (React 19, jsdom, Testing Library, Regeln der Hooks; Tailwind 4 im Kit, Vite nur für die Galerie), das Kit mit neutralen Tokens, Thema als Parameter der Ausgabe, Kontrastprüfung je Thema, Kit-Texte in de-CH, Galerie mit Vorschaubildern. Beschreibung: [`platform/ui/api.md`](../../platform/ui/api.md).
+
+Entscheide (klein, selbst getroffen):
+
+1. **Schicht «React»:** Das ganze `src/` eines React-Pakets ist React (`REACT_PACKAGES` in `eslint.config.js`). Es gilt alles, was für ein reines Paket gilt, mit drei Unterschieden: `react` und `lucide-react` sind erlaubt, die Globalen `window` und `document` (Fokus, Zeitgeber, modaler Dialog) und keine weiteren, und die Regeln der Hooks. `react-dom` bleibt zu: Die App einhängen tut die Ausgabe. Ein reines Paket importiert weiterhin kein React (neu auch `lucide-react` nicht). Belegt in `tools/test/lint-boundaries.test.ts`.
+2. **Schichten des Kits:** `ui` importiert nur `core` (Geld, Datum, Zahlen) und `i18n` (der eigene Katalog in anderen Sprachen über `resolveCatalogue`). Kein Speicher, keine Rechte, kein Register, kein Gerät: Was eine Seite davon braucht, kommt über die Hooks der Shell. Heute, die Währung, die Sprache und der Link des Routers kommen über `UiProvider`; das Kit liest nie die Uhr und kennt keinen Router.
+3. **Tailwind wie in der Quelle**, aber ohne Palette: `kit.css` schaltet die Farben von Tailwind aus und bildet die 21 Tokens auf Variablen ab (`@theme inline`). Eine Klasse mit fester Farbe zeichnet nichts, und ein Test findet sie. Kein Plugin für React: Vite übersetzt JSX selbst (L-S86).
+4. **Tokens** nach Rollen, nicht nach Farben: `ground`, `app`, `surface`, `surface-muted`, `calm-start`, `calm-end`, `fg`, `muted`, `line`, `line-strong`, `accent`, `on-accent`, `accent-strong`, `accent-edge`, `accent-soft`, `ok`, `warn`, `bad` mit `-soft`. `accent-edge` ist neu gegenüber S-27: Der helle Akzent hebt sich als angehakter Kasten, gewähltes Segment oder eingeschalteter Schalter nur mit 1.9 zu 1 von der Karte ab; ein Rand in `accent-edge` gibt die 3 zu 1 von WCAG 1.4.11 (L-S88).
+5. **Kontrastprüfung als Wächter**, kein eigener Schritt von `pnpm check`: `tools/guards/contrast.guard.test.ts` läuft in `pnpm guards` und allein mit `pnpm contrast`. Die Paare nennt das Kit (`CONTRAST_PAIRS`), die Messung macht `tools/src/contrast.ts` (WCAG 2.2, auf zwei Stellen abgerundet). Gemessen werden `neutralTheme` und das Thema jeder Ausgabe in `editions/<id>/theme.ts` (TD-127).
+6. **Keine feste Farbe, kein Text, keine Nebenwirkung in einer Komponente**, je mit einem Test im Paket (`test/rules.test.tsx`), der an einem falschen Beispiel rot wird; dazu ein Wächter für die Farbwörter einer Marke unter `platform/` (`tools/src/words/brand-tones.ts`).
+7. **Ausgelassen:** die Bausteine der Gastronomie, alles mit Speicher oder Register, und vorerst Suchfeld, Tabelle, Diagramme, Auswahl mit Suche, Foto (TD-125). `ConfirmDialog` zeigt die gefährliche Tat als Umriss (TD-132).
+
+Prüfung: siehe den Bericht von Schritt 1; Schulden TD-125 bis TD-133, Lektionen L-S86 bis L-S89.
+
+Was die folgenden Schritte wissen müssen:
+
+- **Shell (Schritt 2):** `UiProvider` einmal oben einhängen (`today` aus der Uhr der App, `currency` des Betriebs, `link` des Routers, `translation` der Sprache der Person), dazu `ToastProvider`. Das Zahnrad oben rechts ist `PageHeader corner={<IconButton icon={Settings} label=… />}`. Die Wahl hell oder dunkel setzt die Shell als `data-scheme` auf `<html>` (`SCHEME_ATTRIBUTE`). Braucht die Shell `react-dom` (Portal) oder weitere Globale, ist das eine Zeile in `REACT_PACKAGES` und im Test der Grenzen, mit Begründung. Die Shell als React-Paket bekommt ihre Zeile in `PLATFORM_LAYERS` und `REACT_PACKAGES`.
+- **Ausgabe (Schritt 7):** Thema in `editions/field/theme.ts` mit `defineTheme` (die Werte des Beispiels in `platform/ui/test/example-theme.ts` und `api.md`); beim Bauen `themeCss(theme)` in eine CSS-Datei schreiben (TD-128), dann `@import '@onestrand/ui/kit.css'` und `@source` für Shell und Branchen. Playwright mit axe und `pnpm preview:shots` kommen dort dazu (TD-126); das Skript der Vorschaubilder von Schritt 1 misst schon seitliches Scrollen, Felder ab 16 px und Ziele ab 44 px. `pnpm --filter @onestrand/ui gallery` zeigt das Kit.
+- **Branchen (`industries/<id>/web`):** Seiten nehmen das Kit über `@onestrand/ui` und schreiben nur Tokens (`bg-surface`, `text-muted`), nie eine Farbe; ihre Texte stehen in ihrem Katalog.

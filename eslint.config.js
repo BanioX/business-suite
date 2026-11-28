@@ -1,5 +1,6 @@
 // @ts-check
 import js from '@eslint/js';
+import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
@@ -21,6 +22,9 @@ const PLATFORM_LAYERS = {
   i18n: [],
   manifest: ['core', 'contract', 'storage', 'features', 'access', 'business', 'i18n'],
   'web-data': ['core', 'contract', 'storage', 'business', 'manifest'],
+  // The kit draws and speaks: numbers and dates of the core, its catalogue through i18n. It knows
+  // no data, no rights and no device; those reach a page through the hooks of the shell.
+  ui: ['core', 'i18n'],
 };
 
 /**
@@ -37,6 +41,23 @@ const PLATFORM_LAYERS = {
 const BROWSER_PACKAGES = {
   'web-data': ['indexedDB', 'localStorage', 'navigator', 'crypto'],
 };
+
+/**
+ * The packages of the layer «React» (docs/architektur.md, 3.2): their whole `src/` is React. Each
+ * is held to the rules of a pure package with three differences: it imports React and its icons
+ * (`REACT_IMPORTS`), it reaches the globals named for it and no others, and the rules of the
+ * hooks of React apply. `window` and `document` are for focus, timers and the modal dialog; no
+ * storage, no network, no crypto: the kit has no side effects (its own test proves it), and what
+ * leaves the screen goes through the shell and the packages of the layer «Browser». A new React
+ * package is a decision made in three places: here, in tools/test/lint-boundaries.test.ts, and in
+ * the purity check of its `tsconfig.src.json` (DOM and JSX, no Node).
+ */
+const REACT_PACKAGES = {
+  ui: ['window', 'document'],
+};
+
+/** What a React package imports that a pure one never does. `react-dom` stays closed: mounting the app is the edition's job. */
+const REACT_IMPORTS = ['react', 'lucide-react'];
 
 /** The globals the pure part of a package never reaches: the browser's and Node's. */
 const PURE_RESTRICTED_GLOBALS = [
@@ -58,6 +79,7 @@ const NOT_PURE = [
   { name: 'react-dom', message: 'The pure part of a package knows no UI (architecture 3.2).' },
   { name: 'dexie', message: 'Storage is reached through ports only (architecture 3.2, rule 1).' },
   { name: 'dexie-react-hooks', message: 'Storage is reached through ports only.' },
+  { name: 'lucide-react', message: 'The pure part of a package knows no UI (architecture 3.2).' },
 ];
 
 /**
@@ -112,11 +134,16 @@ const STATIC_IMPORTS_ONLY = [
 
 /** Import rules of one platform package, for the files given. */
 function platformBoundaries(name, allowed, { pure }) {
+  // A React package is pure in everything but React itself.
+  const notPure =
+    name in REACT_PACKAGES
+      ? NOT_PURE.filter((entry) => !REACT_IMPORTS.includes(entry.name))
+      : NOT_PURE;
   return {
     'no-restricted-imports': [
       'error',
       {
-        paths: pure ? NOT_PURE : [],
+        paths: pure ? notPure : [],
         patterns: [
           {
             // Every platform package except the layers below this one. Its own name is
@@ -142,7 +169,7 @@ function platformBoundaries(name, allowed, { pure }) {
                 },
                 {
                   // The same packages through a subpath, such as `react-dom/client`.
-                  group: NOT_PURE.map((entry) => `${entry.name}/**`),
+                  group: notPure.map((entry) => `${entry.name}/**`),
                   message:
                     'The pure part of a package knows no UI and no database (architecture 3.2).',
                 },
@@ -321,8 +348,8 @@ export default tseslint.config(
       'no-restricted-globals': ['error', ...PURE_RESTRICTED_GLOBALS],
     },
   },
-  // The packages of the layer «Browser» reach the globals named for them, and no others.
-  ...Object.entries(BROWSER_PACKAGES).map(([name, reach]) => ({
+  // The packages of the layers «Browser» and «React» reach the globals named for them, and no others.
+  ...Object.entries({ ...BROWSER_PACKAGES, ...REACT_PACKAGES }).map(([name, reach]) => ({
     files: [pureFiles(name)],
     rules: {
       'no-restricted-globals': [
@@ -419,5 +446,11 @@ export default tseslint.config(
     // and reach no other industry and no edition, in any form.
     files: [industryCoreFiles('test')],
     rules: industryBoundaries({ pure: false }),
+  },
+  {
+    // The rules of the hooks of React, wherever a React package keeps code: its sources, its
+    // tests and its gallery.
+    files: Object.keys(REACT_PACKAGES).map((name) => `platform/${name}/**/${CODE}`),
+    extends: [reactHooks.configs.flat.recommended],
   },
 );

@@ -173,6 +173,7 @@ describe('the probe', () => {
     source('core'),
     source('ledger'),
     source('unlisted'),
+    source('ui', 'boundary-probe.tsx'),
     test('core'),
     CONFIG,
     ELSEWHERE,
@@ -778,5 +779,156 @@ describe('the tests of a package', () => {
   it('may import the platform packages by name', async () => {
     await expectAccepted(test('ledger'), importing('@onestrand/ledger'));
     await expectAccepted(test('ledger'), importing('@onestrand/testing'));
+  });
+});
+
+describe('the packages of the layer «React»', () => {
+  // `ui` is the first: its whole `src/` is React (the kit, P-08). It is held to the rules of a pure
+  // package with three differences, named in `REACT_PACKAGES` of `eslint.config.js`: it imports
+  // React and its icons, it reaches `window` and `document`, and the rules of the hooks apply. The
+  // lists are written down here a second time on purpose: opening an import or a global, or
+  // making a second package a React package, is a decision made in two places.
+  const REACT = 'ui';
+  const file = (name = 'boundary-probe.tsx') => source(REACT, name);
+  const REACHES = ['window', 'document'];
+  const CLOSED = [
+    'localStorage',
+    'sessionStorage',
+    'indexedDB',
+    'fetch',
+    'navigator',
+    'process',
+    'Buffer',
+    'crypto',
+  ];
+  const UI_LAYERS = ['core', 'i18n'];
+  const CLOSED_LAYERS = [
+    'contract',
+    'storage',
+    'ledger',
+    'testing',
+    'features',
+    'access',
+    'business',
+    'manifest',
+    'web-data',
+  ];
+  const PURE = [...PACKAGES, 'features', 'access', 'business', 'i18n', 'manifest', 'unlisted'];
+
+  it.each(['react', 'react/jsx-runtime', 'lucide-react'])(
+    'lets %s through in ui, in every file of its src',
+    async (specifier) => {
+      await expectAccepted(file(), importing(specifier));
+      await expectAccepted(file('deep/probe.ts'), importing(specifier));
+    },
+  );
+
+  it.each(['react', 'react/jsx-runtime', 'react-dom', 'lucide-react'])(
+    'still refuses %s in a pure package and in the layer «Browser»',
+    async (specifier) => {
+      for (const pure of [...PURE, 'web-data']) {
+        await expectNoImport(source(pure, 'widget.tsx'), specifier);
+      }
+      await expectNoImport(industrySource('muster', 'widget.tsx'), specifier);
+    },
+  );
+
+  it.each([
+    'react-dom',
+    'react-dom/client',
+    'dexie',
+    'dexie-react-hooks',
+    'node:fs',
+    'node:crypto',
+  ])('refuses %s in ui: no mounting, no database, no Node', async (specifier) => {
+    await expectNoImport(file(), specifier);
+  });
+
+  it.each(UI_LAYERS)('may import %s', async (layer) => {
+    await expectAccepted(file(), importing(`@onestrand/${layer}`));
+  });
+
+  it.each([...CLOSED_LAYERS, REACT])(
+    'may not import %s: no data, no rights, no device',
+    async (layer) => {
+      await expectNoImport(file(), `@onestrand/${layer}`);
+    },
+  );
+
+  it('covers the case of the order: the kit reaches no storage', async () => {
+    await expectNoImport(file(), '@onestrand/storage');
+    await expectNoImport(file(), '@onestrand/web-data');
+  });
+
+  it('is imported by no package of the lower layers', async () => {
+    for (const lower of [...PURE, 'web-data']) {
+      await expectNoImport(source(lower), `@onestrand/${REACT}`);
+    }
+  });
+
+  it.each(REACHES)('lets the global %s through in ui', async (name) => {
+    await expectAccepted(file(), reading(name));
+  });
+
+  it.each(CLOSED)('still refuses the global %s in ui', async (name) => {
+    await expectRefused(file(), reading(name), 'no-restricted-globals', name);
+  });
+
+  it.each(REACHES)('still refuses the global %s in a pure package', async (name) => {
+    for (const pure of PURE) {
+      await expectRefused(source(pure), reading(name), 'no-restricted-globals', name);
+    }
+  });
+
+  it('lets through the globals of the list and no others, by the rule of the real config', async () => {
+    const config = (await real.calculateConfigForFile(join(REPO_ROOT, file()))) as {
+      rules?: Record<string, unknown[]>;
+    };
+    const [severity, ...refused] = config.rules?.['no-restricted-globals'] ?? [];
+    expect(severity).toBe(2);
+    expect([...refused].sort()).toEqual([...CLOSED].sort());
+  });
+
+  it('refuses an industry, an edition, a file inside a package and import() in any form', async () => {
+    await expectNoImport(file(), '../../../industries/facility/core/index');
+    await expectNoImport(file(), '../../../editions/field/edition');
+    await expectNoImport(file(), '@onestrand-industry/muster');
+    await expectNoImport(file(), '@onestrand/core/src/money');
+    await expectNoImport(file(), '@onestrand/i18n/web');
+    await expectRefusedBy(file(), loading('./Button'), DYNAMIC);
+    await expectRefusedBy(file(), typeOf('react'), TYPE_FORM);
+    await expectRefusedBy(file(), requiring('react'), REQUIRE);
+  });
+
+  it('holds the hooks of React to their rules', async () => {
+    const conditional =
+      "import { useState } from 'react';\n\nexport function Probe({ on }: { on: boolean }) {\n  if (on) {\n    useState(0);\n  }\n  return null;\n}\n";
+    const findings = await lint(file(), conditional);
+    expect(findings.map((finding) => finding.rule)).toContain('react-hooks/rules-of-hooks');
+  });
+
+  it('leaves the tests of ui their tools: Node, the testing library, the test kit', async () => {
+    const probe = 'platform/ui/test/boundary-probe.test.tsx';
+    for (const specifier of [
+      'node:fs',
+      '@testing-library/react',
+      '@onestrand/testing',
+      '@onestrand/ui',
+      '../src/index',
+    ]) {
+      await expectAccepted(probe, importing(specifier));
+    }
+    await expectNoImport(probe, '../../storage/src/index');
+  });
+
+  it('keeps the boundary rules of the real config for ui, with and without types', async () => {
+    const path = join(REPO_ROOT, file());
+    const [before, after] = (await Promise.all([
+      real.calculateConfigForFile(path),
+      linter.calculateConfigForFile(path),
+    ])) as { rules?: Record<string, unknown> }[];
+    for (const rule of BOUNDARY_RULES) {
+      expect(after?.rules?.[rule], rule).toEqual(before?.rules?.[rule]);
+    }
   });
 });

@@ -713,6 +713,21 @@ describe('the real workspace', () => {
     expect(affected.map(({ name }) => name)).toContain('@onestrand-industry/muster');
   });
 
+  it('narrows a change of the kit to the kit, with its own Vitest project', () => {
+    // The kit (W0-03) is the first React package: jsdom and its own project, `ui`.
+    const plan = planCheck({ changedPaths: ['platform/ui/src/Button.tsx'], packages: workspace });
+    expect(plan.scope).toBe('packages');
+    expect(plan.packages).toEqual(['@onestrand/ui']);
+    const test = plan.steps.find((step) => step.step === 'test:coverage');
+    expect(test).toMatchObject({ action: 'command' });
+    expect(test?.action === 'command' ? test.args : []).toEqual(
+      expect.arrayContaining(['--project', 'ui', '--coverage.include=src/**']),
+    );
+    // A change below the kit checks the kit too.
+    const below = withDependents(new Set(['@onestrand/i18n']), workspace);
+    expect(below.map(({ name }) => name)).toContain('@onestrand/ui');
+  });
+
   it('puts the tools on top of the platform and the platform on top of nothing outside', () => {
     const affected = withDependents(new Set(['@onestrand/core']), workspace);
     expect(affected.map(({ name }) => name)).toContain('@onestrand/tooling');
