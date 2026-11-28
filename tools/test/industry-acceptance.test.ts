@@ -24,7 +24,10 @@ import { listFiles, REPO_ROOT } from '../src/repo-files.ts';
 // checkout: `pnpm install` rewrites the lockfile, and other agents and checks read this checkout
 // at the same time (a `probe` here would turn their name guard red). The copy is installed from
 // the store of pnpm without the network (`--offline`), so it needs the packages a `pnpm install`
-// of this checkout already fetched. At the end the copy is removed, and the test holds that this
+// of this checkout already fetched. The second install, which links the new industry, must
+// resolve its new importer: on CI pnpm turns the lockfile frozen by itself and has no cache of
+// the registry's metadata after a frozen install, so it runs with `--no-frozen-lockfile` and
+// `--prefer-offline` (the store first, the registry only for what the cache lacks). At the end the copy is removed, and the test holds that this
 // checkout is exactly as it was: lockfile, register, workspace file, root package and the list of
 // industries.
 
@@ -126,7 +129,7 @@ describe('pnpm industry:new probe, then pnpm check:industry probe, in a copy of 
     const install = run(copy, ['install', '--offline', '--frozen-lockfile']);
     expect(install.code, install.output).toBe(0);
     made = run(copy, ['industry:new', 'probe']);
-    const link = run(copy, ['install', '--offline']);
+    const link = run(copy, ['install', '--prefer-offline', '--no-frozen-lockfile']);
     expect(link.code, link.output).toBe(0);
     green = run(copy, ['check:industry', 'probe']);
   }, 240_000);

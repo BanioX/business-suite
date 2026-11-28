@@ -135,14 +135,21 @@ describe('why the transaction is not one of the database', () => {
     });
     const transaction = db.transaction('events', 'readwrite');
     const events = transaction.objectStore('events');
+    const ended = new Promise((resolve) => {
+      transaction.oncomplete = resolve;
+    });
     await new Promise((resolve) => {
       const request = events.count();
       request.onsuccess = () => {
         resolve(request.result);
       };
     });
-    // What a ledger does between reading the last entry and writing the next one.
+    // What a ledger does between reading the last entry and writing the next one. When the
+    // checksum resolves depends on the WebCrypto of the runtime, so the test does not race it:
+    // it waits until the database has ended the transaction by itself, with the write still to
+    // come (if the database waited for the ledger, this would never resolve and the test fail).
     await hasher.sha256(bytesOf('the next entry'));
+    await ended;
     expect(() => events.add({ id: 'x', businessId: 'y' })).toThrow(
       expect.objectContaining({ name: 'TransactionInactiveError' }) as Error,
     );
