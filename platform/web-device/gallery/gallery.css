@@ -1,0 +1,4 @@
+/* The styles of the kit, the classes of the parts of the device, and those of the gallery itself. */
+@import '@onestrand/ui/kit.css';
+@source '../src';
+@source './';

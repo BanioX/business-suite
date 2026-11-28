@@ -59,6 +59,7 @@ pnpm ownership                  # nur Pfad-Eigentum; OWNERSHIP_BASE=<ref> setzt 
 pnpm names                      # nur das Namensregister
 pnpm contrast                   # nur der Kontrast jedes Themas (Kit und Ausgaben), mit jedem Paar
 pnpm --filter @onestrand/ui gallery  # Galerie des UI-Kits im Beispiel-Thema (nur zur Entwicklung)
+pnpm --filter @onestrand/web-device gallery  # Galerie des Geräts (Drucken, Foto, QR, Unterschrift; nur zur Entwicklung)
 pnpm industry:new <id>          # neue Branche nach dem Muster von muster; Namen als Vorschlag in industries/<id>/NAMES.md
 pnpm check:industry <id>        # alles, was eine Branche vor dem Landen besteht, mit exit= je Schritt und ALL=; Exit 2 = konnte nicht starten
 node tools/provenance.mjs       # docs/herkunft.md aus den Herkunftsvermerken neu schreiben

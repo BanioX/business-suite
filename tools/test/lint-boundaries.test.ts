@@ -932,3 +932,156 @@ describe('the packages of the layer «React»', () => {
     }
   });
 });
+
+describe('a package of the layer «Browser» with a React part', () => {
+  // `web-device` is the first (P-10): its `src/` is a browser package that builds the port of the
+  // device from the globals of the page, and its `src/web/` is the React part, published as
+  // `@onestrand/web-device/web`. The lists are written down here a second time on purpose
+  // (`PLATFORM_LAYERS`, `BROWSER_PACKAGES` and `REACT_PARTS` of `eslint.config.js`): opening a
+  // layer, a global or a React part is a decision made in two places.
+  const NAME = 'web-device';
+  const logic = (file = 'boundary-probe.ts') => source(NAME, file);
+  const part = (file = 'boundary-probe.tsx') => source(NAME, `web/${file}`);
+  const LOGIC_REACHES = ['window', 'document', 'navigator', 'crypto'];
+  const LOGIC_CLOSED = [
+    'localStorage',
+    'sessionStorage',
+    'indexedDB',
+    'fetch',
+    'process',
+    'Buffer',
+  ];
+  const LOGIC_LAYERS = ['core', 'storage'];
+  const PART_REACHES = ['window', 'document'];
+  const PART_CLOSED = [
+    'localStorage',
+    'sessionStorage',
+    'indexedDB',
+    'fetch',
+    'navigator',
+    'process',
+    'Buffer',
+    'crypto',
+  ];
+  const PART_LAYERS = ['core', 'i18n', 'storage', 'ui'];
+  const NEVER = [
+    'contract',
+    'ledger',
+    'testing',
+    'features',
+    'access',
+    'business',
+    'manifest',
+    'web-data',
+  ];
+
+  it.each(LOGIC_REACHES)('lets %s through in the logic', async (name) => {
+    await expectAccepted(logic(), reading(name));
+  });
+
+  it.each(LOGIC_CLOSED)('still refuses the global %s in the logic', async (name) => {
+    await expectRefused(logic(), reading(name), 'no-restricted-globals', name);
+  });
+
+  it.each(PART_CLOSED)('refuses the global %s in the React part', async (name) => {
+    await expectRefused(part(), reading(name), 'no-restricted-globals', name);
+  });
+
+  it.each(PART_REACHES)('lets %s through in the React part', async (name) => {
+    await expectAccepted(part(), reading(name));
+  });
+
+  it('lets through exactly the globals of the lists, by the rule of the real config', async () => {
+    for (const [file, closed] of [
+      [logic(), LOGIC_CLOSED],
+      [part(), PART_CLOSED],
+    ] as const) {
+      const config = (await real.calculateConfigForFile(join(REPO_ROOT, file))) as {
+        rules?: Record<string, unknown[]>;
+      };
+      const [severity, ...refused] = config.rules?.['no-restricted-globals'] ?? [];
+      expect(severity).toBe(2);
+      expect([...refused].sort()).toEqual([...closed].sort());
+    }
+  });
+
+  it.each(['react', 'react/jsx-runtime', 'lucide-react', 'react-dom', 'dexie', 'node:fs'])(
+    'refuses %s in the logic: it runs without React',
+    async (specifier) => {
+      await expectNoImport(logic(), specifier);
+      await expectNoImport(logic('deep/probe.ts'), specifier);
+    },
+  );
+
+  it('refuses the React part in the logic, by relative path and by name', async () => {
+    await expectNoImport(logic(), './web/PrintButton');
+    await expectNoImport(logic(), './web');
+    await expectNoImport(logic('deep/probe.ts'), '../web/index');
+    await expectNoImport(logic(), '@onestrand/web-device/web');
+    await expectNoImport(logic(), '@onestrand/ui');
+    await expectAccepted(logic(), importing('./webcam'));
+  });
+
+  it.each(['react', 'react/jsx-runtime', 'lucide-react'])(
+    'lets %s through in the React part',
+    async (specifier) => {
+      await expectAccepted(part(), importing(specifier));
+      await expectAccepted(part('deep/probe.tsx'), importing(specifier));
+    },
+  );
+
+  it.each(['react-dom', 'react-dom/client', 'dexie', 'node:fs'])(
+    'refuses %s in the React part: no mounting, no database, no Node',
+    async (specifier) => {
+      await expectNoImport(part(), specifier);
+    },
+  );
+
+  it.each(LOGIC_LAYERS)('lets the logic import %s', async (layer) => {
+    await expectAccepted(logic(), importing(`@onestrand/${layer}`));
+  });
+
+  it.each(PART_LAYERS)('lets the React part import %s', async (layer) => {
+    await expectAccepted(part(), importing(`@onestrand/${layer}`));
+  });
+
+  it.each([...NEVER, NAME])('refuses %s in both parts', async (layer) => {
+    await expectNoImport(logic(), `@onestrand/${layer}`);
+    await expectNoImport(part(), `@onestrand/${layer}`);
+  });
+
+  it('lets the React part import the logic of its package by relative path, and nothing outside it', async () => {
+    await expectAccepted(part(), importing('../share'));
+    await expectAccepted(part(), importing('./context'));
+    await expectNoImport(part(), '../../../storage/src/index');
+    await expectNoImport(part(), '@onestrand/ui/src/Button');
+    await expectRefusedBy(part(), loading('./PrintButton'), DYNAMIC);
+    await expectRefusedBy(part(), typeOf('react'), TYPE_FORM);
+  });
+
+  it('holds the React part to the rules of the hooks', async () => {
+    const conditional =
+      "import { useState } from 'react';\n\nexport function Probe({ on }: { on: boolean }) {\n  if (on) {\n    useState(0);\n  }\n  return null;\n}\n";
+    const findings = await lint(part(), conditional);
+    expect(findings.map((finding) => finding.rule)).toContain('react-hooks/rules-of-hooks');
+  });
+
+  it('is imported by no package below it, and the kit stays below it', async () => {
+    for (const lower of [...PACKAGES, 'manifest', 'business', 'web-data', 'ui']) {
+      await expectNoImport(source(lower), `@onestrand/${NAME}`);
+    }
+  });
+
+  it('keeps the boundary rules of the real config for both parts, with and without types', async () => {
+    for (const file of [logic(), part()]) {
+      const path = join(REPO_ROOT, file);
+      const [before, after] = (await Promise.all([
+        real.calculateConfigForFile(path),
+        linter.calculateConfigForFile(path),
+      ])) as { rules?: Record<string, unknown> }[];
+      for (const rule of BOUNDARY_RULES) {
+        expect(after?.rules?.[rule], rule).toEqual(before?.rules?.[rule]);
+      }
+    }
+  });
+});

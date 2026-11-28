@@ -25,6 +25,9 @@ const PLATFORM_LAYERS = {
   // The kit draws and speaks: numbers and dates of the core, its catalogue through i18n. It knows
   // no data, no rights and no device; those reach a page through the hooks of the shell.
   ui: ['core', 'i18n'],
+  // The device: ports and the logic over the browser in `src/`, the checksum of a signature
+  // through the storage. Its React part (`src/web/`) has a line of its own in REACT_PARTS.
+  'web-device': ['core', 'storage'],
 };
 
 /**
@@ -40,6 +43,9 @@ const PLATFORM_LAYERS = {
  */
 const BROWSER_PACKAGES = {
   'web-data': ['indexedDB', 'localStorage', 'navigator', 'crypto'],
+  // Share, print, download, camera, pictures, wake lock, badge, clipboard: all built in one file
+  // (`createBrowserDevice`) and handed to the rest of the package as the port `Device`.
+  'web-device': ['window', 'document', 'navigator', 'crypto'],
 };
 
 /**
@@ -55,6 +61,24 @@ const BROWSER_PACKAGES = {
 const REACT_PACKAGES = {
   ui: ['window', 'document'],
 };
+
+/**
+ * The React parts of packages of the layer «Browser»: `src/web/`, published as
+ * `@onestrand/<name>/web`. The rest of `src/` stays a browser package, held to its rules, and
+ * imports nothing from `src/web/`, so the logic runs and is tested without React. The React part
+ * is held to the rules of a React package with its own layers and globals: it imports the logic of
+ * its package by relative path, the kit (`ui`) and the packages named here. A new React part is a
+ * decision made in three places: here, in tools/test/lint-boundaries.test.ts, and in the purity
+ * check of the package's `tsconfig.src.json` (DOM and JSX, no Node).
+ */
+const REACT_PARTS = {
+  'web-device': { layers: ['core', 'i18n', 'storage', 'ui'], reach: ['window', 'document'] },
+};
+
+/** The React part of a package: every file of code under its `src/web/`. */
+function reactPartFiles(name) {
+  return `platform/${name}/src/web/**/${CODE}`;
+}
 
 /** What a React package imports that a pure one never does. `react-dom` stays closed: mounting the app is the edition's job. */
 const REACT_IMPORTS = ['react', 'lucide-react'];
@@ -132,13 +156,15 @@ const STATIC_IMPORTS_ONLY = [
   },
 ];
 
-/** Import rules of one platform package, for the files given. */
-function platformBoundaries(name, allowed, { pure }) {
+/**
+ * Import rules of one platform package, for the files given. `react` opens React and its icons
+ * (a React package, or the React part of a package); `extra` adds patterns of its own.
+ */
+function platformBoundaries(name, allowed, { pure, react = name in REACT_PACKAGES, extra = [] }) {
   // A React package is pure in everything but React itself.
-  const notPure =
-    name in REACT_PACKAGES
-      ? NOT_PURE.filter((entry) => !REACT_IMPORTS.includes(entry.name))
-      : NOT_PURE;
+  const notPure = react
+    ? NOT_PURE.filter((entry) => !REACT_IMPORTS.includes(entry.name))
+    : NOT_PURE;
   return {
     'no-restricted-imports': [
       'error',
@@ -161,6 +187,7 @@ function platformBoundaries(name, allowed, { pure }) {
             regex: '^(\\.\\./)+(.*/)?(platform|tools|src|test|node_modules)(/|$)',
             message: 'Stay inside the package: other packages are imported by their name.',
           },
+          ...extra,
           ...(pure
             ? [
                 {
@@ -375,9 +402,33 @@ export default tseslint.config(
   ...Object.entries(PLATFORM_LAYERS).flatMap(([name, allowed]) => [
     {
       files: [pureFiles(name)],
-      rules: platformBoundaries(name, allowed, { pure: true }),
+      rules: platformBoundaries(name, allowed, {
+        pure: true,
+        // The part of a package beside its React part never reaches into it.
+        extra:
+          name in REACT_PARTS
+            ? [
+                {
+                  regex: '^\\.{1,2}/(.*/)?web(/|$)',
+                  message:
+                    'The logic of a package imports no React part, so it runs without React (architecture 3.2).',
+                },
+              ]
+            : [],
+      }),
     },
   ]),
+  // The React part of a package of the layer «Browser»: its own layers, React, and its globals.
+  ...Object.entries(REACT_PARTS).map(([name, { layers, reach }]) => ({
+    files: [reactPartFiles(name)],
+    rules: {
+      ...platformBoundaries(name, layers, { pure: true, react: true }),
+      'no-restricted-globals': [
+        'error',
+        ...PURE_RESTRICTED_GLOBALS.filter((global) => !reach.includes(global)),
+      ],
+    },
+  })),
   {
     // A platform package without a line in PLATFORM_LAYERS imports no other platform package.
     files: [pureFiles('*')],
@@ -450,7 +501,9 @@ export default tseslint.config(
   {
     // The rules of the hooks of React, wherever a React package keeps code: its sources, its
     // tests and its gallery.
-    files: Object.keys(REACT_PACKAGES).map((name) => `platform/${name}/**/${CODE}`),
+    files: [...Object.keys(REACT_PACKAGES), ...Object.keys(REACT_PARTS)].map(
+      (name) => `platform/${name}/**/${CODE}`,
+    ),
     extends: [reactHooks.configs.flat.recommended],
   },
 );

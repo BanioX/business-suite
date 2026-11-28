@@ -2,7 +2,9 @@ import {
   occurrences,
   parseRegister,
   registerProblems,
+  SIDE_EFFECT_KINDS,
   sideEffectProblems,
+  type SideEffectKind,
   type SourceFile,
 } from '@onestrand/testing';
 import { linesOf, type Problem, type RepoFile } from './repo-files.ts';
@@ -20,6 +22,19 @@ import { linesOf, type Problem, type RepoFile } from './repo-files.ts';
  * What it does not check yet: the storage keys of an edition (`storageKeyProblems`). They need
  * the prefix of each edition, and there is no edition yet.
  */
+
+/**
+ * The kinds this repository looks for: those of the standard test, and two functions of the
+ * device that came with `@onestrand/web-device` (W0-03, step 3): keeping the screen on and the
+ * number on the app icon. They belong in `SIDE_EFFECT_KINDS` of `@onestrand/testing`, which this
+ * order may not write (debt in docs/schulden.md); until they are there, the guard and the
+ * conformity of an industry use this list.
+ */
+export const SUITE_SIDE_EFFECT_KINDS: readonly SideEffectKind[] = Object.freeze([
+  ...SIDE_EFFECT_KINDS,
+  { key: 'wakeLock', pattern: /\bwakeLock\b/ },
+  { key: 'setAppBadge', pattern: /\b(?:setAppBadge|clearAppBadge)\b/ },
+]);
 
 /** The register, from the root of the repository. */
 export const SIDE_EFFECTS_DOCUMENT = 'docs/nebenwirkungen.md';
@@ -93,16 +108,18 @@ export function sideEffectGuardProblems(input: {
       },
     ];
   }
-  const inRegister = registerProblems(register).map((problem) => ({
+  const inRegister = registerProblems(register, SUITE_SIDE_EFFECT_KINDS).map((problem) => ({
     path: SIDE_EFFECTS_DOCUMENT,
     line: lineOfRow(register, problem.subject),
     message: problem.message,
   }));
-  const found = occurrences(shippedSources(input.files));
-  const inCode = sideEffectProblems(found, parseRegister(register)).map((problem) => ({
-    path: problem.paths[0] ?? SIDE_EFFECTS_DOCUMENT,
-    line: 0,
-    message: problem.message,
-  }));
+  const found = occurrences(shippedSources(input.files), SUITE_SIDE_EFFECT_KINDS);
+  const inCode = sideEffectProblems(found, parseRegister(register), SUITE_SIDE_EFFECT_KINDS).map(
+    (problem) => ({
+      path: problem.paths[0] ?? SIDE_EFFECTS_DOCUMENT,
+      line: 0,
+      message: problem.message,
+    }),
+  );
   return [...inRegister, ...inCode];
 }

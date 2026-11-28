@@ -46,7 +46,7 @@ import { NAMES_DOCUMENT, namingOf, proposedNames } from './industry-new.ts';
 import { industryNames, NAME_KINDS, NAMES_PATH, packageNames, readNames } from './names.ts';
 import { namesIn } from './public-repo.ts';
 import { readTextFiles, REPO_ROOT } from './repo-files.ts';
-import { SIDE_EFFECTS_DOCUMENT, shippedSources } from './side-effects.ts';
+import { SIDE_EFFECTS_DOCUMENT, shippedSources, SUITE_SIDE_EFFECT_KINDS } from './side-effects.ts';
 import { PRODUCT_NAMES } from './words/products.ts';
 
 /** What a check found: problems turn the step red, notes only tell. */
@@ -794,6 +794,7 @@ export function sideEffectConformity(subject: Subject): Finding {
     return { problems: [`${SIDE_EFFECTS_DOCUMENT} is missing`], notes: [] };
   }
   const problems = sideEffectRegisterProblems(sources, readFileSync(registerFile, 'utf8'), {
+    kinds: SUITE_SIDE_EFFECT_KINDS,
     storagePrefixes: [subject.id],
   }).map(
     (problem) =>

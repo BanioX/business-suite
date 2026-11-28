@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { formatProblem, type RepoFile } from '../src/repo-files.ts';
+import { SIDE_EFFECT_KINDS } from '@onestrand/testing';
 import {
   isShippedSource,
   shippedSources,
   SIDE_EFFECTS_DOCUMENT,
   sideEffectGuardProblems,
+  SUITE_SIDE_EFFECT_KINDS,
 } from '../src/side-effects.ts';
 
 const file = (path: string, text: string): RepoFile => ({ path, text });
@@ -141,5 +143,42 @@ describe('sideEffectGuardProblems', () => {
     expect(problems.map(formatProblem)).toEqual([
       `${SIDE_EFFECTS_DOCUMENT}: The register holds no table that starts with «Kennung».`,
     ]);
+  });
+});
+
+describe('the kinds of the suite', () => {
+  // Keeping the screen on and the number on the app icon came with @onestrand/web-device (W0-03,
+  // step 3); they belong in SIDE_EFFECT_KINDS of @onestrand/testing (debt TD-134).
+  const WAKE =
+    '| SE-09 | Bildschirm wach halten | `wakeLock` | `platform/web-device` | nein | ADR-0009 | geplant |';
+  const BADGE =
+    '| SE-10 | Zahl am Symbol | `setAppBadge` | `platform/web-device` | nein | ADR-0009 | geplant |';
+
+  it('are those of the standard test and two of the device', () => {
+    expect(SUITE_SIDE_EFFECT_KINDS.slice(0, SIDE_EFFECT_KINDS.length)).toEqual([
+      ...SIDE_EFFECT_KINDS,
+    ]);
+    expect(SUITE_SIDE_EFFECT_KINDS.slice(SIDE_EFFECT_KINDS.length).map((kind) => kind.key)).toEqual(
+      ['wakeLock', 'setAppBadge'],
+    );
+    expect(Object.isFrozen(SUITE_SIDE_EFFECT_KINDS)).toBe(true);
+  });
+
+  it('finds the wake lock and the badge in shipped code without a row', () => {
+    const files = [
+      file('platform/web-device/src/browser.ts', "await navigator.wakeLock.request('screen');\n"),
+      file('platform/web-device/src/badge.ts', 'await navigator.clearAppBadge();\n'),
+    ];
+    const problems = sideEffectGuardProblems({ files, register: register() }).map(formatProblem);
+    expect(problems).toHaveLength(2);
+    expect(problems.join('\n')).toContain('`wakeLock`');
+    expect(problems.join('\n')).toContain('`setAppBadge`');
+  });
+
+  it('accepts their rows in the register', () => {
+    const files = [
+      file('platform/web-device/src/browser.ts', 'navigator.wakeLock; navigator.setAppBadge(1);\n'),
+    ];
+    expect(sideEffectGuardProblems({ files, register: register(WAKE, BADGE) })).toEqual([]);
   });
 });

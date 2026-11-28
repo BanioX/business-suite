@@ -14,6 +14,7 @@
     { "kind": "package", "name": "@onestrand/testing", "owner": "platform", "status": "active" },
     { "kind": "package", "name": "@onestrand/web-data", "owner": "platform", "status": "active" },
     { "kind": "package", "name": "@onestrand/ui", "owner": "platform", "status": "active" },
+    { "kind": "package", "name": "@onestrand/web-device", "owner": "platform", "status": "active" },
     { "kind": "package", "name": "@onestrand/tooling", "owner": "head", "status": "active" },
     { "kind": "table", "name": "businesses", "owner": "platform", "status": "active" },
     { "kind": "table", "name": "events", "owner": "platform", "status": "active" },
