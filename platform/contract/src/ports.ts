@@ -1,5 +1,5 @@
 // Origin: BanioX/Randen packages/core/src/ports/index.ts @ e0f0907 — adapted: only the clock and the id generator; import paths, comments
-// Origin: BanioX/Randen packages/core/src/ports/storage.ts @ e0f0907 — adapted: only the command log, the event log and the transaction; an entry of the command log carries its business and is read back whole
+// Origin: BanioX/Randen packages/core/src/ports/storage.ts @ e0f0907 — adapted: only the command log, the event log and the transaction; an entry of the command log carries its business and is read back whole; a transaction inside another shares its fate, and transactions that do not nest take turns
 // Origin: BanioX/Randen packages/core/src/application/command.ts @ e0f0907 — adapted: only the context, narrowed to what a command needs from the storage
 import type { Id, IsoDateTime, LocalDate } from '@onestrand/core';
 import type { DomainEvent } from './events';
@@ -54,14 +54,22 @@ export interface EventLog {
 
 export interface Transactional {
   /**
-   * Runs `work` atomically: all its writes happen or none. A transaction started inside another
-   * joins it. Only storage calls may be awaited inside (no network, no timers), because the
-   * database of the browser ends a transaction at the first foreign await.
+   * Runs `work` atomically: all its writes happen or none. Only storage calls may be awaited
+   * inside (no network, no timers), because the database of the browser ends a transaction at
+   * the first foreign await.
+   *
+   * A transaction started inside another joins it and shares its fate: there is one «all or
+   * none» for both. If the inner one fails, the outer one fails too, at its end and with the
+   * same error, even if its work caught that error and went on. Otherwise the writes of a
+   * half-done step would be kept. So a failed command cannot be skipped inside a larger
+   * transaction: decide before starting it, not after.
    *
    * Transactions that do not nest must not overlap: an adapter of a real database lets the
    * second wait for the first, so a command sent twice at the same moment still runs once. A
    * storage in memory cannot tell a nested call from an overlapping one and joins both; whoever
-   * uses one (tests) awaits a command before starting the next.
+   * uses one (tests) awaits a command before starting the next. Started together there, two
+   * commands share one fate at best, and at worst one of them answers although its writes were
+   * undone with the other.
    */
   transaction: <T>(work: () => Promise<T>) => Promise<T>;
 }

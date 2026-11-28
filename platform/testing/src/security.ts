@@ -54,7 +54,8 @@ function readHeadersFile(text: string): { rules: HeaderRule[]; bad: BadLine[] } 
     }
     const rule = rules.at(-1);
     const separator = trimmed.indexOf(':');
-    if (rule === undefined || separator <= 0) {
+    // A line that starts with `!` takes a header away from its paths, with or without a value.
+    if (rule === undefined || separator <= 0 || trimmed.startsWith('!')) {
       bad.push({ line: index + 1, text: line });
       return;
     }
@@ -492,7 +493,8 @@ export function htmlProblems(html: string, expected: PageExpectations = {}): Sec
       );
     }
     for (const name of tag.attributes.keys()) {
-      if (/^on[a-z]/.test(name)) {
+      // A handler is `on` and the name of an event, in letters: `onclick`, not `one-time`.
+      if (/^on[a-z]+$/.test(name)) {
         report(
           'html.inline_handler',
           `<${tag.name}> has the handler ${name}: code comes from a file of the app.`,

@@ -114,6 +114,16 @@ describe('a changed entry', () => {
     ['the order of a list', (row: AccountEntry) => ({ ...row, tags: ['b', 'a'] })],
     ['a field that was added', (row: AccountEntry) => ({ ...row, text: 'Nachgetragen' })],
     ['a field no schema knows', (row: AccountEntry) => ({ ...row, invented: 1 })],
+    [
+      'a field no schema knows inside a record',
+      (row: AccountEntry) => ({ ...row, ref: { ...row.ref, page: 2 } }),
+    ],
+    [
+      'a field no schema knows deep inside a list',
+      (row: AccountEntry) => ({ ...row, tags: ['a', 'b', [{ later: { on: true } }]] }),
+    ],
+    ['nothing in the place of a field', (row: AccountEntry) => ({ ...row, text: null })],
+    ['a number written as a text', (row: AccountEntry) => ({ ...row, amount: '-100' })],
     ['a field that was removed', (row: AccountEntry) => withField(row, 'ref', undefined)],
     ['the time', (row: AccountEntry) => ({ ...row, at: '2026-11-16T07:00:00.000Z' })],
     ['the person', (row: AccountEntry) => ({ ...row, actor: freshIds.next() })],

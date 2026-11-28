@@ -26,6 +26,23 @@ describe('side effects of shipped code (docs/nebenwirkungen.md)', () => {
     expect(paths.filter((path) => path.includes('node_modules/'))).toEqual([]);
   });
 
+  it('has no row for the place of a device: no location, ever (CLAUDE.md), so shipped code that names it stays red', () => {
+    const text = existsSync(target) ? readFileSync(target, 'utf8') : '';
+    const rows = text.split('\n').filter((line) => /^\|\s*SE-/.test(line));
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.filter((line) => line.includes('`geolocation`'))).toEqual([]);
+    const found = sideEffectGuardProblems({
+      files: [
+        {
+          path: 'platform/probe/src/where.ts',
+          text: 'navigator.geolocation.getCurrentPosition(done);\n',
+        },
+      ],
+      register: text,
+    });
+    expect(found.map((problem) => problem.message).join(' ')).toContain('`geolocation`');
+  });
+
   it('has a well-formed register that names every side effect in the code', () => {
     const problems = sideEffectGuardProblems({
       files,

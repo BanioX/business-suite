@@ -9,8 +9,10 @@ import {
   type FileMeta,
   type Hasher,
   type ModuleStorage,
+  type Rows,
   type Storage,
   type StoredRow,
+  type TableName,
 } from '@onestrand/storage';
 import { fixedClock, type TestClock } from './clock';
 import { sequentialIds } from './ids';
@@ -25,12 +27,18 @@ const BUSINESS_NAMES = ['Betrieb Muster', 'Betrieb Beispiel'] as const;
  */
 const ID_RANGE = 1_000_000;
 
-/** What a storage holds for one business, in a form two snapshots can be compared in. */
-export interface BusinessSnapshot {
+/**
+ * What a storage holds for one business, in a form two snapshots can be compared in. The rows
+ * are typed by the register: `snapshot.tables.notes` is a list of notes.
+ */
+export interface BusinessSnapshot<
+  TRegistry extends AnyTableRegistry = AnyTableRegistry,
+  TBusiness = BusinessBase,
+> {
   /** The row of the business, or undefined if the storage does not hold it. */
-  business: unknown;
+  business: TBusiness | undefined;
   /** The rows of every table of the register, soft-deleted ones included, sorted by id. */
-  tables: Record<string, StoredRow[]>;
+  tables: { [TName in TableName<TRegistry>]: Rows<TRegistry>[TName][] };
   /** Every file with its bytes as plain numbers, sorted by id. */
   files: { meta: FileMeta; bytes: number[] }[];
   /** The events in the order they were appended. */
@@ -47,23 +55,26 @@ const byId = (a: { id: string }, b: { id: string }) => (a.id < b.id ? -1 : a.id 
  * The command log is not part of it: its port finds an entry by the id of its command and
  * cannot list the entries of a business.
  */
-export async function businessSnapshot(
-  storage: ModuleStorage & { businesses: { get: (id: Id) => Promise<unknown> } },
-  registry: AnyTableRegistry,
+export async function businessSnapshot<TRegistry extends AnyTableRegistry, TBusiness>(
+  storage: ModuleStorage & { businesses: { get: (id: Id) => Promise<TBusiness | undefined> } },
+  registry: TRegistry,
   businessId: Id,
-): Promise<BusinessSnapshot> {
+): Promise<BusinessSnapshot<TRegistry, TBusiness>> {
+  // Sorted as copies: what a storage hands out is never reordered in place.
   const tables: Record<string, StoredRow[]> = {};
   for (const table of registry.tables) {
-    tables[table.name] = (await storage.table(table).ofBusiness(businessId)).sort(byId);
+    tables[table.name] = [...(await storage.table(table).ofBusiness(businessId))].sort(byId);
   }
   const files: BusinessSnapshot['files'] = [];
-  for (const meta of (await storage.files.ofBusiness(businessId)).sort(byId)) {
+  for (const meta of [...(await storage.files.ofBusiness(businessId))].sort(byId)) {
     const file = await storage.files.get(meta.id);
     files.push({ meta, bytes: Array.from(file?.bytes ?? []) });
   }
   return {
     business: await storage.businesses.get(businessId),
-    tables,
+    // One list per table of the register, read through its definition: the type the register
+    // gives each table is the type of these rows, which the loop above cannot say.
+    tables: tables as BusinessSnapshot<TRegistry>['tables'],
     files,
     events: await storage.events.ofBusiness(businessId),
   };
@@ -126,7 +137,7 @@ export interface TestContext<
   /** The same context with another person acting. */
   actingAs: (personId: Id) => CommandContext;
   /** Everything the storage holds for this business (`businessSnapshot`). */
-  snapshot: () => Promise<BusinessSnapshot>;
+  snapshot: () => Promise<BusinessSnapshot<TRegistry, TBusiness>>;
   /**
    * A further business on the same storage and the same clock, with its own two persons and
    * its own range of ids: the second is «Betrieb Beispiel». For tests of separation: what one

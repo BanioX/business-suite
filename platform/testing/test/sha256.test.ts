@@ -74,6 +74,22 @@ describe('sha256Hex', () => {
   });
 });
 
+describe('sha256Hex, at its limit', () => {
+  it('refuses 512 MB or more instead of computing a wrong checksum', () => {
+    // The length is all that is read before the refusal: no such message is built here.
+    const huge = (length: number) =>
+      Object.defineProperty(new Uint8Array(1), 'length', { value: length });
+    expect(() => sha256Hex(huge(2 ** 29))).toThrow(RangeError);
+    expect(() => sha256Hex(huge(2 ** 32))).toThrow('512 MB');
+  });
+
+  it('writes the length of a message of several megabytes into the padding', () => {
+    // 3 MB are 25’165’824 bits: more than three bytes of length.
+    const bytes = new Uint8Array(3 * 1024 * 1024).fill(0x5a);
+    expect(sha256Hex(bytes)).toBe(node(bytes));
+  });
+});
+
 describe('testHasher', () => {
   const webCrypto = createWebCryptoHasher(globalThis.crypto);
 

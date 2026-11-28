@@ -1,6 +1,7 @@
 // Origin: BanioX/Randen packages/core/src/testing/index.ts @ e0f0907 — adapted: the counting ids and the fixed clock as they are; the test context without a business row, a person row and use cases; import paths
-// Origin: BanioX/Randen packages/core/src/ports/memory-storage.ts @ e0f0907 — adapted: only the event log, the command log and the transaction, behind the ports of a command; entries by business; counters for the tests
+// Origin: BanioX/Randen packages/core/src/ports/memory-storage.ts @ e0f0907 — adapted: only the event log, the command log and the transaction, behind the ports of a command; entries by business; a second entry of a command is refused; a failed transaction inside another fails the outer one; counters for the tests
 import { IsoDateTimeSchema, localDate, uuidV7, type Id, type LocalDate } from '@onestrand/core';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import type {
   Clock,
   CommandContext,
@@ -59,13 +60,20 @@ export interface FakeStorage extends CommandStorage {
 }
 
 /**
- * Event log, command log and transaction in plain memory. Values are copied in and out, a failing
- * transaction restores both logs, a transaction inside another joins it.
+ * Event log, command log and transaction in plain memory, with the behaviour the ports ask for
+ * and the memory storage of `@onestrand/storage` has: values are copied in and out, a failing
+ * transaction restores both logs, and a transaction inside another joins it and shares its fate
+ * (if the inner one fails, the outer one fails at its end with the same error, even if it caught
+ * that error).
+ *
+ * Like every storage in memory it cannot tell a nested transaction from one that overlaps, and
+ * joins both: await a command before starting the next, or put it behind `takingTurns`.
  */
 export function createFakeStorage(): FakeStorage {
   let events: DomainEvent[] = [];
   let commands: CommandLogEntry[] = [];
-  let depth = 0;
+  /** The transaction that is running, with the first error of one that had joined it. */
+  let running: { failedInside?: { error: unknown } } | undefined;
   let started = 0;
 
   return {
@@ -95,24 +103,65 @@ export function createFakeStorage(): FakeStorage {
       },
     },
     transaction: async (work) => {
-      if (depth > 0) {
-        return work();
+      const outer = running;
+      if (outer !== undefined) {
+        try {
+          return await work();
+        } catch (error) {
+          // Noted on the transaction it joined, which may be over by now: a late failure never
+          // reaches a transaction that started afterwards.
+          outer.failedInside ??= { error };
+          throw error;
+        }
       }
+      const own: { failedInside?: { error: unknown } } = {};
       const snapshot = { events: [...events], commands: [...commands] };
       started += 1;
-      depth += 1;
+      running = own;
       try {
-        return await work();
+        const result = await work();
+        if (own.failedInside !== undefined) {
+          // The inner one promised «all or none» and is part of this one: whoever caught its
+          // error, the only way to keep that promise is to undo everything.
+          throw own.failedInside.error;
+        }
+        return result;
       } catch (error) {
         ({ events, commands } = snapshot);
         throw error;
       } finally {
-        depth -= 1;
+        running = undefined;
       }
     },
     allEvents: () => structuredClone(events),
     allCommands: () => structuredClone(commands),
     transactions: () => started,
+  };
+}
+
+/**
+ * The same storage behind a door that lets one transaction in at a time, as the adapter of a
+ * database does: a transaction that is not inside another waits until every one started before
+ * it is over. Inside, the storage behind decides (a nested transaction joins).
+ *
+ * It tells a nested call from an overlapping one by the asynchronous context of Node, which the
+ * pure code of the platform must not use; so this is a helper for tests, not a way to build a
+ * storage. Calls outside a transaction are answered at once.
+ */
+export function takingTurns(storage: FakeStorage): FakeStorage {
+  const inside = new AsyncLocalStorage<true>();
+  let lastOver: Promise<void> = Promise.resolve();
+  const over = (): void => undefined;
+  return {
+    ...storage,
+    transaction: (work) => {
+      if (inside.getStore() === true) {
+        return storage.transaction(work);
+      }
+      const mine = lastOver.then(() => inside.run(true, () => storage.transaction(work)));
+      lastOver = mine.then(over, over);
+      return mine;
+    },
   };
 }
 

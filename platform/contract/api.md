@@ -29,21 +29,25 @@ Immer über den Paketnamen importieren. Die **Summe** der Schnittstelle steht ni
 2. **`access` ist Pflicht:** `{ feature, level, rights? }`. `feature` ist die Kennung der Funktion im Register in der Form `FEATURE_ID_PATTERN` (ein oder zwei Teile aus Kleinbuchstaben, Ziffern und einzelnen Unterstrichen, getrennt durch einen Punkt: `customers`, `team_time`, `facility.keys`; `@onestrand/features` nimmt dieselbe Form), `level` eine von `view` (sehen), `operate` (bedienen), `manage` (verwalten), `rights` nennt heikle Rechte, jedes in der Form `RIGHT_ID_PATTERN` (ein bis drei Teile in derselben Schreibweise, der erste ist bei einer Branche ihr Namensraum: `wages`, `export_delete`, `facility.keys.assign`; das Register der Rechte in `@onestrand/access` nimmt dieselbe Form, Schuld TD-10). Ohne `access` kompiliert die Operation nicht. Ein Befehl braucht mindestens `operate`. Ein unbekanntes Feld in `access` ist ein Befund, damit ein Tippfehler kein Recht still fallen lässt.
 3. **Basisfelder:** Jeder Befehl trägt `commandId` und `businessId` (`...commandBase`), jede Abfrage `businessId` (`...queryBase`). `command` und `query` verlangen das schon im Typ.
 4. **`summary`** ist englisch und technisch: Daraus wird später die Beschreibung einer API oder eines Werkzeugs. Es ist nie ein Text der App; Texte leben in den Sprachkatalogen.
-5. **Schemas bleiben als JSON Schema darstellbar:** kein `z.date()`, kein `bigint`, keine `Map`; in der Ausgabe kein `transform` und kein `z.void()`. Ein Befehl ohne Ergebnis gibt `z.object({})` zurück.
-6. **Ein Befehl läuft durch `runCommand(operation, input, execute)`:** eine Transaktion für alles, was `execute` schreibt, für die Ereignisse und für den Eintrag im Befehlsprotokoll. Kommt dieselbe `commandId` nochmals, läuft `execute` nicht mehr, und das gespeicherte Ergebnis kommt zurück. Eine `commandId`, die schon für eine andere Operation oder einen anderen Betrieb steht, ergibt `CommandError('invalid')`. Das Ergebnis wird mit dem Ausgabe-Schema geprüft, bevor es gespeichert wird; passt es nicht, ist der ganze Befehl ungeschehen. Eine Abfrage weist `runCommand` ab.
-7. **In der Transaktion nur Aufrufe des Speichers abwarten**, kein Netz und keine Timer: Die Datenbank des Browsers beendet die Transaktion sonst. Transaktionen, die nicht ineinander liegen, überlappen sich nicht: Die Datenbank lässt die zweite warten. Der Speicher im Arbeitsspeicher kann das nicht unterscheiden; im Test wartest du einen Befehl ab, bevor du den nächsten startest.
+5. **Schemas bleiben als JSON Schema darstellbar:** kein `z.date()`, kein `bigint`, keine `Map`; in der Ausgabe kein `transform` und kein `z.void()`. Ein Befehl ohne Ergebnis gibt `z.object({})` zurück. Das Ausgabe-Schema liest sein eigenes Ergebnis nochmals, wenn ein Befehl wiederholt wird: Es nimmt an, was es ausgibt, und lässt es, wie es ist. Schemas prüfen, ohne zu warten (kein `async` in `refine`).
+6. **Ein Befehl läuft durch `runCommand(operation, input, execute)`:** eine Transaktion für alles, was `execute` schreibt, für die Ereignisse und für den Eintrag im Befehlsprotokoll. Kommt dieselbe `commandId` nochmals, läuft `execute` nicht mehr, und das gespeicherte Ergebnis kommt zurück. Eine `commandId`, die schon für eine andere Operation oder einen anderen Betrieb steht, ergibt `CommandError('invalid')`. Das Ergebnis wird mit dem Ausgabe-Schema geprüft, bevor es gespeichert wird; passt es nicht, ist der ganze Befehl ungeschehen. Wirft `execute`, kommt der Fehler unverändert bei dir an, und nichts ist geschrieben. Eine Abfrage weist `runCommand` ab.
+7. **In der Transaktion nur Aufrufe des Speichers abwarten**, kein Netz und keine Timer: Die Datenbank des Browsers beendet die Transaktion sonst. **Eine Transaktion in einer anderen schliesst sich an und teilt ihr Schicksal:** Scheitert die innere (auch ein Befehl in einer offenen Transaktion), scheitert die äussere am Ende mit demselben Fehler, auch wenn du ihn gefangen hast. Was scheitern darf, klärst du darum vorher, statt den Fehler zu fangen. **Transaktionen, die nicht ineinander liegen, überlappen sich nicht:** Die Datenbank lässt die zweite warten. Kommt dieselbe `commandId` zweimal im selben Moment (Doppeltipp), läuft der Befehl darum einmal, und der zweite Aufruf bekommt das gespeicherte Ergebnis. Der Speicher im Arbeitsspeicher kann eine überlappende nicht von einer verschachtelten Transaktion unterscheiden und schliesst beide an: Dort liefe der Befehl zweimal. Im Test wartest du einen Befehl ab, bevor du den nächsten startest.
 8. **Ereignis:** Jeder Befehl ruft mindestens einmal `emit(businessId, 'ding.was_geschah', payload)`. Der Typ steht in der Vergangenheit, klein und mit Unterstrich (`customer.created`, `facility_key.issued`). Die Nutzlast trägt Kennungen und kleine Fakten, nie ganze Zeilen und nie Dateien.
 9. **Fehler:** `throw new CommandError(code, message)`. Codes der Plattform: `not_found`, `invalid`, `duplicate_name`, `in_use`, `not_allowed`, `forbidden` (kein Recht; setzt die Hülle für `access`). Eigene Codes tragen den Namensraum: `'<namensraum>.<code>'`, zum Beispiel `stock.insufficient` (Namensraum wie bei den Operationen, ein Punkt, Code klein mit Unterstrich). Alles andere wird abgewiesen: Der Typ verlangt den Punkt, die genaue Form prüft die Laufzeit, und ein falscher Code wirft dort einen `TypeError` statt des gemeinten Fehlers. Halte die Codes eines Moduls darum in einer Liste und prüfe sie im Test mit `isCommandErrorCode`. `message` ist englisch, für Protokoll und Tests; den Satz für die Person schreibt der Sprachkatalog zum Code.
-10. **Konformität im Test:** `fragmentProblems(fragment)` prüft Name, Art, Beschreibung, `access` und Schemas jeder Operation und dass der Schlüssel der Name ist; `operationSchemaProblems(operation)` prüft, dass beide Schemas als JSON Schema gehen und die Basisfelder verlangt sind. Beide geben eine Liste zurück und werfen nie; der Test erwartet `[]`. Stimmt die Form einer Operation nicht, meldet `operationSchemaProblems` diese Befunde und schaut die Schemas erst an, wenn die Form stimmt.
+10. **Konformität im Test:** `fragmentProblems(fragment)` prüft Name, Art, Beschreibung, `access` und Schemas jeder Operation und dass der Schlüssel der Name ist; `operationSchemaProblems(operation)` prüft, dass beide Schemas als JSON Schema gehen, dass die Basisfelder verlangt sind und dass die Eingabe nicht als Ganzes fehlen darf (kein `.optional()` und kein `.default()` um die ganze Eingabe). Beide geben eine Liste zurück und werfen nicht; der Test erwartet `[]`. Stimmt die Form einer Operation nicht, meldet `operationSchemaProblems` diese Befunde und schaut die Schemas erst an, wenn die Form stimmt.
 11. **Zusammensetzen:** `composeContract([{ source: 'customers', fragment }, { source: 'muster', fragment }] as const)` legt die Fragmente einer Ausgabe nach Operationsname zusammen; `source` ist die Kennung des Moduls oder der Branche, die das Fragment besitzt. Schreibst du die Teile als Tupel (`as const`), kennt der Typ jede Operation (`ComposedContract`); aus einer Liste, deren Glieder der Typ nicht einzeln kennt, wird ein `ContractFragment`. Jede Operation hat einen Besitzer: Bringen zwei Teile eine Operation desselben Namens, ist das ein `duplicate_operation` mit **allen** Herkünften in `sources`, ein Fehler, den die Ausgabe nicht still löst. Dazu `invalid_operation` (`fragmentProblems` nennt etwas, `part` sagt was) und `invalid_part` (kein `{ source, fragment }`, leere Herkunft, Fragment ohne Record). `composeProblems(teile)` gibt jeden Befund als Daten zurück und wirft nie; `composeContract` wirft einen `ComposeError` mit dem Code des ersten Befunds, in `problems` stehen alle. Das Ergebnis ist eingefroren; die Operationen sind die der Fragmente, keine Kopien. Ob `access` einer Operation Funktionen und Rechte nennt, die es gibt, prüft nicht dieses Paket (es kennt die Register nicht), sondern `contractAccessProblems` in `@onestrand/access`; die Ausgabe ruft beides.
+12. **Was heute nicht durchgeht** (offen; es entscheidet der Auftrag, der es zuerst braucht, also nicht selbst umgehen, sondern einen Plattform-Antrag stellen):
+    - **Abfrage ohne Betrieb**: `query` verlangt `businessId` im Typ, und `operationSchemaProblems` meldet eine solche Abfrage. Die Liste der Betriebe auf dem Gerät ist darum keine Operation, sondern `listBusinesses(storage)` aus `@onestrand/business` (W0-02, TD-11). Ein Befehl gehört immer zu einem Betrieb, weil sein Eintrag im Befehlsprotokoll einem Betrieb gehört.
+    - **Bytes in der Eingabe**, etwa eine Datei: `z.instanceof(Uint8Array)` hat kein JSON Schema und wird gemeldet.
+    - **Operation ohne Recht**, etwa vor der Anmeldung: `access` ist Pflicht und kennt kein «braucht nichts».
 
 ## Beispiel
 
 ```ts
 import { IdSchema, nameSchema, syncFields, type Id } from '@onestrand/core';
 import {
-  command, commandBase, CommandError, createCommandKit, fragmentProblems, query, queryBase,
-  type CommandContext, type ContractFragment, type UseCasesOf,
+  command, commandBase, CommandError, createCommandKit, fragmentProblems, operationSchemaProblems,
+  query, queryBase, type CommandContext, type ContractFragment, type UseCasesOf,
 } from '@onestrand/contract';
 import { z } from 'zod';
 
@@ -82,7 +86,7 @@ export function createNotesUseCases(
         const { businessId, text } = input;
         const note = { id: ctx.ids.next(), businessId, text, ...stamps() };
         await notes.put(note);
-        await emit(input.businessId, 'note.added', { noteId: note.id });
+        await emit(businessId, 'note.added', { noteId: note.id });
         return { note };
       });
     },
@@ -97,6 +101,9 @@ export function createNotesUseCases(
   };
 }
 
-// Im Test des Moduls:
-fragmentProblems(notesContract); // []
+// Im Test des Moduls: beide Listen sind leer.
+fragmentProblems(notesContract);
+Object.values(notesContract).flatMap(operationSchemaProblems);
 ```
+
+Das Beispiel läuft als Test in `test/example.test.ts`; wer es ändert, ändert beide.

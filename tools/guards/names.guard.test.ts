@@ -10,8 +10,19 @@ import {
 import { PLATFORM_UNITS } from '@onestrand/core';
 import { RESERVED_TABLE_NAMES } from '@onestrand/storage';
 import { describe, expect, it } from 'vitest';
-import { NAMES_PATH, namesProblems, packageNames, readNames, type UsedName } from '../src/names.ts';
+import { loadIndustries } from '../src/industries.ts';
+import {
+  NAMES_PATH,
+  industryNames,
+  namesProblems,
+  packageNames,
+  readNames,
+  type UsedName,
+} from '../src/names.ts';
 import { formatProblem, readTextFiles, REPO_ROOT } from '../src/repo-files.ts';
+
+/** Every industry of the repository, read from its manifest: a new one is read without a line here. */
+const industries = await loadIndustries(REPO_ROOT);
 
 /**
  * Every identifier stands in the name register, none twice (docs/architektur.md, 3.4; acceptance
@@ -66,6 +77,7 @@ describe('identifiers of the suite (registry/names.json)', () => {
       name: id,
       path: 'platform/business/src/entries.ts',
     })),
+    ...industries.flatMap(({ folder, manifest }) => industryNames(manifest, folder.entry)),
   ];
 
   it('reads the identifiers the code uses', () => {
@@ -80,6 +92,18 @@ describe('identifiers of the suite (registry/names.json)', () => {
     expect(names).toContain('feature business');
     expect(names).toContain('module business');
     expect(names).toContain('right settings');
+    // The industries: their package and what their manifests set, the reference industry first.
+    expect(industries.map(({ folder }) => folder.id)).toContain('muster');
+    expect(names).toContain('package @onestrand-industry/muster');
+    expect(names).toContain('table muster_entries');
+    expect(names).toContain('operation muster.entries.add');
+    expect(names).toContain('event muster_entry.added');
+    expect(names).toContain('feature muster.entries');
+    expect(names).toContain('module muster.journal');
+    expect(names).toContain('right muster.journal_read');
+    for (const { folder, manifest } of industries) {
+      expect(industryNames(manifest, folder.entry).length, folder.id).toBeGreaterThan(0);
+    }
   });
 
   it('has a register that is well formed', () => {

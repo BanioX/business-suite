@@ -38,6 +38,19 @@ describe('defineLedger', () => {
     expect(statusLedger.initial.history).toEqual([]);
   });
 
+  it('freezes the records inside a list of the initial state too', () => {
+    interface Open {
+      open: { stream: string; amounts: number[] }[];
+    }
+    const ledger = defineLedger<AccountEntry, Open>({
+      table: accountEntriesTable,
+      initial: { open: [{ stream: 'cash', amounts: [1] }] },
+      reduce: (state) => state,
+    });
+    expect(Object.isFrozen(ledger.initial.open[0])).toBe(true);
+    expect(Object.isFrozen(ledger.initial.open[0]?.amounts)).toBe(true);
+  });
+
   it('leaves an initial state alone that is not plain data', () => {
     const initial = new Map<string, number>();
     const ledger = defineLedger({

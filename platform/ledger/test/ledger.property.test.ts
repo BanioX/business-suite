@@ -1,4 +1,5 @@
 import { rappen, type Id } from '@onestrand/core';
+import { createBackupKit } from '@onestrand/storage';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import {
@@ -15,6 +16,7 @@ import {
   deviceHolding,
   hasher,
   OVERDRAWN,
+  REGISTRY,
   sequentialIds,
   withField,
   type AccountEntry,
@@ -493,6 +495,84 @@ describe('a single changed entry', () => {
           },
         ),
         { numRuns: 200 },
+      );
+    },
+    TIMEOUT,
+  );
+});
+
+describe('a ledger that goes through a backup', () => {
+  /** Any text a person could type, as its schema stores it: trimmed and not empty. */
+  const textArb = fc
+    .string({ unit: 'grapheme', maxLength: 30 })
+    .map((text) => text.trim())
+    .filter((text) => text.length > 0);
+
+  const bookingArb = fc.record({
+    amount: fc.oneof(
+      fc.integer({ min: 0, max: 500_000 }),
+      // Large, but the sum of all bookings of a run stays a whole number a file can carry.
+      fc.constantFrom(0, -0, 900_000_000_000_000),
+    ),
+    text: fc.option(textArb, { nil: undefined }),
+    tags: fc.option(fc.array(textArb, { maxLength: 3 }), { nil: undefined }),
+    correct: fc.boolean(),
+  });
+
+  it(
+    'comes back the same, byte for byte, with every chain whole',
+    async () => {
+      const backups = createBackupKit({
+        format: 'sample-backup',
+        version: 1,
+        registry: REGISTRY,
+        hasher,
+      });
+      await fc.assert(
+        fc.asyncProperty(fc.array(bookingArb, { minLength: 1, maxLength: 8 }), async (bookings) => {
+          const t = await createTestLedgers();
+          const { businessId } = t.one;
+          for (const [index, { amount, text, tags, correct }] of bookings.entries()) {
+            const stream = STREAMS[index % 2] ?? 'cash';
+            const payload = {
+              amount: rappen(amount),
+              ...(text === undefined ? {} : { text }),
+              ...(tags === undefined ? {} : { tags }),
+            };
+            const { entry } = await t.account.append(businessId, stream, payload);
+            if (correct) {
+              await t.account.correct(businessId, entry.id, { ...payload, text: 'Korrektur' });
+            }
+          }
+          const before = await accountRows(t);
+
+          // Out as a file, in again on another device.
+          const document = await backups.exportBackup(t.storage, businessId, { clock: t.clock });
+          const check = await backups.checkBackup(JSON.parse(JSON.stringify(document)));
+          expect(check.preview.problems).toEqual([]);
+          const other = await createTestLedgers();
+          if (check.backup === undefined) {
+            throw new Error('The backup was refused');
+          }
+          await backups.restoreBackup(other.storage, check.backup);
+
+          const after = await other.storage.table('account_entries').ofBusiness(businessId);
+          expect(after.map((row) => canonicalJson(row)).sort()).toEqual(
+            before.map((row) => canonicalJson(row)).sort(),
+          );
+          expect(await other.account.verifyAll(businessId)).toEqual(
+            await t.account.verifyAll(businessId),
+          );
+          expect(await ledgerInvariantProblems(accountLedger, hasher, after, { before })).toEqual(
+            [],
+          );
+          for (const stream of await t.account.streams(businessId)) {
+            expect(await other.account.state(businessId, stream)).toEqual(
+              await t.account.state(businessId, stream),
+            );
+          }
+        }),
+        { numRuns: 50 },
       );
     },
     TIMEOUT,

@@ -162,21 +162,35 @@ beforeAll(async () => {
 const CONFIG = 'platform/core/vitest.config.ts';
 const ELSEWHERE = 'platform/core/web/boundary-probe.tsx';
 
+/** A file of the pure part of an industry, one of its tests and its configuration; none exists. */
+const industrySource = (id: string, file = 'boundary-probe.ts'): string =>
+  `industries/${id}/core/src/${file}`;
+const industryTest = (id: string): string => `industries/${id}/core/test/boundary-probe.test.ts`;
+const INDUSTRY_CONFIG = 'industries/muster/core/vitest.config.ts';
+
 describe('the probe', () => {
-  it.each([source('core'), source('ledger'), source('unlisted'), test('core'), CONFIG, ELSEWHERE])(
-    'keeps the boundary rules of the real config for %s',
-    async (file) => {
-      const path = join(REPO_ROOT, file);
-      const [before, after] = (await Promise.all([
-        real.calculateConfigForFile(path),
-        linter.calculateConfigForFile(path),
-      ])) as { rules?: Record<string, unknown> }[];
-      expect(before?.rules?.['no-restricted-imports']).toBeDefined();
-      for (const rule of BOUNDARY_RULES) {
-        expect(after?.rules?.[rule], rule).toEqual(before?.rules?.[rule]);
-      }
-    },
-  );
+  it.each([
+    source('core'),
+    source('ledger'),
+    source('unlisted'),
+    source('ui', 'boundary-probe.tsx'),
+    test('core'),
+    CONFIG,
+    ELSEWHERE,
+    industrySource('muster'),
+    industryTest('muster'),
+    INDUSTRY_CONFIG,
+  ])('keeps the boundary rules of the real config for %s', async (file) => {
+    const path = join(REPO_ROOT, file);
+    const [before, after] = (await Promise.all([
+      real.calculateConfigForFile(path),
+      linter.calculateConfigForFile(path),
+    ])) as { rules?: Record<string, unknown> }[];
+    expect(before?.rules?.['no-restricted-imports']).toBeDefined();
+    for (const rule of BOUNDARY_RULES) {
+      expect(after?.rules?.[rule], rule).toEqual(before?.rules?.[rule]);
+    }
+  });
 
   it('accepts code that respects every boundary', async () => {
     await expectAccepted(source('core'), importing('./ids'));
@@ -539,6 +553,220 @@ describe('the packages of the layer «Browser»', () => {
     }
   });
 });
+describe('the platform imports no industry by the scope of the industries', () => {
+  // The packages of the industries are `@onestrand-industry/<id>`, outside `@onestrand/`: no rule
+  // of the platform's own layers would see them, so the rule against industries names the scope.
+  it.each(['@onestrand-industry/muster', '@onestrand-industry/muster/src/index'])(
+    'refuses %s in the pure part, in a test and in any other file under platform/',
+    async (specifier) => {
+      for (const file of [
+        source('core'),
+        source('manifest'),
+        source('web-data'),
+        source('unlisted'),
+        test('core'),
+        CONFIG,
+        ELSEWHERE,
+      ]) {
+        await expectNoImport(file, specifier);
+      }
+    },
+  );
+
+  it('refuses the scope in every other form of an import', async () => {
+    await expectRefusedBy(source('core'), loading('@onestrand-industry/muster'), DYNAMIC);
+    await expectRefusedBy(test('core'), loading('@onestrand-industry/muster'), DYNAMIC);
+    await expectRefusedBy(CONFIG, loading('@onestrand-industry/muster'), DYNAMIC);
+    await expectRefusedBy(test('core'), typeOf('@onestrand-industry/muster'), TYPE_FORM);
+    await expectRefusedBy(test('core'), requiring('@onestrand-industry/muster'), REQUIRE);
+  });
+});
+
+describe('the pure part of an industry', () => {
+  // `industries/<id>/core/src`: pure like the platform, importing the public entries of the pure
+  // layers of the platform, never another industry, never an edition (suite ADR-0004).
+  const SOURCES = [
+    industrySource('muster'),
+    industrySource('muster', 'deep/probe.ts'),
+    industrySource('other'),
+  ];
+  const PURE_PLATFORM = [
+    'core',
+    'contract',
+    'storage',
+    'ledger',
+    'features',
+    'access',
+    'business',
+    'i18n',
+    'manifest',
+  ];
+
+  it.each(PURE_PLATFORM)('may import @onestrand/%s by its public entry', async (name) => {
+    await expectAccepted(industrySource('muster'), importing(`@onestrand/${name}`));
+  });
+
+  it('may import a library without UI and its own files', async () => {
+    await expectAccepted(industrySource('muster'), importing('zod'));
+    await expectAccepted(industrySource('muster'), importing('./model'));
+    await expectAccepted(industrySource('muster', 'deep/probe.ts'), importing('../model'));
+  });
+
+  it.each(['@onestrand/web-data', '@onestrand/testing'])(
+    'refuses %s: no package of the layer «Browser», no test kit',
+    async (specifier) => {
+      for (const file of SOURCES) {
+        await expectNoImport(file, specifier);
+      }
+    },
+  );
+
+  it.each([
+    '@onestrand/contract/src/index',
+    '@onestrand/manifest/web',
+    '@onestrand/storage/testing',
+    '../../../../platform/core/src/index',
+  ])('refuses %s: only the public entry of a platform package', async (specifier) => {
+    for (const file of SOURCES) {
+      await expectNoImport(file, specifier);
+    }
+  });
+
+  it.each([
+    'react',
+    'react-dom',
+    'react-dom/client',
+    'react/jsx-runtime',
+    'dexie',
+    'dexie-react-hooks',
+    'node:fs',
+    'node:crypto',
+  ])('refuses %s: no UI, no database, no Node', async (specifier) => {
+    for (const file of SOURCES) {
+      await expectNoImport(file, specifier);
+    }
+  });
+
+  it.each([
+    '@onestrand-industry/other',
+    '@onestrand-industry/other/src/index',
+    '@onestrand-industry/muster',
+    '../../../other/core/src/index',
+    '../../../../industries/other/core/src/index',
+  ])('refuses %s: no other industry, and itself by relative path only', async (specifier) => {
+    await expectNoImport(industrySource('muster'), specifier);
+    await expectNoImport(industrySource('muster', 'probe.mjs'), specifier);
+  });
+
+  it.each(['../../web/messages', '../test/messages'])(
+    'refuses %s: the pure part stays in its src, away from its React part and its tests',
+    async (specifier) => {
+      await expectNoImport(industrySource('muster'), specifier);
+    },
+  );
+
+  it.each(['../../../../editions/field/edition', 'editions/field/edition'])(
+    'refuses the edition %s: the edition lists the industry',
+    async (specifier) => {
+      await expectNoImport(industrySource('muster'), specifier);
+    },
+  );
+
+  it('holds for every extension of code', async () => {
+    await expectNoImport(industrySource('muster', 'widget.tsx'), 'react');
+    await expectNoImport(industrySource('muster', 'probe.mts'), 'node:fs');
+    await expectNoImport(industrySource('muster', 'probe.cjs'), '@onestrand-industry/other');
+    await expectNoImport(industrySource('muster', 'probe.js'), '@onestrand/web-data');
+  });
+
+  it.each(['./model', '@onestrand/manifest', '@onestrand-industry/other', 'react'])(
+    "refuses import('%s'), the type import('%s').Thing and require('%s')",
+    async (specifier) => {
+      await expectRefusedBy(industrySource('muster'), loading(specifier), DYNAMIC);
+      await expectRefusedBy(industrySource('muster'), typeOf(specifier), TYPE_FORM);
+      await expectRefusedBy(industrySource('muster'), requiring(specifier), REQUIRE);
+    },
+  );
+
+  it.each([
+    'window',
+    'document',
+    'localStorage',
+    'sessionStorage',
+    'indexedDB',
+    'fetch',
+    'navigator',
+    'process',
+    'Buffer',
+    'crypto',
+  ])('refuses the global %s', async (name) => {
+    await expectRefused(industrySource('muster'), reading(name), 'no-restricted-globals', name);
+  });
+
+  it('accepts the same name as a parameter: the outside world comes in through ports', async () => {
+    await expectAccepted(
+      industrySource('muster'),
+      'export function randomByte(crypto: { random(): number }): number {\n  return crypto.random();\n}\n',
+    );
+  });
+});
+
+describe('the tests of an industry', () => {
+  it.each([
+    'node:fs',
+    'vitest',
+    'zod',
+    '@onestrand/testing',
+    '@onestrand/manifest',
+    '@onestrand/storage/testing',
+    '../src',
+    './support',
+  ])('may import %s', async (specifier) => {
+    await expectAccepted(industryTest('muster'), importing(specifier));
+  });
+
+  it('may read the globals of Node', async () => {
+    await expectAccepted(industryTest('muster'), reading('process'));
+  });
+
+  it.each([
+    '@onestrand-industry/other',
+    '@onestrand-industry/muster',
+    '../../../other/core/src/index',
+    '../../web/messages',
+    '../../../../editions/field/edition',
+    '@onestrand/contract/src/index',
+    '../../../../platform/storage/src/memory',
+  ])(
+    'refuses %s: no other industry, no edition, nothing outside the package',
+    async (specifier) => {
+      await expectNoImport(industryTest('muster'), specifier);
+    },
+  );
+
+  it.each([
+    '@onestrand-industry/other',
+    '../../../other/core/src/index',
+    '../../../../editions/field/edition',
+    '@onestrand/contract/src/index',
+  ])("refuses import('%s') as well", async (specifier) => {
+    await expectRefusedBy(industryTest('muster'), loading(specifier), DYNAMIC);
+  });
+
+  it('lets a test load its own package with import()', async () => {
+    await expectAccepted(industryTest('muster'), loading('../src/index'));
+    await expectAccepted(industryTest('muster'), loading('@onestrand/manifest'));
+  });
+});
+
+describe('whatever else stands under industries/', () => {
+  it('reaches no edition, in any form', async () => {
+    await expectNoImport(INDUSTRY_CONFIG, '../../../editions/field/edition');
+    await expectRefusedBy(INDUSTRY_CONFIG, loading('../../../editions/field/edition'), DYNAMIC);
+    await expectAccepted(INDUSTRY_CONFIG, importing('vitest/config'));
+  });
+});
+
 describe('the tests of a package', () => {
   it.each(['node:fs', 'node:crypto', 'node:path', 'vitest', 'fast-check'])(
     'may import %s',
@@ -551,5 +779,309 @@ describe('the tests of a package', () => {
   it('may import the platform packages by name', async () => {
     await expectAccepted(test('ledger'), importing('@onestrand/ledger'));
     await expectAccepted(test('ledger'), importing('@onestrand/testing'));
+  });
+});
+
+describe('the packages of the layer «React»', () => {
+  // `ui` is the first: its whole `src/` is React (the kit, P-08). It is held to the rules of a pure
+  // package with three differences, named in `REACT_PACKAGES` of `eslint.config.js`: it imports
+  // React and its icons, it reaches `window` and `document`, and the rules of the hooks apply. The
+  // lists are written down here a second time on purpose: opening an import or a global, or
+  // making a second package a React package, is a decision made in two places.
+  const REACT = 'ui';
+  const file = (name = 'boundary-probe.tsx') => source(REACT, name);
+  const REACHES = ['window', 'document'];
+  const CLOSED = [
+    'localStorage',
+    'sessionStorage',
+    'indexedDB',
+    'fetch',
+    'navigator',
+    'process',
+    'Buffer',
+    'crypto',
+  ];
+  const UI_LAYERS = ['core', 'i18n'];
+  const CLOSED_LAYERS = [
+    'contract',
+    'storage',
+    'ledger',
+    'testing',
+    'features',
+    'access',
+    'business',
+    'manifest',
+    'web-data',
+  ];
+  const PURE = [...PACKAGES, 'features', 'access', 'business', 'i18n', 'manifest', 'unlisted'];
+
+  it.each(['react', 'react/jsx-runtime', 'lucide-react'])(
+    'lets %s through in ui, in every file of its src',
+    async (specifier) => {
+      await expectAccepted(file(), importing(specifier));
+      await expectAccepted(file('deep/probe.ts'), importing(specifier));
+    },
+  );
+
+  it.each(['react', 'react/jsx-runtime', 'react-dom', 'lucide-react'])(
+    'still refuses %s in a pure package and in the layer «Browser»',
+    async (specifier) => {
+      for (const pure of [...PURE, 'web-data']) {
+        await expectNoImport(source(pure, 'widget.tsx'), specifier);
+      }
+      await expectNoImport(industrySource('muster', 'widget.tsx'), specifier);
+    },
+  );
+
+  it.each([
+    'react-dom',
+    'react-dom/client',
+    'dexie',
+    'dexie-react-hooks',
+    'node:fs',
+    'node:crypto',
+  ])('refuses %s in ui: no mounting, no database, no Node', async (specifier) => {
+    await expectNoImport(file(), specifier);
+  });
+
+  it.each(UI_LAYERS)('may import %s', async (layer) => {
+    await expectAccepted(file(), importing(`@onestrand/${layer}`));
+  });
+
+  it.each([...CLOSED_LAYERS, REACT])(
+    'may not import %s: no data, no rights, no device',
+    async (layer) => {
+      await expectNoImport(file(), `@onestrand/${layer}`);
+    },
+  );
+
+  it('covers the case of the order: the kit reaches no storage', async () => {
+    await expectNoImport(file(), '@onestrand/storage');
+    await expectNoImport(file(), '@onestrand/web-data');
+  });
+
+  it('is imported by no package of the lower layers', async () => {
+    for (const lower of [...PURE, 'web-data']) {
+      await expectNoImport(source(lower), `@onestrand/${REACT}`);
+    }
+  });
+
+  it.each(REACHES)('lets the global %s through in ui', async (name) => {
+    await expectAccepted(file(), reading(name));
+  });
+
+  it.each(CLOSED)('still refuses the global %s in ui', async (name) => {
+    await expectRefused(file(), reading(name), 'no-restricted-globals', name);
+  });
+
+  it.each(REACHES)('still refuses the global %s in a pure package', async (name) => {
+    for (const pure of PURE) {
+      await expectRefused(source(pure), reading(name), 'no-restricted-globals', name);
+    }
+  });
+
+  it('lets through the globals of the list and no others, by the rule of the real config', async () => {
+    const config = (await real.calculateConfigForFile(join(REPO_ROOT, file()))) as {
+      rules?: Record<string, unknown[]>;
+    };
+    const [severity, ...refused] = config.rules?.['no-restricted-globals'] ?? [];
+    expect(severity).toBe(2);
+    expect([...refused].sort()).toEqual([...CLOSED].sort());
+  });
+
+  it('refuses an industry, an edition, a file inside a package and import() in any form', async () => {
+    await expectNoImport(file(), '../../../industries/facility/core/index');
+    await expectNoImport(file(), '../../../editions/field/edition');
+    await expectNoImport(file(), '@onestrand-industry/muster');
+    await expectNoImport(file(), '@onestrand/core/src/money');
+    await expectNoImport(file(), '@onestrand/i18n/web');
+    await expectRefusedBy(file(), loading('./Button'), DYNAMIC);
+    await expectRefusedBy(file(), typeOf('react'), TYPE_FORM);
+    await expectRefusedBy(file(), requiring('react'), REQUIRE);
+  });
+
+  it('holds the hooks of React to their rules', async () => {
+    const conditional =
+      "import { useState } from 'react';\n\nexport function Probe({ on }: { on: boolean }) {\n  if (on) {\n    useState(0);\n  }\n  return null;\n}\n";
+    const findings = await lint(file(), conditional);
+    expect(findings.map((finding) => finding.rule)).toContain('react-hooks/rules-of-hooks');
+  });
+
+  it('leaves the tests of ui their tools: Node, the testing library, the test kit', async () => {
+    const probe = 'platform/ui/test/boundary-probe.test.tsx';
+    for (const specifier of [
+      'node:fs',
+      '@testing-library/react',
+      '@onestrand/testing',
+      '@onestrand/ui',
+      '../src/index',
+    ]) {
+      await expectAccepted(probe, importing(specifier));
+    }
+    await expectNoImport(probe, '../../storage/src/index');
+  });
+
+  it('keeps the boundary rules of the real config for ui, with and without types', async () => {
+    const path = join(REPO_ROOT, file());
+    const [before, after] = (await Promise.all([
+      real.calculateConfigForFile(path),
+      linter.calculateConfigForFile(path),
+    ])) as { rules?: Record<string, unknown> }[];
+    for (const rule of BOUNDARY_RULES) {
+      expect(after?.rules?.[rule], rule).toEqual(before?.rules?.[rule]);
+    }
+  });
+});
+
+describe('a package of the layer «Browser» with a React part', () => {
+  // `web-device` is the first (P-10): its `src/` is a browser package that builds the port of the
+  // device from the globals of the page, and its `src/web/` is the React part, published as
+  // `@onestrand/web-device/web`. The lists are written down here a second time on purpose
+  // (`PLATFORM_LAYERS`, `BROWSER_PACKAGES` and `REACT_PARTS` of `eslint.config.js`): opening a
+  // layer, a global or a React part is a decision made in two places.
+  const NAME = 'web-device';
+  const logic = (file = 'boundary-probe.ts') => source(NAME, file);
+  const part = (file = 'boundary-probe.tsx') => source(NAME, `web/${file}`);
+  const LOGIC_REACHES = ['window', 'document', 'navigator', 'crypto'];
+  const LOGIC_CLOSED = [
+    'localStorage',
+    'sessionStorage',
+    'indexedDB',
+    'fetch',
+    'process',
+    'Buffer',
+  ];
+  const LOGIC_LAYERS = ['core', 'storage'];
+  const PART_REACHES = ['window', 'document'];
+  const PART_CLOSED = [
+    'localStorage',
+    'sessionStorage',
+    'indexedDB',
+    'fetch',
+    'navigator',
+    'process',
+    'Buffer',
+    'crypto',
+  ];
+  const PART_LAYERS = ['core', 'i18n', 'storage', 'ui'];
+  const NEVER = [
+    'contract',
+    'ledger',
+    'testing',
+    'features',
+    'access',
+    'business',
+    'manifest',
+    'web-data',
+  ];
+
+  it.each(LOGIC_REACHES)('lets %s through in the logic', async (name) => {
+    await expectAccepted(logic(), reading(name));
+  });
+
+  it.each(LOGIC_CLOSED)('still refuses the global %s in the logic', async (name) => {
+    await expectRefused(logic(), reading(name), 'no-restricted-globals', name);
+  });
+
+  it.each(PART_CLOSED)('refuses the global %s in the React part', async (name) => {
+    await expectRefused(part(), reading(name), 'no-restricted-globals', name);
+  });
+
+  it.each(PART_REACHES)('lets %s through in the React part', async (name) => {
+    await expectAccepted(part(), reading(name));
+  });
+
+  it('lets through exactly the globals of the lists, by the rule of the real config', async () => {
+    for (const [file, closed] of [
+      [logic(), LOGIC_CLOSED],
+      [part(), PART_CLOSED],
+    ] as const) {
+      const config = (await real.calculateConfigForFile(join(REPO_ROOT, file))) as {
+        rules?: Record<string, unknown[]>;
+      };
+      const [severity, ...refused] = config.rules?.['no-restricted-globals'] ?? [];
+      expect(severity).toBe(2);
+      expect([...refused].sort()).toEqual([...closed].sort());
+    }
+  });
+
+  it.each(['react', 'react/jsx-runtime', 'lucide-react', 'react-dom', 'dexie', 'node:fs'])(
+    'refuses %s in the logic: it runs without React',
+    async (specifier) => {
+      await expectNoImport(logic(), specifier);
+      await expectNoImport(logic('deep/probe.ts'), specifier);
+    },
+  );
+
+  it('refuses the React part in the logic, by relative path and by name', async () => {
+    await expectNoImport(logic(), './web/PrintButton');
+    await expectNoImport(logic(), './web');
+    await expectNoImport(logic('deep/probe.ts'), '../web/index');
+    await expectNoImport(logic(), '@onestrand/web-device/web');
+    await expectNoImport(logic(), '@onestrand/ui');
+    await expectAccepted(logic(), importing('./webcam'));
+  });
+
+  it.each(['react', 'react/jsx-runtime', 'lucide-react'])(
+    'lets %s through in the React part',
+    async (specifier) => {
+      await expectAccepted(part(), importing(specifier));
+      await expectAccepted(part('deep/probe.tsx'), importing(specifier));
+    },
+  );
+
+  it.each(['react-dom', 'react-dom/client', 'dexie', 'node:fs'])(
+    'refuses %s in the React part: no mounting, no database, no Node',
+    async (specifier) => {
+      await expectNoImport(part(), specifier);
+    },
+  );
+
+  it.each(LOGIC_LAYERS)('lets the logic import %s', async (layer) => {
+    await expectAccepted(logic(), importing(`@onestrand/${layer}`));
+  });
+
+  it.each(PART_LAYERS)('lets the React part import %s', async (layer) => {
+    await expectAccepted(part(), importing(`@onestrand/${layer}`));
+  });
+
+  it.each([...NEVER, NAME])('refuses %s in both parts', async (layer) => {
+    await expectNoImport(logic(), `@onestrand/${layer}`);
+    await expectNoImport(part(), `@onestrand/${layer}`);
+  });
+
+  it('lets the React part import the logic of its package by relative path, and nothing outside it', async () => {
+    await expectAccepted(part(), importing('../share'));
+    await expectAccepted(part(), importing('./context'));
+    await expectNoImport(part(), '../../../storage/src/index');
+    await expectNoImport(part(), '@onestrand/ui/src/Button');
+    await expectRefusedBy(part(), loading('./PrintButton'), DYNAMIC);
+    await expectRefusedBy(part(), typeOf('react'), TYPE_FORM);
+  });
+
+  it('holds the React part to the rules of the hooks', async () => {
+    const conditional =
+      "import { useState } from 'react';\n\nexport function Probe({ on }: { on: boolean }) {\n  if (on) {\n    useState(0);\n  }\n  return null;\n}\n";
+    const findings = await lint(part(), conditional);
+    expect(findings.map((finding) => finding.rule)).toContain('react-hooks/rules-of-hooks');
+  });
+
+  it('is imported by no package below it, and the kit stays below it', async () => {
+    for (const lower of [...PACKAGES, 'manifest', 'business', 'web-data', 'ui']) {
+      await expectNoImport(source(lower), `@onestrand/${NAME}`);
+    }
+  });
+
+  it('keeps the boundary rules of the real config for both parts, with and without types', async () => {
+    for (const file of [logic(), part()]) {
+      const path = join(REPO_ROOT, file);
+      const [before, after] = (await Promise.all([
+        real.calculateConfigForFile(path),
+        linter.calculateConfigForFile(path),
+      ])) as { rules?: Record<string, unknown> }[];
+      for (const rule of BOUNDARY_RULES) {
+        expect(after?.rules?.[rule], rule).toEqual(before?.rules?.[rule]);
+      }
+    }
   });
 });

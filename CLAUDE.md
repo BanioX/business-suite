@@ -54,14 +54,19 @@ pnpm lint                       # mit den Importgrenzen der Plattform
 pnpm typecheck                  # inkl. Reinheits-Check von platform/*/src
 pnpm test                       # pnpm test:coverage für Abdeckung mit Schwellen
 pnpm build
-pnpm guards                     # Wächter: öffentliches Repo, Wörter in der Plattform, Herkunft, Nebenwirkungen, Namen, Pfad-Eigentum
+pnpm guards                     # Wächter: öffentliches Repo, Wörter in der Plattform, Herkunft, Nebenwirkungen, Namen, Pfad-Eigentum, Kontrast
 pnpm ownership                  # nur Pfad-Eigentum; OWNERSHIP_BASE=<ref> setzt den Anfang (sonst origin/main)
 pnpm names                      # nur das Namensregister
+pnpm contrast                   # nur der Kontrast jedes Themas (Kit und Ausgaben), mit jedem Paar
+pnpm --filter @onestrand/ui gallery  # Galerie des UI-Kits im Beispiel-Thema (nur zur Entwicklung)
+pnpm --filter @onestrand/web-device gallery  # Galerie des Geräts (Drucken, Foto, QR, Unterschrift; nur zur Entwicklung)
+pnpm industry:new <id>          # neue Branche nach dem Muster von muster; Namen als Vorschlag in industries/<id>/NAMES.md
+pnpm check:industry <id>        # alles, was eine Branche vor dem Landen besteht, mit exit= je Schritt und ALL=; Exit 2 = konnte nicht starten
 node tools/provenance.mjs       # docs/herkunft.md aus den Herkunftsvermerken neu schreiben
 node tools/hash-name.mjs <wort> # Prüfsumme für die Liste der verbotenen Namen
 ```
 
-Jeder Commit endet mit `Order: <Auftrag>` und `Role: <head|platform|industry:<id>|facts>`; `registry/owners.json` sagt, welcher Auftrag wo schreiben darf. Ein einzelnes Paket prüfen: `pnpm exec vitest run --project <ordner>` und `pnpm --filter @onestrand/<paket> typecheck`.
+Jeder Commit endet mit `Order: <Auftrag>` und `Role: <head|platform|industry:<id>|facts>`; `registry/owners.json` sagt, welcher Auftrag wo schreiben darf. Ein einzelnes Paket prüfen: `pnpm exec vitest run --project <ordner>` und `pnpm --filter @onestrand/<paket> typecheck`; eine Branche: `pnpm check:industry <id>`, oder einzeln `pnpm exec vitest run --project <id>-core` und `pnpm --filter @onestrand-industry/<id> typecheck` (mit `--coverage --coverage.include='src/**'` für die Abdeckung).
 
 ## Definition of Done
 - [ ] Abnahme des Auftrags erfüllt, nur in den eigenen Pfaden geändert

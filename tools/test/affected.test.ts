@@ -277,6 +277,29 @@ describe('planCheck: only some packages changed', () => {
     ]);
   });
 
+  it('checks the core of an industry when it changes, and the industry when the platform below it changes', () => {
+    const industry = pkg('@sample-industry/one', 'industries/one/core', ['@sample/top']);
+    const packages = [...WORKSPACE, industry];
+    const own = planCheck({ changedPaths: ['industries/one/core/src/index.ts'], packages });
+    expect(own.scope).toBe('packages');
+    expect(own.packages).toEqual(['@sample-industry/one']);
+    expect(argsOf(own, 'lint')).toEqual([
+      'exec',
+      'eslint',
+      '--max-warnings',
+      '0',
+      'industries/one/core',
+    ]);
+    expect(argsOf(own, 'test:coverage')).toContain('one-core');
+    const below = planCheck({ changedPaths: ['platform/base/src/money.ts'], packages });
+    expect(below.packages).toContain('@sample-industry/one');
+    // The README of an industry is docs; a file beside its parts belongs to no package.
+    expect(planCheck({ changedPaths: ['industries/one/README.md'], packages }).scope).toBe('docs');
+    expect(planCheck({ changedPaths: ['industries/one/NAMES.ts'], packages }).scope).toBe(
+      'everything',
+    );
+  });
+
   it('gives a nested package its own files and the outer package the rest', () => {
     const outer = pkg('@sample/outer', 'editions/outer');
     const inner = pkg('@sample/inner', 'editions/outer/app');
@@ -395,6 +418,15 @@ describe('workspaceGraph', () => {
     expect(vitestProject('platform/core')).toBe('core');
     expect(vitestProject('editions/field/app')).toBe('app');
     expect(vitestProject('tools')).toBe('tooling');
+  });
+
+  it('names a part of an industry after the industry and the part: every industry has a core', () => {
+    expect(vitestProject('industries/muster/core')).toBe('muster-core');
+    expect(vitestProject('industries/muster/web')).toBe('muster-web');
+    expect(vitestProject('industries/facility/core')).not.toBe(vitestProject('platform/core'));
+    // Only a part directly below an industry: anything else keeps the name of its directory.
+    expect(vitestProject('industries/muster')).toBe('muster');
+    expect(vitestProject('industries/muster/core/fixtures')).toBe('fixtures');
   });
 });
 
@@ -660,11 +692,47 @@ describe('the real workspace', () => {
   const root = fileURLToPath(new URL('../..', import.meta.url));
   const workspace = readWorkspace(root);
 
-  it('is read without a problem and contains the tools and the platform', () => {
+  it('is read without a problem and contains the tools, the platform and the industries', () => {
     const names = workspace.map(({ name }) => name);
     expect(names).toContain('@onestrand/tooling');
     expect(names).toContain('@onestrand/core');
     expect(new Set(names).size).toBe(names.length);
+    expect(workspace.find(({ dir }) => dir === 'industries/muster/core')).toMatchObject({
+      name: '@onestrand-industry/muster',
+      project: 'muster-core',
+    });
+  });
+
+  it('gives every package a Vitest project of its own name', () => {
+    const projects = workspace.map(({ project }) => project);
+    expect(new Set(projects).size).toBe(projects.length);
+  });
+
+  it('checks an industry when a platform package below it changes', () => {
+    const affected = withDependents(new Set(['@onestrand/manifest']), workspace);
+    expect(affected.map(({ name }) => name)).toContain('@onestrand-industry/muster');
+  });
+
+  it('narrows a change of the kit to the kit and what builds on it, with its own Vitest project', () => {
+    // The kit (W0-03) is the first React package: jsdom and its own project, `ui`. The device
+    // (`@onestrand/web-device`) builds its visible parts with it, so a change of the kit checks it too.
+    const plan = planCheck({ changedPaths: ['platform/ui/src/Button.tsx'], packages: workspace });
+    expect(plan.scope).toBe('packages');
+    expect(plan.packages).toEqual(
+      withDependents(new Set(['@onestrand/ui']), workspace).map(({ name }) => name),
+    );
+    expect(plan.packages).toEqual(
+      expect.arrayContaining(['@onestrand/ui', '@onestrand/web-device']),
+    );
+    expect(plan.packages).not.toContain('@onestrand/core');
+    const test = plan.steps.find((step) => step.step === 'test:coverage');
+    expect(test).toMatchObject({ action: 'command' });
+    expect(test?.action === 'command' ? test.args : []).toEqual(
+      expect.arrayContaining(['--project', 'ui', '--coverage.include=src/**']),
+    );
+    // A change below the kit checks the kit too.
+    const below = withDependents(new Set(['@onestrand/i18n']), workspace);
+    expect(below.map(({ name }) => name)).toContain('@onestrand/ui');
   });
 
   it('puts the tools on top of the platform and the platform on top of nothing outside', () => {

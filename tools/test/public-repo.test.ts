@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   forbiddenNameProblems,
+  forbiddenPathProblems,
   hashName,
   nameHashes,
   namesIn,
@@ -65,6 +66,20 @@ describe('names that never stand in the repository', () => {
     ]);
     expect(problems[1]?.message).toContain(hashName('zweiworte'));
     expect(problems.map((problem) => problem.message).join(' ')).not.toMatch(/zwei|beispiel/i);
+  });
+
+  it('reports a name in the path of a file whose text is not read', () => {
+    const problems = forbiddenPathProblems(
+      ['docs/bilder/beispielapp-logo.png', 'docs/bilder/zwei_worte.woff2', 'docs/bilder/ok.png'],
+      names,
+      firstWords,
+    );
+    expect(problems.map(({ path, line }) => ({ path, line }))).toEqual([
+      { path: 'docs/bilder/beispielapp-logo.png', line: 0 },
+      { path: 'docs/bilder/zwei_worte.woff2', line: 0 },
+    ]);
+    expect(problems.map((problem) => problem.message).join(' ')).not.toMatch(/zwei|beispiel/i);
+    expect(forbiddenPathProblems(['docs/bilder/muster-logo.png'])).toEqual([]);
   });
 
   it('keeps the real list as hashes only', () => {

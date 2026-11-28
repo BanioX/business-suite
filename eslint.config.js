@@ -1,5 +1,6 @@
 // @ts-check
 import js from '@eslint/js';
+import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
@@ -21,6 +22,12 @@ const PLATFORM_LAYERS = {
   i18n: [],
   manifest: ['core', 'contract', 'storage', 'features', 'access', 'business', 'i18n'],
   'web-data': ['core', 'contract', 'storage', 'business', 'manifest'],
+  // The kit draws and speaks: numbers and dates of the core, its catalogue through i18n. It knows
+  // no data, no rights and no device; those reach a page through the hooks of the shell.
+  ui: ['core', 'i18n'],
+  // The device: ports and the logic over the browser in `src/`, the checksum of a signature
+  // through the storage. Its React part (`src/web/`) has a line of its own in REACT_PARTS.
+  'web-device': ['core', 'storage'],
 };
 
 /**
@@ -36,7 +43,45 @@ const PLATFORM_LAYERS = {
  */
 const BROWSER_PACKAGES = {
   'web-data': ['indexedDB', 'localStorage', 'navigator', 'crypto'],
+  // Share, print, download, camera, pictures, wake lock, badge, clipboard: all built in one file
+  // (`createBrowserDevice`) and handed to the rest of the package as the port `Device`.
+  'web-device': ['window', 'document', 'navigator', 'crypto'],
 };
+
+/**
+ * The packages of the layer «React» (docs/architektur.md, 3.2): their whole `src/` is React. Each
+ * is held to the rules of a pure package with three differences: it imports React and its icons
+ * (`REACT_IMPORTS`), it reaches the globals named for it and no others, and the rules of the
+ * hooks of React apply. `window` and `document` are for focus, timers and the modal dialog; no
+ * storage, no network, no crypto: the kit has no side effects (its own test proves it), and what
+ * leaves the screen goes through the shell and the packages of the layer «Browser». A new React
+ * package is a decision made in three places: here, in tools/test/lint-boundaries.test.ts, and in
+ * the purity check of its `tsconfig.src.json` (DOM and JSX, no Node).
+ */
+const REACT_PACKAGES = {
+  ui: ['window', 'document'],
+};
+
+/**
+ * The React parts of packages of the layer «Browser»: `src/web/`, published as
+ * `@onestrand/<name>/web`. The rest of `src/` stays a browser package, held to its rules, and
+ * imports nothing from `src/web/`, so the logic runs and is tested without React. The React part
+ * is held to the rules of a React package with its own layers and globals: it imports the logic of
+ * its package by relative path, the kit (`ui`) and the packages named here. A new React part is a
+ * decision made in three places: here, in tools/test/lint-boundaries.test.ts, and in the purity
+ * check of the package's `tsconfig.src.json` (DOM and JSX, no Node).
+ */
+const REACT_PARTS = {
+  'web-device': { layers: ['core', 'i18n', 'storage', 'ui'], reach: ['window', 'document'] },
+};
+
+/** The React part of a package: every file of code under its `src/web/`. */
+function reactPartFiles(name) {
+  return `platform/${name}/src/web/**/${CODE}`;
+}
+
+/** What a React package imports that a pure one never does. `react-dom` stays closed: mounting the app is the edition's job. */
+const REACT_IMPORTS = ['react', 'lucide-react'];
 
 /** The globals the pure part of a package never reaches: the browser's and Node's. */
 const PURE_RESTRICTED_GLOBALS = [
@@ -58,6 +103,7 @@ const NOT_PURE = [
   { name: 'react-dom', message: 'The pure part of a package knows no UI (architecture 3.2).' },
   { name: 'dexie', message: 'Storage is reached through ports only (architecture 3.2, rule 1).' },
   { name: 'dexie-react-hooks', message: 'Storage is reached through ports only.' },
+  { name: 'lucide-react', message: 'The pure part of a package knows no UI (architecture 3.2).' },
 ];
 
 /**
@@ -71,8 +117,15 @@ function pureFiles(name) {
   return `platform/${name}/src/**/${CODE}`;
 }
 
+/**
+ * The scope of the packages of the industries (`industries/<id>/core` is `@onestrand-industry/<id>`).
+ * It lies outside `@onestrand/`, so no rule written for the platform's own packages lets an
+ * industry through by accident; every rule below names it.
+ */
+const INDUSTRY_SCOPE = '@onestrand-industry';
+
 const NO_INDUSTRY = {
-  group: ['**/industries/**', '**/editions/**'],
+  group: ['**/industries/**', '**/editions/**', `${INDUSTRY_SCOPE}/*`, `${INDUSTRY_SCOPE}/**`],
   message: 'The platform imports no industry and no edition (architecture 3.2, rule 2).',
 };
 
@@ -86,7 +139,7 @@ function dynamicImportOf(pattern, message) {
 }
 
 const NO_INDUSTRY_DYNAMIC = dynamicImportOf(
-  '(^|\\/)(industries|editions)(\\/|$)',
+  `(^|\\/)(industries|editions)(\\/|$)|^${INDUSTRY_SCOPE}\\/`,
   NO_INDUSTRY.message,
 );
 
@@ -103,13 +156,20 @@ const STATIC_IMPORTS_ONLY = [
   },
 ];
 
-/** Import rules of one platform package, for the files given. */
-function platformBoundaries(name, allowed, { pure }) {
+/**
+ * Import rules of one platform package, for the files given. `react` opens React and its icons
+ * (a React package, or the React part of a package); `extra` adds patterns of its own.
+ */
+function platformBoundaries(name, allowed, { pure, react = name in REACT_PACKAGES, extra = [] }) {
+  // A React package is pure in everything but React itself.
+  const notPure = react
+    ? NOT_PURE.filter((entry) => !REACT_IMPORTS.includes(entry.name))
+    : NOT_PURE;
   return {
     'no-restricted-imports': [
       'error',
       {
-        paths: pure ? NOT_PURE : [],
+        paths: pure ? notPure : [],
         patterns: [
           {
             // Every platform package except the layers below this one. Its own name is
@@ -127,6 +187,7 @@ function platformBoundaries(name, allowed, { pure }) {
             regex: '^(\\.\\./)+(.*/)?(platform|tools|src|test|node_modules)(/|$)',
             message: 'Stay inside the package: other packages are imported by their name.',
           },
+          ...extra,
           ...(pure
             ? [
                 {
@@ -135,7 +196,7 @@ function platformBoundaries(name, allowed, { pure }) {
                 },
                 {
                   // The same packages through a subpath, such as `react-dom/client`.
-                  group: NOT_PURE.map((entry) => `${entry.name}/**`),
+                  group: notPure.map((entry) => `${entry.name}/**`),
                   message:
                     'The pure part of a package knows no UI and no database (architecture 3.2).',
                 },
@@ -149,6 +210,114 @@ function platformBoundaries(name, allowed, { pure }) {
       },
     ],
     ...(pure ? { 'no-restricted-syntax': STATIC_IMPORTS_ONLY } : {}),
+  };
+}
+
+/**
+ * The industries (suite ADR-0004, «Was eine Branche nicht darf»; docs/architektur.md, 3.2). An
+ * industry lies in `industries/<id>/`; its pure part, `industries/<id>/core`, is the package
+ * `@onestrand-industry/<id>` and is held to the rules of the pure part of the platform: no UI, no
+ * database, no Node, no browser global, import statements only. On top of that:
+ *
+ * - it imports the platform by the public entry of a package, never a file inside one, and only
+ *   packages of the pure layers: not the layer «Browser» (`BROWSER_PACKAGES`) and not the test kit;
+ * - it imports no other industry, by path or by name, and itself only by relative path;
+ * - it imports no edition: the edition lists the industry, never the other way round.
+ *
+ * The React part (`industries/<id>/web`) gets its rules with W0-03.
+ */
+function industryCoreFiles(part) {
+  return `industries/*/core/${part}/**/${CODE}`;
+}
+
+/** Platform packages the pure part of an industry never imports: the browser layer and the test kit. */
+const NOT_FOR_INDUSTRY_CORE = [...Object.keys(BROWSER_PACKAGES), 'testing'];
+
+const NO_OTHER_INDUSTRY = {
+  group: ['**/industries/**', `${INDUSTRY_SCOPE}/*`, `${INDUSTRY_SCOPE}/**`],
+  message:
+    'An industry imports no other industry, and its own files by relative path (suite ADR-0004).',
+};
+
+const NO_EDITION = {
+  group: ['**/editions/**'],
+  message: 'An industry imports no edition: the edition lists the industry (suite ADR-0004, 2).',
+};
+
+const NO_OTHER_INDUSTRY_DYNAMIC = dynamicImportOf(
+  `(^|\\/)(industries|editions)(\\/|$)|^${INDUSTRY_SCOPE}\\/`,
+  'An industry imports no other industry and no edition (suite ADR-0004).',
+);
+
+function industryBoundaries({ pure }) {
+  return {
+    'no-restricted-imports': [
+      'error',
+      {
+        paths: pure
+          ? [
+              ...NOT_PURE,
+              ...NOT_FOR_INDUSTRY_CORE.map((name) => ({
+                name: `@onestrand/${name}`,
+                message:
+                  name === 'testing'
+                    ? 'The test kit belongs in tests, never in what an industry ships.'
+                    : `@onestrand/${name} belongs to the layer «Browser»; the pure part of an industry runs without a browser (architecture 3.2).`,
+              })),
+            ]
+          : [],
+        patterns: [
+          {
+            group: pure
+              ? ['@onestrand/*/*']
+              : ['@onestrand/*/*', '!@onestrand/*/web', '!@onestrand/*/testing'],
+            message: pure
+              ? 'The pure part of an industry imports the public entry of a platform package: no file inside it and no React part.'
+              : 'Import the public entry of a package, never a file inside it.',
+          },
+          NO_OTHER_INDUSTRY,
+          NO_EDITION,
+          pure
+            ? {
+                // Out of `src` into the tests, the web part or anything beside the package.
+                regex:
+                  '^(\\.\\./)+(.*/)?(industries|platform|editions|tools|core|web|src|test|node_modules)(/|$)',
+                message: 'Stay inside the package: other packages are imported by their name.',
+              }
+            : {
+                regex: '^(\\.\\./){2,}',
+                message: 'Stay inside the package: other packages are imported by their name.',
+              },
+          ...(pure
+            ? [
+                {
+                  regex: '^node:',
+                  message: 'The pure part of an industry runs without Node (architecture 3.2).',
+                },
+                {
+                  group: NOT_PURE.map((entry) => `${entry.name}/**`),
+                  message:
+                    'The pure part of an industry knows no UI and no database (architecture 3.2).',
+                },
+              ]
+            : []),
+        ],
+      },
+    ],
+    'no-restricted-syntax': pure
+      ? STATIC_IMPORTS_ONLY
+      : [
+          'error',
+          NO_OTHER_INDUSTRY_DYNAMIC,
+          dynamicImportOf(
+            '^@onestrand\\/[^\\/]+\\/(?!(web|testing)$)',
+            'Import the public entry of a package, never a file inside it.',
+          ),
+          dynamicImportOf(
+            '^(\\.\\.\\/){2,}',
+            'Stay inside the package: other packages are imported by their name.',
+          ),
+        ],
   };
 }
 
@@ -206,8 +375,8 @@ export default tseslint.config(
       'no-restricted-globals': ['error', ...PURE_RESTRICTED_GLOBALS],
     },
   },
-  // The packages of the layer «Browser» reach the globals named for them, and no others.
-  ...Object.entries(BROWSER_PACKAGES).map(([name, reach]) => ({
+  // The packages of the layers «Browser» and «React» reach the globals named for them, and no others.
+  ...Object.entries({ ...BROWSER_PACKAGES, ...REACT_PACKAGES }).map(([name, reach]) => ({
     files: [pureFiles(name)],
     rules: {
       'no-restricted-globals': [
@@ -233,9 +402,33 @@ export default tseslint.config(
   ...Object.entries(PLATFORM_LAYERS).flatMap(([name, allowed]) => [
     {
       files: [pureFiles(name)],
-      rules: platformBoundaries(name, allowed, { pure: true }),
+      rules: platformBoundaries(name, allowed, {
+        pure: true,
+        // The part of a package beside its React part never reaches into it.
+        extra:
+          name in REACT_PARTS
+            ? [
+                {
+                  regex: '^\\.{1,2}/(.*/)?web(/|$)',
+                  message:
+                    'The logic of a package imports no React part, so it runs without React (architecture 3.2).',
+                },
+              ]
+            : [],
+      }),
     },
   ]),
+  // The React part of a package of the layer «Browser»: its own layers, React, and its globals.
+  ...Object.entries(REACT_PARTS).map(([name, { layers, reach }]) => ({
+    files: [reactPartFiles(name)],
+    rules: {
+      ...platformBoundaries(name, layers, { pure: true, react: true }),
+      'no-restricted-globals': [
+        'error',
+        ...PURE_RESTRICTED_GLOBALS.filter((global) => !reach.includes(global)),
+      ],
+    },
+  })),
   {
     // A platform package without a line in PLATFORM_LAYERS imports no other platform package.
     files: [pureFiles('*')],
@@ -277,5 +470,40 @@ export default tseslint.config(
         ),
       ],
     },
+  },
+  {
+    // Whatever stands under `industries/` (a configuration, a part without rules of its own
+    // yet): no edition, in any form. The blocks below replace this for the core of an industry.
+    files: [`industries/**/${CODE}`],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [NO_EDITION] }],
+      'no-restricted-syntax': [
+        'error',
+        dynamicImportOf('(^|\\/)editions(\\/|$)', NO_EDITION.message),
+      ],
+    },
+  },
+  {
+    // The pure part of an industry: the globals of neither the browser nor Node.
+    files: [industryCoreFiles('src')],
+    languageOptions: { globals: {} },
+    rules: {
+      'no-restricted-globals': ['error', ...PURE_RESTRICTED_GLOBALS],
+      ...industryBoundaries({ pure: true }),
+    },
+  },
+  {
+    // The tests of an industry run on Node and may use the test kit; they stay in their package
+    // and reach no other industry and no edition, in any form.
+    files: [industryCoreFiles('test')],
+    rules: industryBoundaries({ pure: false }),
+  },
+  {
+    // The rules of the hooks of React, wherever a React package keeps code: its sources, its
+    // tests and its gallery.
+    files: [...Object.keys(REACT_PACKAGES), ...Object.keys(REACT_PARTS)].map(
+      (name) => `platform/${name}/**/${CODE}`,
+    ),
+    extends: [reactHooks.configs.flat.recommended],
   },
 );

@@ -96,7 +96,16 @@ const NARROWED = {
   build: (affected) => [...filters(affected), '--if-present', 'run', 'build'],
 } satisfies Partial<Record<StepName, (affected: readonly WorkspacePackage[]) => readonly string[]>>;
 
-type CodeStep = keyof typeof NARROWED;
+export type CodeStep = keyof typeof NARROWED;
+
+/**
+ * The arguments for pnpm that run one of the steps lint, typecheck, test:coverage and build
+ * narrowed to the given packages: what `pnpm check --affected` runs for them, so another runner
+ * (`pnpm check:industry`) applies exactly the same rules.
+ */
+export function narrowedArgs(step: CodeStep, packages: readonly WorkspacePackage[]): string[] {
+  return [...NARROWED[step](packages)];
+}
 
 /** The steps that look at code only: skipped for docs, narrowed for packages. */
 function isCodeStep(step: StepName): step is CodeStep {
@@ -223,13 +232,25 @@ export function planCheck(input: {
 
 // --- The workspace -------------------------------------------------------------------------
 
+/** A part of an industry: `industries/<id>/<part>`, such as `industries/muster/core`. */
+const INDUSTRY_PART = /^industries\/([^/]+)\/([^/]+)$/;
+
 /**
- * The Vitest project of a package: the name of its directory, and `tooling` for the tools (the
+ * The Vitest project of a package: the name of its directory, `tooling` for the tools, and
+ * `<id>-<part>` for a part of an industry (`muster-core`), because every industry has a `core`
+ * and the name of the directory alone would clash with `platform/core` and with each other (the
  * convention of the `vitest.config.ts` files; tools/test/affected.test.ts pins it against the
  * real ones). A name Vitest does not know makes the narrowed test run fail, never pass.
  */
 export function vitestProject(dir: string): string {
-  return dir === 'tools' ? 'tooling' : dir.slice(dir.lastIndexOf('/') + 1);
+  if (dir === 'tools') {
+    return 'tooling';
+  }
+  const industry = INDUSTRY_PART.exec(dir);
+  if (industry !== null) {
+    return `${industry[1] ?? ''}-${industry[2] ?? ''}`;
+  }
+  return dir.slice(dir.lastIndexOf('/') + 1);
 }
 
 const DEPENDENCY_FIELDS = [

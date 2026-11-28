@@ -1,3 +1,4 @@
+// Origin: BanioX/Randen packages/core/test/application.test.ts @ e0f0907 — adapted: only the test that every command asks for a commandId and every operation for a business, on a sample contract; the rest of the file is new
 import {
   BpsSchema,
   CurrencyCodeSchema,
@@ -12,12 +13,13 @@ import {
   WeekdaySchema,
   YearMonthSchema,
 } from '@onestrand/core';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 import { z } from 'zod';
 import {
   command,
   commandBase,
   contractJsonSchemas,
+  fragmentProblems,
   operationJsonSchema,
   operationProblems,
   operationSchemaProblems,
@@ -26,10 +28,13 @@ import {
   type ContractFragment,
   type Operation,
   type OperationProblem,
+  type QueryNames,
+  type QueryOperation,
 } from '../src';
 import { customersContract } from './sample-contract';
 
 const ID = { type: 'string', pattern: UUID_V7_PATTERN.source };
+const SOME_ID = '01a3185c-5000-7000-8000-000000000001';
 const DRAFT = 'https://json-schema.org/draft/2020-12/schema';
 const access = { feature: 'customers', level: 'operate' } as const;
 const done = z.object({ done: z.boolean() });
@@ -44,6 +49,12 @@ function loose(kind: 'command' | 'query', input: z.ZodType, output: z.ZodType = 
 
 const messages = (problems: readonly OperationProblem[]) =>
   problems.map((problem) => `${problem.part}: ${problem.message}`);
+
+/** The base fields the input of an operation was found not to require. */
+const notRequired = (operation: Operation) =>
+  operationSchemaProblems(operation).flatMap(
+    ({ message }) => /must require «(\w+)»/.exec(message)?.[1] ?? [],
+  );
 
 /** What a function throws, or undefined if it returns. */
 function thrownBy(run: () => unknown): unknown {
@@ -256,13 +267,56 @@ describe('operationSchemaProblems', () => {
     expect(operationSchemaProblems(loose('query', z.object({ ...commandBase })))).toEqual([]);
   });
 
+  it('reports an input that may be left out as a whole', () => {
+    // JSON Schema shows the object and its required fields; that the call may send nothing at
+    // all is only known to the schema itself.
+    const optional = z.object({ ...commandBase }).optional();
+    expect(operationJsonSchema(loose('command', optional)).input.required).toEqual([
+      'commandId',
+      'businessId',
+    ]);
+    expect(operationSchemaProblems(loose('command', optional))).toEqual([
+      {
+        operation: 'customers.try',
+        part: 'input',
+        message:
+          'the input must not take a call that sends nothing: remove .optional() or .default() around the whole input',
+      },
+    ]);
+    const ids = z.object({ ...queryBase });
+    const withDefault = ids.default({ businessId: IdSchema.parse(SOME_ID) });
+    expect(messages(operationSchemaProblems(loose('query', withDefault)))).toEqual([
+      'input: the input must not take a call that sends nothing: remove .optional() or .default() around the whole input',
+    ]);
+    // After the base fields, if both are wrong.
+    expect(
+      operationSchemaProblems(loose('query', z.object({ text: z.string() }).optional())),
+    ).toMatchObject([
+      { message: expect.stringContaining('must require «businessId»') as unknown },
+      { message: expect.stringContaining('sends nothing') as unknown },
+    ]);
+    // «Or null» is a branch of a choice and found there; an empty object is not nothing.
+    expect(operationSchemaProblems(loose('query', ids.nullable()))).toHaveLength(1);
+    expect(operationSchemaProblems(loose('query', ids.partial()))).toHaveLength(1);
+  });
+
+  it('reports an input that cannot say without waiting whether it takes nothing', () => {
+    const waiting = z.preprocess((value) => Promise.resolve(value), z.object({ ...commandBase }));
+    expect(messages(operationSchemaProblems(loose('command', waiting)))).toEqual([
+      'input: the input could not be tried with nothing: Encountered Promise during synchronous parse. Use .parseAsync() instead.',
+    ]);
+  });
+
   it('reports an input that is no object at all', () => {
     expect(operationSchemaProblems(loose('query', z.string()))).toHaveLength(1);
-    expect(operationSchemaProblems(loose('query', z.unknown()))).toHaveLength(1);
+    expect(notRequired(loose('query', z.string()))).toEqual(['businessId']);
     expect(
       operationSchemaProblems(loose('query', z.array(z.object({ ...queryBase })))),
     ).toHaveLength(1);
-    expect(operationSchemaProblems(loose('command', z.unknown()))).toHaveLength(2);
+    // What takes anything requires nothing, and takes nothing too.
+    expect(notRequired(loose('query', z.unknown()))).toEqual(['businessId']);
+    expect(notRequired(loose('command', z.unknown()))).toEqual(['commandId', 'businessId']);
+    expect(operationSchemaProblems(loose('command', z.unknown()))).toHaveLength(3);
   });
 
   it('looks into every branch of a choice', () => {
@@ -359,7 +413,7 @@ describe('operationSchemaProblems', () => {
   it('takes a choice without branches as requiring nothing', () => {
     const empty = z.unknown().meta({ anyOf: [] });
     expect(operationJsonSchema(loose('query', empty)).input).toMatchObject({ anyOf: [] });
-    expect(operationSchemaProblems(loose('query', empty))).toHaveLength(1);
+    expect(notRequired(loose('query', empty))).toEqual(['businessId']);
   });
 
   it('does not run in circles on a schema that refers to itself', () => {
@@ -368,7 +422,11 @@ describe('operationSchemaProblems', () => {
       anyOf: [{ $ref: '#' }, { type: 'object' }],
     });
     // The reference back adds no requirement of its own, so the choice does not require it.
-    expect(operationSchemaProblems(loose('query', self))).toHaveLength(1);
+    expect(notRequired(loose('query', self))).toEqual(['businessId']);
+    // Zod itself runs in circles on such a schema; that is reported, not thrown.
+    expect(messages(operationSchemaProblems(loose('query', self)))[1]).toMatch(
+      /^input: the input could not be tried with nothing: /,
+    );
   });
 
   it('does not follow a reference out of the document', () => {
@@ -376,9 +434,17 @@ describe('operationSchemaProblems', () => {
     expect(operationJsonSchema(loose('query', elsewhere)).input.$ref).toBe(
       'https://example.invalid/input.json',
     );
-    expect(operationSchemaProblems(loose('query', elsewhere))).toHaveLength(1);
+    expect(notRequired(loose('query', elsewhere))).toEqual(['businessId']);
     const missing = z.unknown().meta({ $ref: '#/$defs/Nowhere' });
-    expect(operationSchemaProblems(loose('query', missing))).toHaveLength(1);
+    expect(notRequired(loose('query', missing))).toEqual(['businessId']);
+    // A reference elsewhere whose end is the id of a definition here is still one elsewhere.
+    const shared = z.object({ ...queryBase }).meta({ id: 'SharedBase' });
+    const lookalike = z.object({ nested: shared.optional() }).meta({ $ref: 'other://SharedBase' });
+    expect(operationJsonSchema(loose('query', lookalike)).input).toMatchObject({
+      $ref: 'other://SharedBase',
+      $defs: { SharedBase: { required: ['businessId'] } },
+    });
+    expect(operationSchemaProblems(loose('query', lookalike))).toHaveLength(1);
   });
 
   it.each([
@@ -442,6 +508,37 @@ describe('operationSchemaProblems', () => {
     expect(
       operationSchemaProblems({ ...twoThings, summary: 'Tries a schema.' }).map(({ part }) => part),
     ).toEqual(['input', 'input']);
+  });
+
+  it('does not pass a query that reads the device and no business', () => {
+    // Written without the helper, which asks for the business by type. Its form is fine and it
+    // can stand in a fragment; only this check reports it, until the order that needs such a
+    // query decides how one is declared.
+    const listBusinesses = {
+      name: 'device.businesses.list',
+      kind: 'query',
+      summary: 'Lists the businesses on this device.',
+      access: { feature: 'device', level: 'view' },
+      input: z.object({}),
+      output: z.object({ businessIds: z.array(IdSchema) }),
+    } as const satisfies QueryOperation;
+    const fragment = { 'device.businesses.list': listBusinesses } as const;
+    expectTypeOf<QueryNames<typeof fragment>>().toEqualTypeOf<'device.businesses.list'>();
+    expect(fragmentProblems(fragment)).toEqual([]);
+    expect(messages(operationSchemaProblems(listBusinesses))).toEqual([
+      'input: the input of a query must require «businessId»: spread queryBase into its object schema',
+    ]);
+  });
+
+  it('does not pass an input that carries bytes', () => {
+    // A file travels as bytes, and bytes have no JSON Schema: open until files go through an
+    // operation.
+    const bytes = z.instanceof(Uint8Array);
+    const store = loose('command', z.object({ ...commandBase, bytes }));
+    expect(operationProblems(store)).toEqual([]);
+    expect(messages(operationSchemaProblems(store))).toEqual([
+      'input: the input cannot be expressed as JSON Schema: Custom types cannot be represented in JSON Schema',
+    ]);
   });
 
   it('agrees with the types of command and query', () => {

@@ -1,0 +1,10 @@
+{
+  "//": "Purity check of a React package: src only, with the DOM types and JSX, and no Node types. Which globals the code may reach is decided by eslint.config.js (REACT_PACKAGES), not here. Tests, the gallery and configs are checked via tsconfig.json.",
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "types": []
+  },
+  "include": ["src"]
+}

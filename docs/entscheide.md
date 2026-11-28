@@ -144,6 +144,51 @@ Optionen:
 
 Passt zu den Grundsätzen aus Randen ([ADR-0009](adr/0009-grundsaetze-aus-randen.md): eine App für iPhone, iPad und Web, eine Hauptaktion pro Seite, Ziele 44 px) und zu den Prüfsteinen 2 und 5 im [Zielbild](zielbild.md) (unter zehn Sekunden, mit einer Hand). Eingetragen in den Auftrag [W0-03](auftraege/w0-03-oberflaeche.md).
 
+### S-27 Farben der Ausgaben: der helle Ton von Onestrand
+
+**Albans Vorgaben, 27.11.2026, wörtlich:** «Ich möchte vom UI Silber Weiss und helblaue akzente» und «Onestrand ist dagegen Premium Schwarz und blau es muss einen ton heller sein..».
+
+**Lesart:** Die Dachmarke Onestrand ist Schwarz, Silber und Blau (Website, `BanioX/onestrand`, `site/assets/css/main.css`: Schwarz der Raum, Silber der Mensch, Blau die Maschine; Blau `#0a6cff`, Verlauf `#8dbdff` bis `#0a5bea`). Eine Ausgabe ist ihr heller Ton: Weiss und Silber statt Schwarz, dasselbe Blau eine Stufe heller. Der dunkle Modus einer Ausgabe ist Onestrand selbst.
+
+**Was gilt** (Thema einer Ausgabe; die Plattform kennt nur neutrale Tokens wie `accent`, `surface`, W0-03 Schritt 1):
+
+| Rolle | Hell | Dunkel |
+| --- | --- | --- |
+| Grund hinter der App | Silber `#e6e9ee` | Schwarz `#000000` |
+| Grund der App | Silber, beleuchtet `#f4f6f9` | Nacht `#05070b` |
+| Listen, Karten, Felder | Weiss `#ffffff` | `#10141b` |
+| Flächen, die handeln oder markieren (Hauptknopf, «＋ Erfassen», abgehakt, gewählt) | helles Blau `#8dbdff`, Schrift Nachtblau `#061633` (9.3 zu 1) | Blau `#5aa2ff`, Schrift `#061633` (6.9 zu 1) |
+| Blau als Schrift (Links, «Zurück», aktiver Punkt) | `#0a5bea` (5.7 zu 1 auf Weiss, 5.2 auf Silber) | `#8dbdff` (9.5 zu 1) |
+| Rand der Bedienelemente, die abgehakt oder gewählt sind (Kästchen, Schalter, gewählter Abschnitt) | `#0a5bea` (5.7 zu 1 auf Weiss) | `#8dbdff` (9.5 zu 1) |
+| Ruhige Flächen (Kennzahlen in «Heute») | Verlauf Silber `#ffffff` bis `#e6e9ee` | `#161b23` bis `#0b0f15` |
+
+Dazu: Bedeutungsfarben bleiben getrennt (Grün «in Ordnung», Bernstein «bald», Rot «falsch»; Blau heisst nie «gut» oder «schlecht»); Systemschrift wie bei Onestrand, keine fremden Schriften. Die Kontraste sind nach WCAG 2.2 gerechnet; die Kontrastprüfung von W0-03 bestätigt sie für jede Ausgabe. Nachtrag 28.11.2026 (W0-03 Schritt 1): Das helle Blau `#8dbdff` hat auf Weiss nur 1.9 zu 1 und genügt allein nicht, wo es einen Zustand anzeigt (WCAG 1.4.11 verlangt 3 zu 1); darum bekommen abgehakte und gewählte Bedienelemente einen Rand in der Rolle `accent-edge`. Die Zahl «5.3 auf Silber» war gerundet, richtig ist 5.2 zu 1. Angeschaut am Klickentwurf, Stand 27.11.2026. Eine andere Ausgabe (Gastro, Haus, Studio) darf ihr Blau verschieben, bleibt aber im hellen Ton von Onestrand, bis Alban anders entscheidet.
+
+### S-28 Zeitstempeln gehört zum ersten Pilot
+
+**Albans Vorgabe, 27.11.2026, wörtlich:** «Es muss auch Zeitstempeln drin haben.»
+
+Steht im Plan: P-31 Team und Zeit ist für Facility ein **Muss** ([Steckbrief](branchen/facility.md), Abschnitt 5) und kommt mit Welle 2, vor dem Pilot. Was gilt:
+
+1. **Kommen, Pause, Weiter, Gehen** mit einem Tipp, auf «Heute» für jede Rolle sichtbar, dazu unter «＋ Erfassen». Am Objekt geht es mit dem QR-Code schneller. **Nie ein Standort** (CLAUDE.md, harte Regeln).
+2. **Zeit als Ledger:** Einträge werden nur angefügt; eine Korrektur ist eine neue Zeile mit Grund, die alte bleibt sichtbar (Kit `@onestrand/ledger`).
+3. **Pflicht mit Quelle:** erfasst werden Beginn, Ende und Pausen ab 30 Minuten, aufbewahrt mindestens 5 Jahre (Art. 73 ArGV 1, [`fakten/arbeit-personal.md`](fakten/arbeit-personal.md), Abschnitt 1.3). Den Erfassungsmodus je Person (vollständig, vereinfacht, Verzicht) wählt der Betrieb; ob die Voraussetzungen erfüllt sind, beurteilt die App nicht.
+4. Mitarbeitende sehen nur ihre eigenen Stunden, nie Löhne oder Stunden anderer.
+
+Angeschaut am Klickentwurf, Stand 27.11.2026. Ob das Stempeln schon in Welle 1 vorgezogen wird, entscheidet der Kopf mit dem Auftrag W1-00; heute steht es in Welle 2.
+
+### S-29 Alles am Handy, ohne PC: Kundschaft und Ferienplan inbegriffen
+
+**Albans Vorgabe, 27.11.2026, wörtlich gekürzt:** «Ferien plan etc […] CRM alles am handy ohne pcs».
+
+**Was gilt:**
+
+1. **Handy zuerst, ohne Ausnahme.** Jede Funktion, auch die des Büros (Offerte, Rechnung, Monatsabschluss, Ferienplan, Lohn-Vorbereitung, Sichern), ist auf dem iPhone ganz bedienbar. iPad und Web zeigen dasselbe grösser; ein Laptop ist nie Pflicht. Das schärft ADR-0013 von Randen («eine App, vier Ansichten») und den Prüfstein 1 im [Zielbild](zielbild.md). Wo ein Papier nötig ist, entsteht es als PDF auf dem Handy und geht über das Teilen-Menü.
+2. **Kundschaft als kleines CRM** (P-22 mit P-25 und P-28): Kontakt, Objekte, Sprache der Dokumente, **Verlauf** aus dem, was ohnehin geschieht (Anfrage, Besichtigung, Offerte, Vertrag, Rapport, Rechnung, Zahlung; aus den Ereignissen gelesen, nie doppelt erfasst), Notizen und ein **nächster Schritt** mit Datum, der in «Heute» erscheint. Neue Kundschaft von Hand oder aus einem Kontakt des Handys, den die Person selbst wählt. Keine Anbindung an fremde Adressbücher oder Dienste.
+3. **Ferien und Abwesenheiten** (P-28 mit P-31): Antrag vom Handy der Mitarbeitenden, Annehmen oder Ablehnen mit Grund, Plan des Teams mit Feiertagen je Kanton (Richtwert), Guthaben je Person **gerechnet, nie gespeichert**; Mindestanspruch mit Quelle (4 Wochen, bis 20 Jahre 5 Wochen, Art. 329a OR, [`fakten/arbeit-personal.md`](fakten/arbeit-personal.md), Abschnitt 2.3). Kollidiert ein Antrag mit Einsätzen, zeigt die App die Einsätze und schlägt Ersatz vor; entscheiden tut die Inhaberin.
+
+Angeschaut am Klickentwurf, Stand 27.11.2026. Pakete und Wellen wie im [Katalog](plattform.md): Kundschaft in Welle 1, Ferien mit Team und Zeit in Welle 2.
+
 ## Vor Welle 2 und 3
 
 ### S-06 Abgleich zwischen Büro und Aussendienst ohne Server [Datenfluss]

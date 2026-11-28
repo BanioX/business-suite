@@ -68,7 +68,7 @@ describe('the guards and the scripts that run them', () => {
     const single = Object.entries(scripts).filter(
       ([name, command]) => name !== 'guards' && command.startsWith(`${runsGuards} `),
     );
-    expect(single.map(([name]) => name).sort()).toEqual(['names', 'ownership']);
+    expect(single.map(([name]) => name).sort()).toEqual(['contrast', 'names', 'ownership']);
     for (const [name, command] of single) {
       const filter = command.slice(runsGuards.length + 1);
       expect(filter, name).toBe(name);

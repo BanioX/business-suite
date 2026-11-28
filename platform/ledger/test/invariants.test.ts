@@ -90,7 +90,7 @@ describe('schema', () => {
         businessId: row.businessId,
         stream: row.stream,
         id: row.id,
-        message: 'The row does not fit the schema of account_entries: amount',
+        message: 'The row is no entry of account_entries: the schema refuses it: amount',
       },
     ]);
     // The fold of a chain with a row the schema refuses would say nothing; it is left out.
@@ -106,16 +106,28 @@ describe('schema', () => {
     const table = [withField(row, 'text', new Date(0)), ...rows.slice(1)];
     const problems = await ledgerInvariantProblems(accountLedger, hasher, table);
     expect(of(problems, 'schema')).toEqual([
-      expect.objectContaining({ id: row.id, message: 'The row is not plain data' }),
+      expect.objectContaining({
+        id: row.id,
+        message: 'The row is no entry of account_entries: it is not plain data',
+      }),
     ]);
   });
 
   it('names what is no row at all, without a place', async () => {
     const problems = await ledgerInvariantProblems(accountLedger, hasher, [null, 'text', 7]);
     expect(of(problems, 'schema')).toEqual([
-      { invariant: 'schema', message: 'The row does not fit the schema of account_entries: row' },
-      { invariant: 'schema', message: 'The row does not fit the schema of account_entries: row' },
-      { invariant: 'schema', message: 'The row does not fit the schema of account_entries: row' },
+      {
+        invariant: 'schema',
+        message: 'The row is no entry of account_entries: the schema refuses it: row',
+      },
+      {
+        invariant: 'schema',
+        message: 'The row is no entry of account_entries: the schema refuses it: row',
+      },
+      {
+        invariant: 'schema',
+        message: 'The row is no entry of account_entries: the schema refuses it: row',
+      },
     ]);
     // None of them names a chain: the check of the chains says so, without a place either.
     expect(of(problems, 'chain')).toHaveLength(3);
@@ -141,7 +153,7 @@ describe('schema', () => {
     const problems = await ledgerInvariantProblems(filling, hasher, rows);
     expect(problems).toHaveLength(rows.length);
     expect(problems.every((problem) => problem.invariant === 'schema')).toBe(true);
-    expect(problems[0]?.message).toMatch(/^The schema changes the stored row/);
+    expect(problems[0]?.message).toMatch(/the schema reads it differently from how it is stored/);
   });
 
   it('accepts a field the schema does not know: a newer version wrote it', async () => {

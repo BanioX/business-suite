@@ -21,13 +21,17 @@
     "guards": "vitest run --config tools/vitest.guards.config.ts",
     "ownership": "vitest run --config tools/vitest.guards.config.ts ownership",
     "names": "vitest run --config tools/vitest.guards.config.ts names",
-    "check": "node tools/check.mjs"
+    "contrast": "vitest run --config tools/vitest.guards.config.ts contrast",
+    "check": "node tools/check.mjs",
+    "check:industry": "node tools/check-industry.mjs",
+    "industry:new": "node tools/industry-new.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^24.19.2",
     "@vitest/coverage-v8": "^5.1.0",
     "eslint": "^10.14.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.14.0",
     "prettier": "^3.9.10",
     "typescript": "~6.0.3",

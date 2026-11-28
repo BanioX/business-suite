@@ -16,12 +16,15 @@
 //   }
 //
 // - `kind`: what the identifier names. The guard reads these kinds from the code: `package` (the
-//   name in every package.json of the workspace), `table` (the tables the storage keeps for
-//   itself and those a package registers), `unit` (the units of the platform), and, since the
-//   package for the business, `operation` (a name in a contract fragment), `event` (a type
-//   of event a command appends), `feature` and `module` (an id in the register of features,
-//   a module being a group) and `right` (a delicate right). The frozen names of an edition get
-//   their kinds with the editions.
+//   name in every package.json of the workspace: `@onestrand/<name>` for the platform and the
+//   tools, `@onestrand-industry/<id>` for the core of an industry), `table` (the tables the
+//   storage keeps for itself and those a package or an industry registers), `unit` (the units of
+//   the platform), and, since the package for the business, `operation` (a name in a contract
+//   fragment), `event` (a type of event a command appends), `feature` and `module` (an id in the
+//   register of features, a module being a group) and `right` (a delicate right). Of an industry
+//   the guard reads them from its manifest (`industryNames`). The frozen names of an edition get
+//   their kinds with the editions; kinds of business, setup questions, device modes, options,
+//   templates and rule sets of an industry have no kind yet (debt TD-52).
 // - `name`: the identifier, in the form of its kind.
 // - `owner`: `head`, `platform` or `industry:<id>`: who may use the name.
 // - `status`: `active` (the code uses it) or `reserved` (held for later, so nobody else takes it).
@@ -66,7 +69,8 @@ export type NameStatus = (typeof NAME_STATUSES)[number];
 
 /** The form of an identifier, by kind. */
 const NAME_FORM: Readonly<Record<NameKind, RegExp>> = {
-  package: /^@onestrand\/[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/,
+  // The platform and the tools, or the core of an industry.
+  package: /^@onestrand(?:-industry)?\/[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/,
   table: /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/,
   unit: /^[a-z][a-z0-9_]*$/,
   // The forms of the contract package, so a name in the register cannot drift from the code.
@@ -208,9 +212,12 @@ export function readNames(text: string | undefined): {
     : { entries, problems: [] };
 }
 
+/** The scopes of the packages of the suite: the platform and the tools, and the industries. */
+export const PACKAGE_SCOPES = ['@onestrand/', '@onestrand-industry/'] as const;
+
 /**
  * The names of the packages of the workspace: the `name` of every package.json given, as far as
- * it belongs to the namespace of the suite. The root of the workspace has a name of its own kind
+ * it belongs to a scope of the suite. The root of the workspace has a name of its own kind
  * (it is no package anyone imports) and is left out.
  */
 export function packageNames(files: readonly { path: string; text: string }[]): UsedName[] {
@@ -225,10 +232,59 @@ export function packageNames(files: readonly { path: string; text: string }[]): 
         return [];
       }
       const name = isRecord(data) ? data.name : undefined;
-      return typeof name === 'string' && name.startsWith('@onestrand/')
+      return typeof name === 'string' && PACKAGE_SCOPES.some((scope) => name.startsWith(scope))
         ? [{ kind: 'package' as const, name, path: file.path }]
         : [];
     });
+}
+
+/**
+ * The manifest of an industry as far as the register reads it: what `defineIndustry` of
+ * `@onestrand/manifest` returns has this shape (a test of the guard holds both together), so the
+ * tools need no dependency on the package to read it.
+ */
+export interface IndustryShape {
+  readonly kind: 'industry';
+  readonly id: string;
+  readonly tables: readonly { readonly name: string }[];
+  readonly contract: Readonly<Record<string, unknown>>;
+  readonly events: readonly string[];
+  readonly catalog: {
+    readonly groups?: readonly { readonly id: string }[];
+    readonly features?: readonly { readonly id: string }[];
+  };
+  readonly rights: { readonly rights?: readonly { readonly id: string }[] };
+}
+
+/**
+ * The identifiers an industry sets for good, read from its manifest, not from a list: its
+ * tables, operations, events, functions, modules and delicate rights. `path` is where the guard
+ * says it found them (the entry of the industry). Its package name comes from its package.json
+ * (`packageNames`).
+ */
+export function industryNames(industry: IndustryShape, path: string): UsedName[] {
+  const named = (kind: NameKind, names: readonly string[]): UsedName[] =>
+    names.map((name) => ({ kind, name, path }));
+  return [
+    ...named(
+      'table',
+      industry.tables.map(({ name }) => name),
+    ),
+    ...named('operation', Object.keys(industry.contract)),
+    ...named('event', industry.events),
+    ...named(
+      'feature',
+      (industry.catalog.features ?? []).map(({ id }) => id),
+    ),
+    ...named(
+      'module',
+      (industry.catalog.groups ?? []).map(({ id }) => id),
+    ),
+    ...named(
+      'right',
+      (industry.rights.rights ?? []).map(({ id }) => id),
+    ),
+  ];
 }
 
 /**

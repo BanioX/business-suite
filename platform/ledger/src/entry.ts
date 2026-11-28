@@ -1,7 +1,13 @@
 import { IdSchema, IsoDateTimeSchema, type Id, type IsoDateTime } from '@onestrand/core';
-import { SHA256_PATTERN, sha256Of, utf8Encode, type Hasher } from '@onestrand/storage';
+import {
+  keepUnknownFields,
+  SHA256_PATTERN,
+  sha256Of,
+  utf8Encode,
+  type Hasher,
+} from '@onestrand/storage';
 import { z } from 'zod';
-import { canonicalJson } from './canonical';
+import { canonicalJson, canonicalText } from './canonical';
 import { compareText } from './internal';
 
 /**
@@ -117,6 +123,35 @@ export async function contentHash(hasher: Hasher, content: string): Promise<stri
 /** The checksum an entry must carry in `hash`: SHA-256 over `hashedContent`, as UTF-8. */
 export async function entryHash(hasher: Hasher, entry: object): Promise<string> {
   return contentHash(hasher, hashedContent(entry));
+}
+
+/**
+ * Why a row is not one the schema of its table accepts and leaves exactly as it is, or nothing.
+ *
+ * A backup brings a row back as its schema reads it, with the fields the schema does not know
+ * put back (`keepUnknownFields`). An entry must come through that unchanged, or its checksum no
+ * longer fits: so a schema must read what it wrote as it wrote it. A transform that is applied
+ * again on every reading (an amount multiplied, a text with something added) does not.
+ *
+ * For code of this package: the kit asks before it writes an entry, the invariants ask for
+ * every stored row.
+ */
+export function readBackProblem(schema: z.ZodType, row: unknown): string | undefined {
+  const stored = canonicalText(row);
+  if (stored === undefined) {
+    return 'it is not plain data';
+  }
+  const read = schema.safeParse(row);
+  if (!read.success) {
+    const fields = read.error.issues.map((issue) => issue.path.map(String).join('.') || 'row');
+    return `the schema refuses it: ${[...new Set(fields)].join(', ')}`;
+  }
+  if (canonicalText(read.data) === undefined) {
+    return 'the schema reads it as something that is not plain data';
+  }
+  return canonicalText(keepUnknownFields(row, read.data)) === stored
+    ? undefined
+    : 'the schema reads it differently from how it is stored, so brought back from a backup it would no longer match its hash';
 }
 
 /**

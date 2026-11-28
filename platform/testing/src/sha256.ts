@@ -33,6 +33,9 @@ const ROUND_CONSTANTS: readonly number[] = [
 const BLOCK_BYTES = 64;
 const WORD_BYTES = 4;
 
+/** The length of a message in bits must fit one word here: below 512 MB, far above any test. */
+const MAX_BYTES = 2 ** 29 - 1;
+
 const rotateRight = (word: number, bits: number) => (word >>> bits) | (word << (32 - bits));
 
 /** The message followed by a 1 bit, zeros and its length in bits, to a whole number of blocks. */
@@ -43,9 +46,8 @@ function padded(data: Uint8Array): DataView {
   bytes.set(data);
   bytes[data.length] = 0x80;
   const view = new DataView(bytes.buffer);
-  const bits = data.length * 8;
-  view.setUint32(length - 8, Math.floor(bits / 2 ** 32));
-  view.setUint32(length - 4, bits % 2 ** 32);
+  // The length in bits takes eight bytes; the upper four stay zero (see `MAX_BYTES`).
+  view.setUint32(length - 4, data.length * 8);
   return view;
 }
 
@@ -100,11 +102,17 @@ function compress(state: State, message: DataView, offset: number, schedule: Dat
   ];
 }
 
-/** SHA-256 of the bytes as 64 hex digits, lower case. */
+/**
+ * SHA-256 of the bytes as 64 hex digits, lower case. Throws a `TypeError` for what is no
+ * `Uint8Array` and a `RangeError` for 512 MB or more.
+ */
 export function sha256Hex(data: Uint8Array): string {
   if (!(data instanceof Uint8Array)) {
     // Anything else would be hashed as an empty message without a word.
     throw new TypeError('sha256Hex takes the bytes as a Uint8Array');
+  }
+  if (data.length > MAX_BYTES) {
+    throw new RangeError('sha256Hex is for the small files of tests: less than 512 MB');
   }
   const message = padded(data);
   const schedule = new DataView(new ArrayBuffer(ROUND_CONSTANTS.length * WORD_BYTES));

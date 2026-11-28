@@ -1,5 +1,8 @@
 packages:
   - platform/*
+  # The pure part of every industry (industries/<id>/core); the React part (industries/<id>/web)
+  # gets its own line with W0-03.
+  - industries/*/core
   - tools
 
 # Install only versions published at least three days ago: a poisoned release is usually found

@@ -2,12 +2,14 @@ import { CommandError } from '@onestrand/contract';
 import type { Id } from '@onestrand/core';
 import {
   isPlainRecord,
+  keepUnknownFields,
   plainCopy,
   type Clock,
   type Hasher,
   type IdGenerator,
   type ModuleStorage,
 } from '@onestrand/storage';
+import { canonicalText } from './canonical';
 import { allChainProblems, chainProblems, type LedgerAnchor, type LedgerProblem } from './chain';
 import type { LedgerDefinition } from './definition';
 import {
@@ -15,18 +17,22 @@ import {
   inSequence,
   LEDGER_FIELD_NAMES,
   LEDGER_STREAM_PATTERN,
+  readBackProblem,
   type LedgerEntry,
   type LedgerPayload,
 } from './entry';
 import { LedgerError } from './errors';
 import { foldLedger } from './fold';
-import { compareText, fieldOf } from './internal';
+import { compareText, deepFreeze, fieldOf } from './internal';
 
 /**
  * The ledger kit on a storage: adding entries, correcting them with a new entry, reading the
  * entries, computing the state and checking the chain. Adding and correcting belong inside a
  * command (`runCommand` of the contract): the command gives them its transaction, makes them
  * safe to repeat and writes the event.
+ *
+ * A chain has one writer: the device that runs the commands. Two devices that both add to one
+ * stream each write the next place, and `verify` reports the second entry of that place.
  */
 
 /** What reading a ledger needs. */
@@ -40,10 +46,10 @@ export interface LedgerReaderContext {
  * What writing a ledger needs: the context of a command plus the hasher.
  *
  * The checksum of a new entry is computed inside the transaction, after the entry before it was
- * read. The hasher must therefore be safe to wait for there: the database of the browser ends a
- * transaction when something else than the database is awaited (see `Transactional`). Whoever
- * puts an edition together passes a hasher that keeps the transaction open or answers without a
- * pause.
+ * read, and a booking that finds another one at work on the same table waits for it there. The
+ * database of the browser ends a transaction when something else than the database is awaited
+ * (see `Transactional`), so whoever puts an edition together passes a storage and a hasher that
+ * keep the transaction open across these two waits, or a hasher that answers without a pause.
  */
 export interface LedgerContext {
   storage: Pick<ModuleStorage, 'table' | 'transaction'>;
@@ -120,7 +126,11 @@ export interface Ledger<TEntry extends LedgerEntry, TState> extends LedgerReader
    * Adds an entry at the end of a stream. One transaction: the last entry is read, the new one
    * is checked with the schema of the table, chained, folded and written. If `reduce` refuses
    * it, nothing is written and its error comes out. A payload that does not fit the schema is a
-   * `ZodError`.
+   * `ZodError`; one that carries a field the schema does not know, at any depth, is a
+   * `LedgerError` `invalid_payload`: nothing is dropped without a word.
+   *
+   * Bookings on one table take turns, also when they are started together: no two of them get
+   * the same place in a chain.
    */
   append: (
     businessId: Id,
@@ -157,6 +167,10 @@ function headOf(entries: readonly LedgerEntry[]): { head?: LedgerAnchor } {
 /**
  * Reading a ledger. Throws a `StorageError` with the code `unknown_table` right away if the
  * storage does not hold the table of the ledger.
+ *
+ * Reading does not check the key of a stream: a key nobody wrote to, well-formed or not, has no
+ * entries and the initial state. So a damaged row that stands under a malformed key can still
+ * be looked at and is reported by `verify` under that key.
  */
 export function createLedgerReader<TEntry extends LedgerEntry, TState>(
   definition: LedgerDefinition<TEntry, TState>,
@@ -202,6 +216,16 @@ export function createLedgerReader<TEntry extends LedgerEntry, TState>(
   };
 }
 
+function checkedStream(stream: unknown): string {
+  if (typeof stream !== 'string' || !LEDGER_STREAM_PATTERN.test(stream)) {
+    throw new LedgerError(
+      'invalid_stream',
+      `The key of a stream must match ${String(LEDGER_STREAM_PATTERN)}, got ${JSON.stringify(stream)}`,
+    );
+  }
+  return stream;
+}
+
 /** The payload as a record of its own fields, or a `LedgerError` `invalid_payload`. */
 function checkedPayload(payload: unknown): Record<string, unknown> {
   if (!isPlainRecord(payload)) {
@@ -217,14 +241,38 @@ function checkedPayload(payload: unknown): Record<string, unknown> {
   return payload;
 }
 
-function checkedStream(stream: unknown): string {
-  if (typeof stream !== 'string' || !LEDGER_STREAM_PATTERN.test(stream)) {
-    throw new LedgerError(
-      'invalid_stream',
-      `The key of a stream must match ${String(LEDGER_STREAM_PATTERN)}, got ${JSON.stringify(stream)}`,
-    );
-  }
-  return stream;
+/**
+ * The fields of a draft in which the schema dropped something it does not know: the field
+ * itself, or a field somewhere inside it. What the schema changed (a text it trimmed) or added
+ * (a default) is none of these.
+ */
+function droppedFields(draft: Record<string, unknown>, checked: object): string[] {
+  // The draft with what the schema read laid over it keeps exactly what the schema left out.
+  const kept = keepUnknownFields(draft, checked);
+  return Object.keys(kept).filter(
+    (field) => canonicalText(fieldOf(kept, field)) !== canonicalText(fieldOf(checked, field)),
+  );
+}
+
+const over = (): void => undefined;
+
+/**
+ * The end of the line of bookings on a table, by the store of the table.
+ *
+ * Between reading the end of a chain and writing the next entry a booking waits (for the
+ * checksum, for the storage). A second booking started meanwhile would read the same end and
+ * write the same place a second time. So the bookings on one table take turns, whoever started
+ * them: two calls in one command that are not awaited one after the other, or two ledgers set
+ * up on the same storage.
+ */
+const turns = new WeakMap<object, Promise<void>>();
+
+/** Runs `work` when every booking that asked before it on this store is over. */
+function inTurn<TResult>(store: object, work: () => Promise<TResult>): Promise<TResult> {
+  const result = (turns.get(store) ?? Promise.resolve()).then(work);
+  // The next one starts when this one is over, however it ended.
+  turns.set(store, result.then(over, over));
+  return result;
 }
 
 /**
@@ -239,10 +287,28 @@ export function createLedger<TEntry extends LedgerEntry, TState>(
   const store = storage.table(table);
 
   /**
+   * One booking: inside a transaction, and there in its turn among the bookings on this table.
+   *
+   * The turn is asked for only after the storage has answered once. A database that lets a
+   * transaction wait for the one before it answers when this transaction is the one at work;
+   * a booking that took its turn earlier would hold it while it waits for the database, and a
+   * booking of the transaction at work would wait for that turn: neither would ever go on.
+   */
+  function booking<TResult>(work: (id: Id) => Promise<TResult>): Promise<TResult> {
+    return storage.transaction(async () => {
+      const id = ids.next();
+      // What comes back does not matter: an id that is taken is refused when the entry is added.
+      await store.get(id);
+      return inTurn(store, () => work(id));
+    });
+  }
+
+  /**
    * Writes one entry at the end of `chain`, the entries of the stream as just read inside the
    * running transaction.
    */
   async function book(
+    id: Id,
     businessId: Id,
     stream: string,
     payload: Record<string, unknown>,
@@ -252,7 +318,7 @@ export function createLedger<TEntry extends LedgerEntry, TState>(
     const last = inSequence(chain).at(-1);
     const draft = {
       ...payload,
-      id: ids.next(),
+      id,
       businessId,
       stream,
       seq: (last?.seq ?? 0) + 1,
@@ -274,9 +340,27 @@ export function createLedger<TEntry extends LedgerEntry, TState>(
         );
       }
     }
+    const dropped = droppedFields(draft, checked);
+    if (dropped.length > 0) {
+      // An entry is for good: a field lost on the way in could never be added to it again.
+      throw new LedgerError(
+        'invalid_payload',
+        `The schema of table "${table.name}" does not know what the payload carries in ${dropped.join(', ')}; it would be dropped`,
+      );
+    }
     const entry = { ...checked, hash: await entryHash(hasher, checked) };
+    const problem = readBackProblem(table.schema, entry);
+    if (problem !== undefined) {
+      // Refused at the first booking instead of found after the first backup.
+      throw new LedgerError(
+        'invalid_definition',
+        `The schema of table "${table.name}" cannot read back the entry it wrote: ${problem}`,
+      );
+    }
     // Folded before anything is written: what the rules of the ledger refuse is never stored.
-    const state = foldLedger(definition, [...chain, entry]);
+    // The rule gets a frozen copy of the new entry: what is stored is what the checksum was
+    // computed over, whatever a `reduce` does with the entry it is given.
+    const state = foldLedger(definition, [...chain, deepFreeze(plainCopy(entry))]);
     await store.add(entry);
     return { entry, state };
   }
@@ -286,9 +370,10 @@ export function createLedger<TEntry extends LedgerEntry, TState>(
     append: async (businessId, stream, payload) => {
       const key = checkedStream(stream);
       const fields = checkedPayload(payload);
-      return storage.transaction(async () => {
+      return booking(async (id) => {
         const rows = await store.ofBusiness(businessId);
         return book(
+          id,
           businessId,
           key,
           fields,
@@ -298,7 +383,7 @@ export function createLedger<TEntry extends LedgerEntry, TState>(
     },
     correct: async (businessId, entryId, payload) => {
       const fields = checkedPayload(payload);
-      return storage.transaction(async () => {
+      return booking(async (id) => {
         const rows = await store.ofBusiness(businessId);
         const target = rows.find((row) => row.id === entryId);
         if (target === undefined) {
@@ -312,7 +397,7 @@ export function createLedger<TEntry extends LedgerEntry, TState>(
             `Entry ${entryId} was corrected already, by ${correction.id}; correct that one`,
           );
         }
-        return book(businessId, target.stream, fields, chain, entryId);
+        return book(id, businessId, target.stream, fields, chain, entryId);
       });
     },
   };

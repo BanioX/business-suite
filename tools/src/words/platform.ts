@@ -1,4 +1,5 @@
 import type { WordList } from '../platform-words.ts';
+import { BRAND_TONES } from './brand-tones.ts';
 import { GASTRONOMY } from './gastronomy.ts';
 import { PRODUCT_NAMES } from './products.ts';
 
@@ -9,4 +10,9 @@ import { PRODUCT_NAMES } from './products.ts';
  */
 export const INDUSTRY_WORD_LISTS: readonly WordList[] = [GASTRONOMY];
 
-export const PLATFORM_WORD_LISTS: readonly WordList[] = [...INDUSTRY_WORD_LISTS, PRODUCT_NAMES];
+/** The words of every industry, the product names and the names of the tones of a brand (W0-03). */
+export const PLATFORM_WORD_LISTS: readonly WordList[] = [
+  ...INDUSTRY_WORD_LISTS,
+  PRODUCT_NAMES,
+  BRAND_TONES,
+];

@@ -4,7 +4,9 @@ Die Onestrand Business Suite ist eine local-first Plattform für Schweizer Klein
 
 ## Stand
 
-Stand 24.11.2026: **nur Plan, noch kein Code.** Als Nächstes baut ein Agent das Fundament nach Auftrag [W0-01](docs/auftraege/w0-01-fundament.md). Den Weg zeigt der [Fahrplan](docs/fahrplan.md).
+Stand 27.11.2026: **Fundament und Zusammensetzen gebaut, noch keine Oberfläche.** Fertig sind W0-01 (Werkzeuge, `pnpm check`, Wächter, Kern, Schnittstelle, Speicher mit Sicherung, Ledger, Test-Kit) und W0-02 (Register der Funktionen, Rechte, Betrieb und Personen, Sprachen, Manifeste und Zusammensetzen, Speicher im Browser, Referenz-Branche `industries/muster`, Generator `pnpm industry:new` und Prüfung `pnpm check:industry`). W0-03 (UI-Kit, Rahmen, erste Ausgabe «Vor Ort») läuft seit dem 27.11.2026. Den Weg zeigt der [Fahrplan](docs/fahrplan.md).
+
+**Eine neue Branche** beginnt mit `pnpm industry:new <id>`, wird mit `pnpm check:industry <id>` geprüft und folgt [`industries/muster/README.md`](industries/muster/README.md). Ihre Kennungen schlägt sie in `industries/<id>/NAMES.md` vor; der Kopf trägt sie ins Namensregister ein.
 
 ## Lesereihenfolge
 
@@ -27,7 +29,7 @@ Stand 24.11.2026: **nur Plan, noch kein Code.** Als Nächstes baut ein Agent das
 | `industries/muster/` | Kopf | Referenz-Branche, nutzt jeden Steckplatz einmal |
 | `editions/<id>/` | Kopf | dünne App: `edition.ts`, Marke, `public/`, `_headers`, `wrangler.jsonc`, Schema-Ledger, eingefrorene Sicherungen, E2E |
 | `services/vermittler/` | Kopf | Handschlag der Kopplung (nur mit Albans JA) |
-| `tools/` | Kopf | `check`, `ownership`, `names`, `stamp`, `industry:new` |
+| `tools/` | Kopf | `check`, `ownership`, `names`, `industry:new`, `check:industry`, Wächter (`guards/`), Prüfschritte einer Branche (`conformity/`) |
 
 ## Eine Branche in fünf Sätzen
 

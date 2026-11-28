@@ -1,4 +1,4 @@
-import { QuantitySchema, type Id, type IsoDateTime } from '@onestrand/core';
+import { IsoDateTimeSchema, QuantitySchema, type Id, type IsoDateTime } from '@onestrand/core';
 import fc from 'fast-check';
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import { z } from 'zod';
@@ -15,7 +15,7 @@ import {
   type UseCase,
 } from '../src';
 import { customersContract, type Customer, type CustomersContract } from './sample-contract';
-import { createTestContext, type TestContext } from './support';
+import { createTestContext, takingTurns, type TestContext } from './support';
 
 const createOperation = customersContract['customers.create'];
 const removeOperation = customersContract['customers.remove'];
@@ -124,6 +124,20 @@ describe('stamps', () => {
       updatedAt: '2026-11-14T10:00:00.000Z',
     });
     expectTypeOf(stamps()).toEqualTypeOf<{ createdAt: IsoDateTime; updatedAt: IsoDateTime }>();
+  });
+
+  it('reads the clock once: on a clock that runs, both are still the same instant', () => {
+    const t = createTestContext();
+    let asked = 0;
+    const now = () => {
+      asked += 1;
+      return IsoDateTimeSchema.parse(`2026-11-14T10:00:00.00${asked}Z`);
+    };
+    const { stamps } = createCommandKit({ ...t.ctx, clock: { now, today: t.clock.today } });
+    const { createdAt, updatedAt } = stamps();
+    expect(createdAt).toBe('2026-11-14T10:00:00.001Z');
+    expect(updatedAt).toBe(createdAt);
+    expect(asked).toBe(1);
   });
 });
 
@@ -438,6 +452,46 @@ describe('runCommand', () => {
     expect(t.storage.allCommands()).toEqual([]);
   });
 
+  it('fails the transaction it joined when it fails, even if its error was caught', async () => {
+    const t = createTestContext();
+    const customers = createCustomers(t);
+    const base = { businessId: t.businessId };
+    let wentOn = false;
+    const attempt = t.storage.transaction(async () => {
+      await customers.create({ ...base, commandId: t.cmd(), name: 'Before' });
+      // A step that fails, and a caller that means to go on without it.
+      await customers.create({ ...base, commandId: t.cmd(), name: 'Taken' }).catch(() => undefined);
+      await customers.create({ ...base, commandId: t.cmd(), name: 'After' });
+      wentOn = true;
+      return 'done';
+    });
+    // The failed command was «all or none» inside this transaction: the whole of it is undone,
+    // with the error of the command, although the work itself came to its end.
+    await expect(attempt).rejects.toBeInstanceOf(CommandError);
+    await expect(attempt).rejects.toMatchObject({ code: 'duplicate_name' });
+    expect(wentOn).toBe(true);
+    expect(customers.executed()).toBe(3);
+    expect(t.storage.allEvents()).toEqual([]);
+    expect(t.storage.allCommands()).toEqual([]);
+  });
+
+  it('fails the transaction it joined when its commandId is refused there', async () => {
+    const t = createTestContext();
+    const customers = createCustomers(t);
+    const commandId = t.cmd();
+    const { customer } = await customers.create({ commandId, businessId: t.businessId, name: 'A' });
+    const attempt = t.storage.transaction(async () => {
+      await customers.create({ commandId: t.cmd(), businessId: t.businessId, name: 'B' });
+      await customers
+        .remove({ commandId, businessId: t.businessId, customerId: customer.id })
+        .catch(() => undefined);
+    });
+    await expect(attempt).rejects.toMatchObject({ code: 'invalid' });
+    // What was there before the transaction stays, nothing of it is added.
+    expect(t.storage.allCommands().map((entry) => entry.commandId)).toEqual([commandId]);
+    expect(t.storage.allEvents().map((event) => event.type)).toEqual(['customer.created']);
+  });
+
   it('types the result by the output schema of the operation', async () => {
     const t = createTestContext();
     const { runCommand } = createCommandKit(t.ctx);
@@ -507,6 +561,95 @@ describe('runCommand', () => {
         expect(t.storage.allEvents()).toHaveLength(firstAnswers.size);
       }),
     );
+  });
+});
+
+describe('commands sent at the same moment', () => {
+  /** A context whose storage lets one transaction in at a time, as the adapter of a database does. */
+  function createWaitingContext(): TestContext {
+    const t = createTestContext();
+    const storage = takingTurns(t.storage);
+    return { ...t, storage, ctx: { ...t.ctx, storage } };
+  }
+
+  it('run once if they carry the same commandId: the second waits and gets the stored answer', async () => {
+    const t = createWaitingContext();
+    const customers = createCustomers(t);
+    const commandId = t.cmd();
+    // A double tap: the same command twice, neither awaited before the other starts.
+    const [first, second] = await Promise.all([
+      customers.create({ commandId, businessId: t.businessId, name: 'Eins' }),
+      customers.create({ commandId, businessId: t.businessId, name: 'Eins' }),
+    ]);
+    expect(second).toEqual(first);
+    expect(customers.executed()).toBe(1);
+    expect(t.storage.allEvents()).toHaveLength(1);
+    expect(t.storage.allCommands()).toHaveLength(1);
+    expect(t.storage.transactions()).toBe(2);
+  });
+
+  it('run the second if the first failed and left nothing', async () => {
+    const t = createWaitingContext();
+    const customers = createCustomers(t);
+    const commandId = t.cmd();
+    const [first, second] = await Promise.allSettled([
+      customers.create({ commandId, businessId: t.businessId, name: 'Taken' }),
+      customers.create({ commandId, businessId: t.businessId, name: 'Free' }),
+    ]);
+    expect(first).toMatchObject({ status: 'rejected', reason: { code: 'duplicate_name' } });
+    expect(second).toMatchObject({ status: 'fulfilled', value: { customer: { name: 'Free' } } });
+    expect(customers.executed()).toBe(2);
+    // Only the second one left a trace.
+    expect(t.storage.allEvents()).toHaveLength(1);
+    expect(t.storage.allCommands()).toMatchObject([
+      { commandId, result: { customer: { name: 'Free' } } },
+    ]);
+  });
+
+  it('refuse the second if it spends the commandId on another operation', async () => {
+    const t = createWaitingContext();
+    const customers = createCustomers(t);
+    const commandId = t.cmd();
+    const [created, removed] = await Promise.allSettled([
+      customers.create({ commandId, businessId: t.businessId, name: 'A' }),
+      customers.remove({ commandId, businessId: t.businessId, customerId: t.cmd() }),
+    ]);
+    expect(created.status).toBe('fulfilled');
+    expect(removed).toMatchObject({ status: 'rejected', reason: { code: 'invalid' } });
+    expect(customers.executed()).toBe(1);
+    expect(t.storage.allEvents().map((event) => event.type)).toEqual(['customer.created']);
+  });
+
+  it('run one after the other, in the order they were sent, if they are different commands', async () => {
+    const t = createWaitingContext();
+    const customers = createCustomers(t);
+    const names = ['A', 'B', 'C'];
+    const answers = await Promise.all(
+      names.map((name) => customers.create({ commandId: t.cmd(), businessId: t.businessId, name })),
+    );
+    expect(answers.map(({ customer }) => customer.name)).toEqual(names);
+    expect(customers.executed()).toBe(3);
+    expect(t.storage.allCommands().map((entry) => entry.result)).toEqual(answers);
+    expect(t.storage.allEvents()).toHaveLength(3);
+  });
+
+  it('are not safe on a storage in memory, which cannot let the second wait', async () => {
+    // The fake joins transactions that overlap, as every storage in memory does: the second
+    // command reads the log before the first has written its entry.
+    const t = createTestContext();
+    const customers = createCustomers(t);
+    const commandId = t.cmd();
+    const results = await Promise.allSettled([
+      customers.create({ commandId, businessId: t.businessId, name: 'Eins' }),
+      customers.create({ commandId, businessId: t.businessId, name: 'Eins' }),
+    ]);
+    // The command ran twice. That is why tests await a command before they start the next, and
+    // why the adapter of a database must let the second wait.
+    expect(customers.executed()).toBe(2);
+    // The log never takes a second entry for the id, so the damage does not pass for success:
+    // at most one caller gets an answer.
+    expect(results.filter((result) => result.status === 'fulfilled').length).toBeLessThan(2);
+    expect(t.storage.allCommands().length).toBeLessThan(2);
   });
 });
 

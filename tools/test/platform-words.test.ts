@@ -243,9 +243,28 @@ describe('platformWordProblems', () => {
     ]);
   });
 
-  it('has one list per industry and one for the products', () => {
+  it('has one list per industry, one for the products and one for the tones of a brand', () => {
     expect(INDUSTRY_WORD_LISTS.map((list) => list.id)).toEqual(['gastronomy']);
-    expect(PLATFORM_WORD_LISTS.map((list) => list.id)).toEqual(['gastronomy', 'products']);
+    expect(PLATFORM_WORD_LISTS.map((list) => list.id)).toEqual([
+      'gastronomy',
+      'products',
+      'brand-tones',
+    ]);
     expect(PRODUCT_NAMES.words).toContain('randen');
+  });
+
+  it('finds a tone of a brand in a token, a class and a comment, not a role', () => {
+    const file = {
+      path: 'platform/ui/src/Probe.tsx',
+      text: "const look = 'bg-wine-700 text-grape';\n// Kork on Traube\nconst role = 'bg-accent text-on-accent';\n",
+    };
+    expect(
+      platformWordProblems([file]).map((problem) => `${String(problem.line)} ${problem.message}`),
+    ).toEqual([
+      '1 «wine» is a word of the colours of the brand of an edition and has no place in the platform',
+      '1 «grape» is a word of the colours of the brand of an edition and has no place in the platform',
+      '2 «kork» is a word of the colours of the brand of an edition and has no place in the platform',
+      '2 «traube» is a word of the colours of the brand of an edition and has no place in the platform',
+    ]);
   });
 });

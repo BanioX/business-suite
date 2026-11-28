@@ -10,7 +10,7 @@ UI-Kit, Rahmen, Gerät und PDF der Plattform stehen neutral und mit Marke als Th
 
 ## Lesestoff
 
-1. `CLAUDE.md`, `AGENTS.md`, [`../architektur.md`](../architektur.md) Abschnitte 2.4, 3, 4, 7; [`../entscheide.md`](../entscheide.md), S-26 (Bedienmuster)
+1. `CLAUDE.md`, `AGENTS.md`, [`../architektur.md`](../architektur.md) Abschnitte 2.4, 3, 4, 7; [`../entscheide.md`](../entscheide.md), S-26 (Bedienmuster) und S-27 (Farben); der Klickentwurf, den Alban dazu angeschaut hat, als Bild der Abläufe
 2. [`../plattform.md`](../plattform.md), P-08 bis P-11, P-32; ADR [0008](../adr/0008-herkunft-namen-und-adressen.md)
 3. In `BanioX/Randen` (nur lesen): `apps/web/src/ui/`, `apps/web/src/app/`, `apps/web/src/index.css`, `apps/web/src/ui/pdf/`, `ui/print.ts`, `ui/share-file.ts`, `apps/web/vite.config.ts`, `apps/web/public/_headers`, `apps/web/e2e/`, `scripts/` (Vorschaubilder, Kontrast), `docs/design.md`, `docs/regeln.md`, `docs/ui-kit.md`
 4. In `BanioX/Rettich` (nur lesen): Scanner und Kamera (`features/scan/`), App-Sperre (`app/lock/`), Zahl am Symbol, Dokument-Ansicht mit pdf.js (`features/reports/`)
@@ -28,7 +28,7 @@ UI-Kit, Rahmen, Gerät und PDF der Plattform stehen neutral und mit Marke als Th
 4. **`@onestrand/pdf`** (P-11): PDF-Kit mit Thema, Stile Übersicht, Streifen, Formular; Briefkopf mit Logo; Dokument-Ansicht vor dem Drucken; Dokument-Sprache.
 5. **`@onestrand/today`** (P-32): «Heute» aus Steckplätzen.
 6. **`industries/muster/web`:** eine Seite, ein Navigationseintrag, eine Karte in «Heute», ein Abschnitt auf einer Plattform-Seite, ein Dokument.
-7. **`editions/field`:** `edition.ts` mit Datenbank `field`, Präfix `field:`, Format `field-backup` (nie umbenennen), Arbeitstitel «Vor Ort», Thema als Platzhalter; `_headers` mit CSP `'self'` und `noindex`; Manifest; `wrangler.jsonc` für eine Vorschau; E2E mit Playwright und axe in vier Ansichten, hell und dunkel; Vorschaubilder (`pnpm preview:shots`).
+7. **`editions/field`:** `edition.ts` mit Datenbank `field`, Präfix `field:`, Format `field-backup` (nie umbenennen), Arbeitstitel «Vor Ort», Thema nach [S-27](../entscheide.md) (der helle Ton von Onestrand: Weiss und Silber, das Blau von Onestrand eine Stufe heller; dunkel wie Onestrand selbst), geprüft mit der Kontrastprüfung hell und dunkel; `_headers` mit CSP `'self'` und `noindex`; Manifest; `wrangler.jsonc` für eine Vorschau; E2E mit Playwright und axe in vier Ansichten, hell und dunkel; Vorschaubilder (`pnpm preview:shots`).
 
 ## Abnahme
 
@@ -55,4 +55,46 @@ Bilder, was gebaut ist, was für die Branchen bereitsteht (Steckplätze), Schuld
 
 ## Stand
 
-offen
+Schritt 1 (`@onestrand/ui`, P-08) gebaut, 28.11.2026; Schritt 3 (`@onestrand/web-device`, P-10) gebaut, 28.11.2026; Schritte 2 und 4 bis 7 offen. Geerntet aus `BanioX/Randen` @ `e0f0907` (`apps/web/src/ui`, `index.css`, `test-setup.ts`, `scripts/check-contrast.mjs`), jede Datei mit Herkunftsvermerk ([`../herkunft.md`](../herkunft.md)).
+
+**Schritt 1, `@onestrand/ui`:** Werkzeuge für React-Pakete (React 19, jsdom, Testing Library, Regeln der Hooks; Tailwind 4 im Kit, Vite nur für die Galerie), das Kit mit neutralen Tokens, Thema als Parameter der Ausgabe, Kontrastprüfung je Thema, Kit-Texte in de-CH, Galerie mit Vorschaubildern. Beschreibung: [`platform/ui/api.md`](../../platform/ui/api.md).
+
+Entscheide (klein, selbst getroffen):
+
+1. **Schicht «React»:** Das ganze `src/` eines React-Pakets ist React (`REACT_PACKAGES` in `eslint.config.js`). Es gilt alles, was für ein reines Paket gilt, mit drei Unterschieden: `react` und `lucide-react` sind erlaubt, die Globalen `window` und `document` (Fokus, Zeitgeber, modaler Dialog) und keine weiteren, und die Regeln der Hooks. `react-dom` bleibt zu: Die App einhängen tut die Ausgabe. Ein reines Paket importiert weiterhin kein React (neu auch `lucide-react` nicht). Belegt in `tools/test/lint-boundaries.test.ts`.
+2. **Schichten des Kits:** `ui` importiert nur `core` (Geld, Datum, Zahlen) und `i18n` (der eigene Katalog in anderen Sprachen über `resolveCatalogue`). Kein Speicher, keine Rechte, kein Register, kein Gerät: Was eine Seite davon braucht, kommt über die Hooks der Shell. Heute, die Währung, die Sprache und der Link des Routers kommen über `UiProvider`; das Kit liest nie die Uhr und kennt keinen Router.
+3. **Tailwind wie in der Quelle**, aber ohne Palette: `kit.css` schaltet die Farben von Tailwind aus und bildet die 21 Tokens auf Variablen ab (`@theme inline`). Eine Klasse mit fester Farbe zeichnet nichts, und ein Test findet sie. Kein Plugin für React: Vite übersetzt JSX selbst (L-S86).
+4. **Tokens** nach Rollen, nicht nach Farben: `ground`, `app`, `surface`, `surface-muted`, `calm-start`, `calm-end`, `fg`, `muted`, `line`, `line-strong`, `accent`, `on-accent`, `accent-strong`, `accent-edge`, `accent-soft`, `ok`, `warn`, `bad` mit `-soft`. `accent-edge` ist neu gegenüber S-27: Der helle Akzent hebt sich als angehakter Kasten, gewähltes Segment oder eingeschalteter Schalter nur mit 1.9 zu 1 von der Karte ab; ein Rand in `accent-edge` gibt die 3 zu 1 von WCAG 1.4.11 (L-S88).
+5. **Kontrastprüfung als Wächter**, kein eigener Schritt von `pnpm check`: `tools/guards/contrast.guard.test.ts` läuft in `pnpm guards` und allein mit `pnpm contrast`. Die Paare nennt das Kit (`CONTRAST_PAIRS`), die Messung macht `tools/src/contrast.ts` (WCAG 2.2, auf zwei Stellen abgerundet). Gemessen werden `neutralTheme` und das Thema jeder Ausgabe in `editions/<id>/theme.ts` (TD-127).
+6. **Keine feste Farbe, kein Text, keine Nebenwirkung in einer Komponente**, je mit einem Test im Paket (`test/rules.test.tsx`), der an einem falschen Beispiel rot wird; dazu ein Wächter für die Farbwörter einer Marke unter `platform/` (`tools/src/words/brand-tones.ts`).
+7. **Ausgelassen:** die Bausteine der Gastronomie, alles mit Speicher oder Register, und vorerst Suchfeld, Tabelle, Diagramme, Auswahl mit Suche, Foto (TD-125). `ConfirmDialog` zeigt die gefährliche Tat als Umriss (TD-132).
+
+Prüfung: siehe den Bericht von Schritt 1; Schulden TD-125 bis TD-133, Lektionen L-S86 bis L-S91.
+
+**Befunde der unabhängigen Prüfung von Schritt 1, behoben (28.11.2026):** Der Kontrast misst die Bedeutungsfarben als Schrift auf jedem Grund (auch auf der ruhigen Fläche der Kennzahlen) und ruhige Schrift auf jeder hellen Fläche eines Hinweises; beide Themen bestehen, keine Farbe geändert. Meldungen stehen in einer Reihe und gehen nicht verloren, eine Meldung über Falsches steht ihre ganze Zeit, und ein offenes Blatt zeigt die Meldung in sich (in Chromium gemessen, L-S90). `NumberField` liest «1.000» nicht als 1. Neu `QuantityField` (Tausendstel als ganze Zahl) und `TimeField` (`HH:MM`). Das Datumsfeld schaltet Schnellwahlen ausserhalb von `min` und `max` aus, behält ein ISO-Datum von der Tastatur und nimmt einen Monat ohne Tag nicht als Monatsende. `Sheet` trägt `aria-modal="true"`, und der Weg über `cancel` hat eigene Tests.
+
+Was die folgenden Schritte wissen müssen:
+
+- **Shell (Schritt 2):** `UiProvider` einmal oben einhängen (`today` aus der Uhr der App, `currency` des Betriebs, `link` des Routers, `translation` der Sprache der Person), dazu `ToastProvider`. Das Zahnrad oben rechts ist `PageHeader corner={<IconButton icon={Settings} label=… />}`. Die Wahl hell oder dunkel setzt die Shell als `data-scheme` auf `<html>` (`SCHEME_ATTRIBUTE`). Braucht die Shell `react-dom` (Portal) oder weitere Globale, ist das eine Zeile in `REACT_PACKAGES` und im Test der Grenzen, mit Begründung. Die Shell als React-Paket bekommt ihre Zeile in `PLATFORM_LAYERS` und `REACT_PACKAGES`.
+- **Ausgabe (Schritt 7):** Thema in `editions/field/theme.ts` mit `defineTheme` (die Werte des Beispiels in `platform/ui/test/example-theme.ts` und `api.md`); beim Bauen `themeCss(theme)` in eine CSS-Datei schreiben (TD-128), dann `@import '@onestrand/ui/kit.css'` und `@source` für Shell und Branchen. Playwright mit axe und `pnpm preview:shots` kommen dort dazu (TD-126); das Skript der Vorschaubilder von Schritt 1 misst schon seitliches Scrollen, Felder ab 16 px und Ziele ab 44 px. `pnpm --filter @onestrand/ui gallery` zeigt das Kit.
+- **Branchen (`industries/<id>/web`):** Seiten nehmen das Kit über `@onestrand/ui` und schreiben nur Tokens (`bg-surface`, `text-muted`), nie eine Farbe; ihre Texte stehen in ihrem Katalog.
+
+**Schritt 3, `@onestrand/web-device` (28.11.2026):** Teilen und Drucken (iOS-Weg über das PDF, Herunterladen als letzter Weg), Kamera nur nach einem Tipp mit jedem Zustand der Erlaubnis und der Datei als Ausweg, Fotos auf dem Gerät verkleinern (längste Seite, Qualität und Grösse als Parameter, aufrecht nach EXIF, ohne Metadaten und ohne Ort), QR lesen (Leser des Browsers, sonst `jsqr` im Bündel, immer ein getippter Weg), Unterschrift auf dem Gerät (Finger oder Stift, «Löschen», «Übernehmen», getippter Name als Ausweg; wer, wann, was, PNG mit SHA-256 und die Striche), Wachhalten während einer Aufgabe, Zahl am Symbol und Zwischenablage. Geerntet aus `BanioX/Randen` @ `e0f0907` (`ui/print.ts`, `ui/share-file.ts`, `ui/PrintButton.tsx`, `ui/PhotoField.tsx`, `ui/PhotoViewer.tsx`, `ui/photo.ts`, Texte) und `BanioX/Rettich` @ `0ac1fd2` (`features/scan/camera.ts`, `features/scan/BarcodeScanner.tsx`). Beschreibung: [`platform/web-device/api.md`](../../platform/web-device/api.md). Nebenwirkungen SE-04 bis SE-11.
+
+Entscheide (klein, selbst getroffen):
+
+1. **Ein Paket, zwei Schichten:** `src/` ist ein Paket der Schicht «Browser» (`BROWSER_PACKAGES`: `window`, `document`, `navigator`, `crypto`; Schichten `core` und `storage`), `src/web/` sein React-Teil (neu `REACT_PARTS` in `eslint.config.js`: React, `ui`, `i18n`, `core`, `storage`, die Logik über relative Pfade; nur `window` und `document`), veröffentlicht als `@onestrand/web-device/web`. Die Logik importiert nichts aus `src/web/` (eigene Regel), also läuft sie ohne React. Belegt in `tools/test/lint-boundaries.test.ts`.
+2. **Ein Port für das ganze Gerät** (`Device`), gebaut an einer Stelle (`createBrowserDevice` in `src/browser.ts`); die Attrappe liegt im Testordner des Pakets, weil noch kein zweites Paket sie braucht.
+3. **QR mit `jsqr`** (Apache-2.0, reines JavaScript), weil der Leser für alle Formate (ZXing als WebAssembly) `'wasm-unsafe-eval'` in der CSP bräuchte; Strichcodes darum nur mit dem Leser des Browsers (TD-135). `"sideEffects": false`, damit eine Ausgabe ohne QR den Decoder nicht trägt.
+4. **Fotos als Bytes**, nicht als Text wie in der Quelle: Der Dateispeicher hält Bytes. Die Metadaten entfernt das Paket selbst aus dem JPEG, auch wenn eine Leinwand keine schreibt.
+5. **Ansicht eines Fotos als `<dialog>`** mit `showModal()` statt eines Portals: kein `react-dom` im Paket, die Seite dahinter ist träge.
+6. **Zwei neue Arten im Wächter** (`wakeLock`, `setAppBadge`) über `SUITE_SIDE_EFFECT_KINDS` in `tools/src/side-effects.ts`, weil `@onestrand/testing` nicht zu W0-03 gehört (TD-134).
+
+Prüfung: siehe den Bericht von Schritt 3; Schulden TD-134 bis TD-141, Lektionen L-S92 bis L-S95. Vorschaubilder der Galerie (`pnpm --filter @onestrand/web-device gallery`) in 390 px, 820 px, 1180 px und 1440 px, hell und dunkel, gemessen: kein seitliches Scrollen, Ziele ab 44 px, Felder ab 16 px, keine Fehler.
+
+Was die folgenden Schritte wissen müssen:
+
+- **Shell (Schritt 2):** `createBrowserDevice()` einmal beim Start, `DeviceProvider` unter `UiProvider` und `ToastProvider`. `useActionCount(n)` mit der Zahl dessen, was in «Heute» die Person verlangt (S-26). Für Seiten, die die Shell als React-Paket importiert, braucht sie `@onestrand/web-device/web`: Ein React-Paket weist heute jedes `@onestrand/*/web` ab (Regel des reinen Teils); das öffnet die Shell in `platformBoundaries` mit ihrer Zeile. **App-Sperre** (nicht gebaut): Sie braucht einen Port wie `DeviceUnlock` (verfügbar, anmelden, prüfen) über WebAuthn mit dem Authentifikator des Geräts, ohne Server; die Einstellung (sperren nach jetzt, 1 oder 5 Minuten) im Speicher des Geräts unter dem Präfix der Ausgabe (`DeviceStore` von `@onestrand/web-data`, eigene Zeile in SE-02 und im Namensregister), nie in der Sicherung; Sperren, wenn die Seite länger verborgen war; in der Ausgabe `Permissions-Policy` mit `publickey-credentials-get=(self)` und `publickey-credentials-create=(self)`.
+- **PDF (Schritt 4):** `PrintButton` nimmt `{ buildPdf, fileName, title }`; `buildPdf` stabil halten (`useCallback`). Eine getippte Unterschrift (`method: 'typed'`) hat kein Bild: Das PDF schreibt den Namen mit «getippt». Die Prüfsumme des Dokuments für eine Unterschrift kommt aus `checksumOf(device, bytes)`.
+- **Ausgabe (Schritt 7):** CSP bleibt `'self'` (kein WebAssembly); `img-src 'self' blob: data:` für die Vorschau der Fotos; `Permissions-Policy: camera=(self), geolocation=()`. E2E soll ein gedrehtes JPEG, eine falsche Kamera und das Feld der Unterschrift in Chromium prüfen (TD-138).
+

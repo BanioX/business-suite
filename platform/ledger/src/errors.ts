@@ -5,9 +5,10 @@
  * its own `reduce`.
  *
  * - `invalid_definition`: a ledger was defined on a table that cannot carry one, or its schema
- *   changes a field the kit writes.
+ *   changes a field the kit writes, or it does not read an entry back as it wrote it.
  * - `invalid_stream`: the key of a stream is malformed (see `LEDGER_STREAM_PATTERN`).
- * - `invalid_payload`: the payload is no plain record, or it carries a field the kit writes.
+ * - `invalid_payload`: the payload is no plain record, it carries a field the kit writes, or it
+ *   carries a field the schema of the table does not know.
  */
 export type LedgerErrorCode = 'invalid_definition' | 'invalid_stream' | 'invalid_payload';
 

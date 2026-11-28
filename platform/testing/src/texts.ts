@@ -1,4 +1,5 @@
-// Origin: BanioX/Randen apps/web/src/app/messages.test.ts @ e0f0907 — adapted: the walk over a catalogue and the rules of the language as functions and data over a given catalogue; a message function is read by its literals, not by its source; an exclamation mark at the end of a text is found; rules for empty texts, names of products and pictographs are new
+// Origin: BanioX/Randen apps/web/src/app/messages.test.ts @ e0f0907 — adapted: the walk over a catalogue and the rules of the language as functions and data over a given catalogue; a message function is read by its literals, not by its source; an exclamation mark at the end of a text is found; rules for empty texts, names of products and pictographs are new; a catalogue without a text is a finding
+import { frozenList } from './frozen';
 import type { StandardProblem } from './problem';
 import { EXPRESSION_PLACEHOLDER, literalsOf } from './source';
 
@@ -39,11 +40,12 @@ export interface TextProblem extends StandardProblem {
 }
 
 /**
- * Every text of a catalogue: a nested record (or list) of texts and message functions. Of a
- * message function the literals are read (`(n) => `${n} Zeilen`` gives «{} Zeilen»), never its
- * code, so a `!` that negates or a variable called `ihr` breaks no rule. Literals without a
- * letter or digit (a separator, an empty fallback) are left out. Numbers, booleans and missing
- * values are no texts.
+ * Every text of a catalogue: a nested record (or list, `Map` or `Set`) of texts and message
+ * functions. Of a message function the literals are read (`(n) => `${n} Zeilen`` gives
+ * «{} Zeilen»), never its code, so a `!` that negates or a variable called `ihr` breaks no rule.
+ * A literal that says nothing (an empty fallback, the space between two values) is left out;
+ * one that holds only a sign (`', '`, `'!'`) is a text like any other. Numbers, booleans and
+ * missing values are no texts.
  *
  * What it cannot see: a text that is put together outside the catalogue, and the text behind a
  * regular expression that holds a quote.
@@ -52,19 +54,35 @@ export function catalogueTexts(catalogue: unknown): CatalogueText[] {
   const texts: CatalogueText[] = [];
   const seen = new WeakSet<object>();
   const walk = (value: unknown, path: string) => {
+    const under = (key: string) => (path === '' ? key : `${path}.${key}`);
     if (typeof value === 'string') {
       texts.push({ path, text: value, from: 'string' });
     } else if (typeof value === 'function') {
       for (const literal of literalsOf(Function.prototype.toString.call(value))) {
-        if (/[\p{L}\p{N}]/u.test(literal.replaceAll(EXPRESSION_PLACEHOLDER, ''))) {
+        if (literal.replaceAll(EXPRESSION_PLACEHOLDER, '').trim() !== '') {
           texts.push({ path, text: literal, from: 'function' });
         }
       }
     } else if (typeof value === 'object' && value !== null && !seen.has(value)) {
       // A catalogue that holds itself is read once, not for ever.
       seen.add(value);
-      for (const [key, child] of Object.entries(value)) {
-        walk(child, path === '' ? key : `${path}.${key}`);
+      if (value instanceof Map) {
+        // A catalogue kept in a map has entries no `Object.entries` shows.
+        let index = 0;
+        for (const [key, child] of value) {
+          walk(child, under(typeof key === 'string' ? key : String(index)));
+          index += 1;
+        }
+      } else if (value instanceof Set) {
+        let index = 0;
+        for (const child of value) {
+          walk(child, under(String(index)));
+          index += 1;
+        }
+      } else {
+        for (const [key, child] of Object.entries(value)) {
+          walk(child, under(key));
+        }
       }
     }
   };
@@ -89,7 +107,8 @@ const EMOJI_VARIATION = String.fromCharCode(0xfe0f);
  * - `eszett`: «ss», never «ß».
  * - `exclamation`: no exclamation mark.
  * - `plural_address`: one person is addressed with «du», never several with «ihr», «euch» or
- *   «euer». The possessive «ihr» (her, their) is found as well; such a sentence is reworded.
+ *   «euer». The possessive «ihr» (her, their) and the formal «Ihr» are found as well; such a
+ *   sentence is reworded. «ihre» and its forms in lower case are not: they are «her» and «their».
  * - `formal_address`: never «Sie»: «Ihnen», «Ihre» and its forms with a capital letter, and
  *   «Sie» inside a sentence, where the capital letter can only be the formal address.
  * - `buzzword`: calm names, no words of advertising.
@@ -98,7 +117,7 @@ const EMOJI_VARIATION = String.fromCharCode(0xfe0f);
  * «Sie» at the start of a sentence is not in this list, because there it is also «she», «it»
  * and «they»; see `DE_CH_OPENING_SIE_RULE`.
  */
-export const DE_CH_TEXT_RULES: readonly TextRule[] = [
+export const DE_CH_TEXT_RULES: readonly TextRule[] = frozenList<TextRule>([
   {
     id: 'empty',
     pattern: /^\s*$/u,
@@ -118,7 +137,7 @@ export const DE_CH_TEXT_RULES: readonly TextRule[] = [
     id: 'plural_address',
     pattern: wholeWords('ihr|euch|euer|eure[mnrs]?', 'iu'),
     message:
-      'The app talks to one person with «du», never to several («ihr», «euch», «euer»). If the word means «her» or «their», reword the sentence.',
+      'The app talks to one person with «du», never to several («ihr», «euch», «euer») and never formally («Ihr»). If the word means «her» or «their», reword the sentence.',
   },
   {
     id: 'formal_address',
@@ -138,7 +157,7 @@ export const DE_CH_TEXT_RULES: readonly TextRule[] = [
     pattern: new RegExp(`\\p{Emoji_Presentation}|${EMOJI_VARIATION}`, 'u'),
     message: 'No emoji in texts.',
   },
-];
+]);
 
 /**
  * «Sie» at the start of a text or a sentence, after a colon or after an opening quote. It
@@ -146,12 +165,12 @@ export const DE_CH_TEXT_RULES: readonly TextRule[] = [
  * printing), but it is also the ordinary «she», «it» and «they». So it is no rule for every
  * catalogue: add it for the catalogues in which no sentence should open that way.
  */
-export const DE_CH_OPENING_SIE_RULE: TextRule = {
+export const DE_CH_OPENING_SIE_RULE: Readonly<TextRule> = Object.freeze({
   id: 'formal_address_opening',
   pattern: new RegExp(`(?:^|[.:?]\\s+|[\`'"«]\\s*)Sie${WORD_END}`, 'u'),
   message:
     'A sentence that opens with «Sie» reads as the formal address: reword it, or name what «sie» stands for.',
-};
+});
 
 /**
  * A rule that finds the given names as whole words, in any case: names of products that must
@@ -191,18 +210,36 @@ function searchPattern(pattern: RegExp): RegExp {
   return new RegExp(pattern.source, pattern.flags.replace(/[gy]/g, ''));
 }
 
+/** The rule that is broken when a catalogue holds no text at all. It is no rule of a language. */
+const NO_TEXTS_RULE = 'no_texts';
+
 /**
  * Every text of a catalogue that breaks a rule: one problem per text and rule, in the order of
  * the catalogue, with the first place the rule is broken. A test expects `[]`. Pass every
  * catalogue of the package in one record, keyed by where it comes from, so the path of a
  * problem says which file to open.
+ *
+ * A catalogue without a single text is a problem of its own (`no_texts`): a test that was
+ * handed the wrong object would otherwise pass for the wrong reason.
  */
 export function textProblems(catalogue: unknown, options: TextCheckOptions = {}): TextProblem[] {
   const { rules = DE_CH_TEXT_RULES, productNames = [] } = options;
   const all = (productNames.length === 0 ? rules : [...rules, productNameRule(productNames)]).map(
     (rule) => ({ ...rule, pattern: searchPattern(rule.pattern) }),
   );
-  return catalogueTexts(catalogue).flatMap(({ path, text }) =>
+  const texts = catalogueTexts(catalogue);
+  if (texts.length === 0) {
+    return [
+      {
+        rule: NO_TEXTS_RULE,
+        message: 'The catalogue holds no text: is it the catalogue of the package?',
+        path: '',
+        text: '',
+        found: '',
+      },
+    ];
+  }
+  return texts.flatMap(({ path, text }) =>
     all.flatMap((rule) => {
       const match = rule.pattern.exec(text);
       return match === null

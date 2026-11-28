@@ -75,11 +75,13 @@ const BASE_FIELDS = {
 
 const DEFS = '#/$defs/';
 
-/** The schema a reference inside the same document points to (`#` or `#/$defs/<id>`), if any. */
+/**
+ * The schema a reference points to, if it is a definition of the same document
+ * (`#/$defs/<id>`). A reference to the document itself (`#`) is not looked up: whenever one is
+ * met the root is being looked at, and a reference back adds nothing. A reference out of the
+ * document is not followed.
+ */
 function referenced(root: JsonSchema, ref: string): JsonSchema | undefined {
-  if (ref === '#') {
-    return root;
-  }
   if (!ref.startsWith(DEFS)) {
     return undefined;
   }
@@ -116,11 +118,30 @@ function requiresField(root: JsonSchema, field: string): boolean {
 }
 
 /**
+ * What is wrong with an input that is tried with nothing at all, if anything. JSON Schema cannot
+ * say that the whole input may be left out (`.optional()` or `.default()` around it), so the
+ * schema itself is asked. One that cannot answer is reported too, not passed.
+ */
+function nothingProblem(input: z.ZodType): string | undefined {
+  try {
+    return input.safeParse(undefined).success
+      ? 'the input must not take a call that sends nothing: remove .optional() or .default() around the whole input'
+      : undefined;
+  } catch (error) {
+    return `the input could not be tried with nothing: ${reasonOf(error)}`;
+  }
+}
+
+/**
  * What is wrong with the schemas of an operation, beyond their presence: a schema JSON cannot
  * carry (the contract could not be published, and a result could not be kept in the command
- * log), and an input that does not require the base fields of its kind (`commandId` and
- * `businessId` for a command, `businessId` for a query). This converts both schemas, so it
- * belongs in tests, not at the start of the app.
+ * log), an input that does not require the base fields of its kind (`commandId` and
+ * `businessId` for a command, `businessId` for a query), and an input that may be left out as a
+ * whole. This converts both schemas, so it belongs in tests, not at the start of the app.
+ *
+ * Two kinds of operation do not pass today, and the order that first needs one decides how it
+ * is declared: a query that reads the device and no business (the list of businesses on it), and
+ * an input that carries bytes (a file), which have no JSON Schema here. See rule 11 of `api.md`.
  *
  * The schemas of something that is not an operation cannot be judged: a value whose form is
  * broken comes back with the problems `operationProblems` finds, and its schemas are looked at
@@ -153,6 +174,10 @@ export function operationSchemaProblems(operation: Operation): OperationProblem[
           `the input of a ${operation.kind} must require «${field}»: spread ${operation.kind}Base into its object schema`,
         );
       }
+    }
+    const nothing = nothingProblem(operation.input);
+    if (nothing !== undefined) {
+      problem('input', nothing);
     }
   }
   // The output only has to be expressible; it has no base fields.

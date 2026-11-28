@@ -206,7 +206,7 @@ describe('businessSnapshot', () => {
     });
 
     const snapshot = await businessSnapshot(t.storage, REGISTRY, t.businessId);
-    expect(snapshot.tables.notes?.map((row) => row.id)).toEqual([first, second, third]);
+    expect(snapshot.tables.notes.map((row) => row.id)).toEqual([first, second, third]);
     expect(snapshot).toEqual(await t.snapshot());
   });
 

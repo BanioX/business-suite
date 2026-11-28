@@ -1,0 +1,128 @@
+/*
+ * The styles of the kit (@onestrand/ui, P-08). An edition imports this file once, after the CSS
+ * of its theme (`themeCss`), and adds `@source` for its own pages:
+ *
+ *   @import '@onestrand/ui/kit.css';
+ *   @source '../../industries/…/web';
+ *
+ * No colour stands here. Every colour is a token of the theme (`--accent`, `--surface`, …, see
+ * src/theme.ts); this file only maps the tokens to the utilities of Tailwind. The palette of
+ * Tailwind is switched off, so a class like a fixed grey or red draws nothing at all, and a test
+ * of the kit finds it in the components.
+ */
+@import 'tailwindcss';
+
+/* The classes of the kit itself. */
+@source './';
+
+@theme {
+  /* System font, as at Onestrand: nothing to download. */
+  --font-sans:
+    system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
+
+  /* No palette and no shadows of Tailwind: only the tokens of the theme. */
+  --color-*: initial;
+  --shadow-*: initial;
+  --inset-shadow-*: initial;
+  --drop-shadow-*: initial;
+  --text-shadow-*: initial;
+}
+
+/* The utilities read the custom properties of the theme directly (`bg-accent` is
+   `background-color: var(--accent)`), so light, dark and the choice of the person switch them. */
+@theme inline {
+  --color-ground: var(--ground);
+  --color-app: var(--app);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-calm-start: var(--calm-start);
+  --color-calm-end: var(--calm-end);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-edge: var(--accent-edge);
+  --color-accent-soft: var(--accent-soft);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-bad: var(--bad);
+  --color-bad-soft: var(--bad-soft);
+  /* Derived by themeCss from the tokens, per scheme. */
+  --color-scrim: var(--scrim);
+  --shadow-card: var(--card-shadow);
+  --shadow-float: var(--float-shadow);
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    /* iPhone on its side must not blow the text up. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  /* iPhone and iPad zoom into a field whose text is smaller than 16 px and stay zoomed. No field
+     may ever be smaller. */
+  input,
+  select,
+  textarea {
+    font-size: max(16px, 1em);
+  }
+
+  /* No 300 ms wait and no double-tap zoom on anything one taps. */
+  a,
+  button,
+  label,
+  summary,
+  [role='button'],
+  [role='tab'],
+  [role='switch'],
+  [role='radio'],
+  [role='checkbox'] {
+    touch-action: manipulation;
+  }
+
+  body {
+    background-color: var(--app);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-size: 1.0625rem;
+    line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent-edge);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@utility hyphens-calm {
+  hyphens: auto;
+  hyphenate-limit-chars: 10 4 4;
+  -webkit-hyphenate-limit-before: 4;
+  -webkit-hyphenate-limit-after: 4;
+}
+
+@utility large-title {
+  font-size: 2.125rem;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}

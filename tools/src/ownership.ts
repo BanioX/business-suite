@@ -60,8 +60,10 @@
 //    only what an industry owns, `facts` only what `facts` owns, `platform` what a platform
 //    package or the head owns. This second fence holds when the register itself is wrong.
 //
-// Merge commits are skipped: what a merge brings was changed by the commits it merges, and those
-// are checked. (A change made by hand inside a merge is not seen; the suite lands by rebase.)
+// A merge that went through cleanly is skipped: what it brings was changed by the commits it
+// merges, and those are checked. A merge that changes paths itself (a conflict settled, an edit
+// made on the way: the paths that differ from every parent, tools/src/git.ts) is a commit like
+// any other, with its own trailers and only the paths of its order.
 //
 // Which commits are read (everything after `OWNERSHIP_BASE`, else after `origin/main`; on the CI
 // the variable must be set) is written down in tools/src/git.ts and in the guard,
@@ -642,11 +644,13 @@ export function checkOwnership(commits: readonly GitCommit[], register: Register
   let checked = 0;
   for (const commit of commits) {
     const subject = subjectOf(commit.message);
-    if (commit.parents.length > 1) {
+    // A merge is passed over only when it changes nothing itself. With paths of its own it is
+    // judged like every commit: otherwise a file changed inside a merge would never be seen.
+    if (commit.parents.length > 1 && commit.paths.length === 0) {
       skipped.push({
         commit: commit.hash,
         subject,
-        reason: 'a merge: the commits it merges are checked on their own',
+        reason: 'a clean merge: the commits it merges are checked on their own',
       });
       continue;
     }
