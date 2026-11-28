@@ -11,8 +11,14 @@ import {
   firstError,
   joinIds,
   MoneyField,
+  formatMilli,
   NumberField,
+  QuantityField,
+  readMilli,
+  readTimeOfDay,
   readWholeNumber,
+  TIME_OF_DAY_PATTERN,
+  TimeField,
   SelectField,
   TextArea,
   TextField,
@@ -290,6 +296,16 @@ describe('NumberField', () => {
     expect(onValue).toHaveBeenLastCalledWith(3);
   });
 
+  it('asks again for «1.000» instead of taking it as one', async () => {
+    const user = userEvent.setup();
+    const onValue = vi.fn();
+    render(<Numbers onValue={onValue} />);
+    await user.type(screen.getByLabelText('Tage'), '1.000');
+    await user.tab();
+    expect(onValue).toHaveBeenLastCalledWith(null);
+    expect(screen.getByText(t.number.unreadable)).toBeTruthy();
+  });
+
   it('keeps to its range', async () => {
     const user = userEvent.setup();
     const onValue = vi.fn();
@@ -351,6 +367,21 @@ describe('NumberField', () => {
     expect(readWholeNumber('−3')).toBe(-3);
     expect(readWholeNumber('12.00')).toBe(12);
     expect(readWholeNumber('12.5')).toBeNull();
+    expect(readWholeNumber('12,00')).toBe(12);
+    expect(readWholeNumber('12.')).toBe(12);
+  });
+
+  it('reads «1.000» and «1,000» as nothing, not as one: a thousand or one is a guess', () => {
+    expect(readWholeNumber('1.000')).toBeNull();
+    expect(readWholeNumber('1,000')).toBeNull();
+    expect(readWholeNumber('12.000')).toBeNull();
+    expect(readWholeNumber('1.0000')).toBeNull();
+  });
+
+  it('turns «-0» into 0', () => {
+    expect(Object.is(readWholeNumber('-0'), 0)).toBe(true);
+    expect(Object.is(readWholeNumber('−0'), 0)).toBe(true);
+    expect(Object.is(readWholeNumber('-0.0'), 0)).toBe(true);
     expect(readWholeNumber('9999999999999999999')).toBeNull();
   });
 });
@@ -519,5 +550,179 @@ describe('SelectField', () => {
     const select = screen.getByLabelText<HTMLSelectElement>('Rhythmus');
     expect(select.disabled).toBe(true);
     expect(described(select)).toBe('Wähle einen Rhythmus.');
+  });
+});
+
+describe('QuantityField', () => {
+  function Hours({
+    onValue,
+    initial = null,
+    allowNegative,
+  }: {
+    onValue?: (value: number | null) => void;
+    initial?: number | null;
+    allowNegative?: boolean;
+  }) {
+    const [value, setValue] = useState<number | null>(initial);
+    return (
+      <QuantityField
+        label="Dauer"
+        unit="h"
+        value={value}
+        allowNegative={allowNegative}
+        onChange={(next) => {
+          setValue(next);
+          onValue?.(next);
+        }}
+      />
+    );
+  }
+
+  it('reads up to three decimals into thousandths, with the unit behind', async () => {
+    const user = userEvent.setup();
+    const onValue = vi.fn();
+    render(<Hours onValue={onValue} />);
+    const input = screen.getByLabelText<HTMLInputElement>('Dauer');
+    expect(input.inputMode).toBe('decimal');
+    expect(described(input)).toBe('h');
+    await user.type(input, '2.5');
+    expect(onValue).toHaveBeenLastCalledWith(2500);
+    await user.clear(input);
+    await user.type(input, '1’250,125');
+    expect(onValue).toHaveBeenLastCalledWith(1_250_125);
+    await user.clear(input);
+    await user.type(input, '.75');
+    expect(onValue).toHaveBeenLastCalledWith(750);
+  });
+
+  it('shows a stored quantity the Swiss way, without trailing zeros', () => {
+    render(<Hours initial={1_250_500} />);
+    expect(screen.getByLabelText<HTMLInputElement>('Dauer').value).toBe('1’250.5');
+  });
+
+  it('says when there are more than three decimals, and when it cannot read at all', async () => {
+    const user = userEvent.setup();
+    const onValue = vi.fn();
+    render(<Hours onValue={onValue} />);
+    const input = screen.getByLabelText('Dauer');
+    await user.type(input, '1.2345');
+    await user.tab();
+    expect(onValue).toHaveBeenLastCalledWith(null);
+    expect(screen.getByText(t.quantity.digits)).toBeTruthy();
+    await user.clear(input);
+    await user.type(input, 'zwei');
+    expect(screen.getByText(t.quantity.unreadable('2.5'))).toBeTruthy();
+  });
+
+  it('refuses a quantity below zero unless it is allowed', async () => {
+    const user = userEvent.setup();
+    const onValue = vi.fn();
+    const { unmount } = render(<Hours onValue={onValue} />);
+    await user.type(screen.getByLabelText('Dauer'), '-1.5');
+    await user.tab();
+    expect(onValue).toHaveBeenLastCalledWith(null);
+    expect(screen.getByText(t.quantity.negative)).toBeTruthy();
+    unmount();
+    render(<Hours onValue={onValue} allowNegative />);
+    await user.type(screen.getByLabelText('Dauer'), '-1.5');
+    expect(onValue).toHaveBeenLastCalledWith(-1500);
+  });
+
+  it('can be switched off', () => {
+    render(<QuantityField label="Fläche" unit="m²" value={null} onChange={vi.fn()} disabled />);
+    expect(screen.getByLabelText<HTMLInputElement>('Fläche').disabled).toBe(true);
+  });
+
+  it('reads and writes thousandths exactly, never through a float', () => {
+    expect(readMilli('0.001')).toBe(1);
+    expect(readMilli('1.005')).toBe(1005);
+    expect(readMilli('12.')).toBe(12_000);
+    expect(readMilli('-0')).toBe(0);
+    expect(Object.is(readMilli('-0.000'), 0)).toBe(true);
+    expect(readMilli('1.0001')).toBe('digits');
+    expect(readMilli('1.2.3')).toBe('unreadable');
+    expect(readMilli('.')).toBe('unreadable');
+    expect(readMilli('99999999999999999')).toBe('unreadable');
+    expect(formatMilli(1)).toBe('0.001');
+    expect(formatMilli(-1500)).toBe('-1.5');
+    expect(formatMilli(12_000)).toBe('12');
+    expect(formatMilli(1_234_567_890)).toBe('1’234’567.89');
+  });
+});
+
+describe('TimeField', () => {
+  function Start({
+    onValue,
+    initial = null,
+  }: {
+    onValue?: (value: string | null) => void;
+    initial?: string | null;
+  }) {
+    const [value, setValue] = useState<string | null>(initial);
+    return (
+      <TimeField
+        label="Beginn"
+        value={value}
+        onChange={(next) => {
+          setValue(next);
+          onValue?.(next);
+        }}
+      />
+    );
+  }
+
+  it('reads «745» and «7.45» as 07:45, and says what it understood', async () => {
+    const user = userEvent.setup();
+    const onValue = vi.fn();
+    render(<Start onValue={onValue} />);
+    const input = screen.getByLabelText<HTMLInputElement>('Beginn');
+    expect(input.placeholder).toBe(t.time.placeholder);
+    expect(input.inputMode).toBe('decimal');
+    await user.type(input, '745');
+    expect(onValue).toHaveBeenLastCalledWith('07:45');
+    expect(described(input)).toBe('07:45');
+    await user.clear(input);
+    await user.type(input, '7.45');
+    expect(onValue).toHaveBeenLastCalledWith('07:45');
+    await user.clear(input);
+    await user.type(input, '17:05');
+    expect(onValue).toHaveBeenLastCalledWith('17:05');
+    expect(described(input)).toBe('');
+  });
+
+  it('answers what is no time of day with null and a message once the field is left', async () => {
+    const user = userEvent.setup();
+    const onValue = vi.fn();
+    render(<Start onValue={onValue} />);
+    await user.type(screen.getByLabelText('Beginn'), '24:00');
+    await user.tab();
+    expect(onValue).toHaveBeenLastCalledWith(null);
+    expect(screen.getByText(t.time.unreadable)).toBeTruthy();
+  });
+
+  it('shows a stored time and can be switched off', () => {
+    render(<TimeField label="Ende" value="16:30" onChange={vi.fn()} disabled />);
+    const input = screen.getByLabelText<HTMLInputElement>('Ende');
+    expect(input.value).toBe('16:30');
+    expect(input.disabled).toBe(true);
+  });
+
+  it('reads the forms of a hurried hand, 24 hours', () => {
+    expect(readTimeOfDay('7')).toBe('07:00');
+    expect(readTimeOfDay('07')).toBe('07:00');
+    expect(readTimeOfDay('7:45')).toBe('07:45');
+    expect(readTimeOfDay('7,45')).toBe('07:45');
+    expect(readTimeOfDay('7h45')).toBe('07:45');
+    expect(readTimeOfDay('0745')).toBe('07:45');
+    expect(readTimeOfDay('1230')).toBe('12:30');
+    expect(readTimeOfDay('123')).toBe('01:23');
+    expect(readTimeOfDay('23:59')).toBe('23:59');
+    expect(readTimeOfDay('24:00')).toBeNull();
+    expect(readTimeOfDay('7:60')).toBeNull();
+    expect(readTimeOfDay('7:5')).toBeNull();
+    expect(readTimeOfDay('12345')).toBeNull();
+    expect(readTimeOfDay('')).toBeNull();
+    expect(TIME_OF_DAY_PATTERN.test('07:45')).toBe(true);
+    expect(TIME_OF_DAY_PATTERN.test('7:45')).toBe(false);
   });
 });

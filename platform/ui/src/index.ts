@@ -73,9 +73,17 @@ export {
 export { TextArea, TextField, type TextAreaProps, type TextFieldProps } from './TextField';
 export { NumberField, readWholeNumber, type NumberFieldProps } from './NumberField';
 export { MoneyField, type MoneyFieldProps } from './MoneyField';
+export { formatMilli, QuantityField, readMilli, type QuantityFieldProps } from './QuantityField';
+export {
+  readTimeOfDay,
+  TIME_OF_DAY_PATTERN,
+  TimeField,
+  type TimeFieldProps,
+  type TimeOfDay,
+} from './TimeField';
 export { DateField, type DateFieldProps, type DatePreset } from './DateField';
 export { CalendarButton } from './CalendarButton';
-export { describeDate, describeRelative, nextDateText } from './date-text';
+export { describeDate, describeRelative, isMonthOnly, nextDateText } from './date-text';
 export { SelectField, type SelectFieldProps, type SelectOption } from './SelectField';
 export { Checkbox, type CheckboxProps } from './Checkbox';
 export { Switch, type SwitchProps } from './Switch';
@@ -94,5 +102,14 @@ export { EmptyState, type EmptyStateProps } from './EmptyState';
 export { BackLink, PageHeader, type PageHeaderProps } from './PageHeader';
 export { Section, type SectionAction, type SectionProps } from './Section';
 export { ConfirmDialog, Sheet, type ConfirmDialogProps, type SheetProps } from './Sheet';
-export { TOAST_MS, ToastProvider, useToast, type ShowToast, type ToastOptions } from './Toast';
+export {
+  TOAST_MIN_MS,
+  TOAST_MS,
+  ToastOutlet,
+  ToastProvider,
+  useToast,
+  useToastHost,
+  type ShowToast,
+  type ToastOptions,
+} from './Toast';
 export { KpiGrid, StatTile, type StatTileProps, type StatTone } from './StatTile';

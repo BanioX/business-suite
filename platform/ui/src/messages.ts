@@ -24,6 +24,16 @@ export const uiMessages = {
       `Dieser Betrag lässt sich nicht lesen. Trag zum Beispiel ${example} ein.`,
     negative: 'Trag einen Betrag ab 0 ein.',
   },
+  quantity: {
+    unreadable: (example: string) =>
+      `Diese Menge lässt sich nicht lesen. Trag zum Beispiel ${example} ein.`,
+    digits: 'Trag höchstens drei Stellen nach dem Punkt ein.',
+    negative: 'Trag eine Menge ab 0 ein.',
+  },
+  time: {
+    placeholder: 'HH:MM',
+    unreadable: 'Diese Uhrzeit lässt sich nicht lesen. Trag zum Beispiel 7:45 oder 745 ein.',
+  },
   select: {
     /** The empty choice of a list. */
     placeholder: 'Bitte wählen',

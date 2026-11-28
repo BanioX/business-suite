@@ -1,9 +1,9 @@
-// Origin: BanioX/Randen apps/web/src/ui/DateField.tsx @ e0f0907 — adapted: today from UiProvider instead of a hook of the app; tokens of the theme; texts from its catalogue
+// Origin: BanioX/Randen apps/web/src/ui/DateField.tsx @ e0f0907 — adapted: today from UiProvider instead of a hook of the app; tokens of the theme; texts from its catalogue; a month without a day is refused, a quick choice outside min and max is switched off
 import { addDays, formatSwissDate, parseDateInput, type LocalDate } from '@onestrand/core';
 import { useId, useState } from 'react';
 import { CalendarButton } from './CalendarButton';
 import { useToday, useUiTexts } from './context';
-import { describeDate, describeRelative, nextDateText } from './date-text';
+import { describeDate, describeRelative, isMonthOnly, nextDateText } from './date-text';
 import { controlClass, Field, fieldLabelId, useParsedText, type FieldBaseProps } from './Field';
 
 /** A quick choice under the date field: «morgen» = 1, «in einer Woche» = 7, «heute» = 0. */
@@ -53,7 +53,8 @@ export function DateField({
   const controlId = id ?? generated;
   const [autoFormatting, setAutoFormatting] = useState(true);
 
-  const read = (text: string) => parseDateInput(text, today);
+  // A month without a day is no date here, although the core reads it as the end of the month.
+  const read = (text: string) => (isMonthOnly(text) ? null : parseDateInput(text, today));
   const tooEarly = (date: LocalDate) => min !== undefined && date < min;
   const tooLate = (date: LocalDate) => max !== undefined && date > max;
 
@@ -155,12 +156,14 @@ export function DateField({
           {presets.map((preset) => {
             const date = addDays(today, preset.days);
             const selected = parsed === date;
+            // A quick choice outside the allowed days cannot be chosen.
+            const outside = tooEarly(date) || tooLate(date);
             return (
               <button
                 key={`${String(preset.days)}-${preset.label}`}
                 type="button"
                 aria-pressed={selected}
-                disabled={disabled}
+                disabled={disabled === true || outside}
                 onClick={() => {
                   choose(date);
                 }}

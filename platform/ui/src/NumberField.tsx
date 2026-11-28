@@ -15,15 +15,22 @@ export interface NumberFieldProps extends FieldBaseProps {
   placeholder?: string | undefined;
 }
 
-/** «12», «1’250», «12.0» and «12,0»; anything with a real fraction is no whole number. */
+/**
+ * «12», «1’250», «12.0», «12,00» and «12.» while typing. A fraction is allowed only as one or two
+ * zeros: «1.000» and «1,000» are a thousand in some writings and one in others, so they read as
+ * nothing (null) and the field asks again, instead of a guess. «-0» is 0.
+ */
 export function readWholeNumber(input: string): number | null {
   const text = input.trim().replace(/[’'\s]/g, '');
-  const match = /^(-?\d+)(?:[.,]0*)?$/.exec(text.replace('−', '-'));
+  const match = /^(-?\d+)(?:[.,](?:0{1,2})?)?$/.exec(text.replace('−', '-'));
   if (match === null) {
     return null;
   }
   const value = Number(match[1]);
-  return Number.isSafeInteger(value) ? value : null;
+  if (!Number.isSafeInteger(value)) {
+    return null;
+  }
+  return value === 0 ? 0 : value;
 }
 
 /** A whole number: days, people, pieces. */

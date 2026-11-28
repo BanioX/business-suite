@@ -24,6 +24,7 @@ import {
   Notice,
   NumberField,
   PageHeader,
+  QuantityField,
   Section,
   SegmentedControl,
   SelectField,
@@ -32,6 +33,7 @@ import {
   StatusChip,
   Switch,
   TextField,
+  TimeField,
   ToastProvider,
   UiProvider,
   useToast,
@@ -78,6 +80,8 @@ function Fields() {
   const [name, setName] = useState('Treppenhaus Ost');
   const [people, setPeople] = useState<number | null>(2);
   const [amount, setAmount] = useState<Rappen | null>(rappen(18_000));
+  const [hours, setHours] = useState<number | null>(2500);
+  const [start, setStart] = useState<string | null>('07:45');
   const [day, setDay] = useState<LocalDate | null>(localDate('2026-12-01'));
   const [interval, setInterval] = useState<Interval | null>('weekly');
   const [keys, setKeys] = useState(true);
@@ -95,6 +99,8 @@ function Fields() {
             onChange={setAmount}
             hint="Ohne Mehrwertsteuer."
           />
+          <QuantityField label="Dauer" unit="h" value={hours} onChange={setHours} />
+          <TimeField label="Beginn" value={start} onChange={setStart} />
           <DateField
             label="Nächster Einsatz"
             value={day}
@@ -216,6 +222,7 @@ function Notices() {
 }
 
 function Dialogs() {
+  const toast = useToast();
   const [sheet, setSheet] = useState(false);
   const [confirm, setConfirm] = useState(false);
   return (
@@ -256,6 +263,15 @@ function Dialogs() {
         }
       >
         <p className="text-muted">Treppenhaus Ost, Dienstag, 08:00.</p>
+        <Button
+          variant="secondary"
+          className="mt-4"
+          onClick={() => {
+            toast({ text: 'Einsatz vorgemerkt.', tone: 'ok' });
+          }}
+        >
+          Vormerken
+        </Button>
       </Sheet>
       <ConfirmDialog
         open={confirm}

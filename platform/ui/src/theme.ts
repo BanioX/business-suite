@@ -293,12 +293,17 @@ export const CONTRAST_PAIRS: readonly ContrastPair[] = Object.freeze([
   { fg: 'accent-strong', bg: 'accent-soft', min: 4.5, use: 'symbol and chip of a hint' },
   { fg: 'accent-edge', bg: 'accent-soft', min: 3, use: 'focus ring on a hint' },
   { fg: 'app', bg: 'fg', min: 4.5, use: 'text of a toast' },
+  // A status as text stands on every ground the kit has: a card, the page, a quiet tile, the
+  // calm gradient of a key figure (StatTile), the ground behind the app.
+  ...STATUS.flatMap((tone): ContrastPair[] =>
+    GROUNDS.map((bg) => ({ fg: tone, bg, min: 4.5, use: `${tone} as text on ${bg}` })),
+  ),
   ...STATUS.flatMap((tone): ContrastPair[] => [
-    { fg: tone, bg: 'surface', min: 4.5, use: `${tone} as text on a card` },
-    { fg: tone, bg: 'app', min: 4.5, use: `${tone} as text on the page` },
     { fg: tone, bg: `${tone}-soft`, min: 4.5, use: `${tone} chip and notice` },
     { fg: 'fg', bg: `${tone}-soft`, min: 4.5, use: `text of a ${tone} notice` },
+    { fg: 'muted', bg: `${tone}-soft`, min: 4.5, use: `quiet text inside a ${tone} notice` },
   ]),
+  { fg: 'muted', bg: 'accent-soft', min: 4.5, use: 'quiet text inside a hint' },
 ]);
 
 /**

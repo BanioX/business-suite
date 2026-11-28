@@ -8,6 +8,7 @@ import {
   DateField,
   describeDate,
   describeRelative,
+  isMonthOnly,
   nextDateText,
   SegmentedControl,
   Switch,
@@ -356,6 +357,66 @@ describe('DateField', () => {
     expect(screen.getByLabelText<HTMLInputElement>('Nächster Einsatz').value).toBe('21.11.2026');
   });
 
+  it('switches off a quick choice outside the earliest and the latest day', async () => {
+    const user = userEvent.setup();
+    const onValue = vi.fn();
+    render(
+      <Day
+        onValue={onValue}
+        min={localDate('2026-11-15')}
+        max={localDate('2026-11-20')}
+        presets={[
+          { label: 'heute', days: 0 },
+          { label: 'morgen', days: 1 },
+          { label: 'in einer Woche', days: 7 },
+        ]}
+      />,
+    );
+    const presets = screen.getByRole('group', { name: t.date.presets });
+    const today = within(presets).getByRole<HTMLButtonElement>('button', { name: 'heute' });
+    const week = within(presets).getByRole<HTMLButtonElement>('button', { name: 'in einer Woche' });
+    expect(today.disabled).toBe(true);
+    expect(week.disabled).toBe(true);
+    expect(
+      within(presets).getByRole<HTMLButtonElement>('button', { name: 'morgen' }).disabled,
+    ).toBe(false);
+    await user.click(week);
+    expect(onValue).not.toHaveBeenCalled();
+  });
+
+  it('keeps an ISO date typed by keyboard in its form and reads it', async () => {
+    const user = userEvent.setup();
+    const onValue = vi.fn();
+    render(<Day onValue={onValue} />);
+    const input = screen.getByLabelText<HTMLInputElement>('Nächster Einsatz');
+    await user.type(input, '2026-11-20');
+    expect(input.value).toBe('2026-11-20');
+    expect(onValue).toHaveBeenLastCalledWith('2026-11-20');
+    // A year that could be a day and a month: the dash takes the dots back out.
+    await user.clear(input);
+    await user.type(input, '2012-11-20');
+    expect(input.value).toBe('2012-11-20');
+    expect(onValue).toHaveBeenLastCalledWith('2012-11-20');
+  });
+
+  it('does not take a month without a day for the end of the month', async () => {
+    const user = userEvent.setup();
+    const onValue = vi.fn();
+    render(<Day onValue={onValue} />);
+    const input = screen.getByLabelText('Nächster Einsatz');
+    await user.type(input, '11.2026');
+    await user.tab();
+    expect(onValue).toHaveBeenLastCalledWith(null);
+    expect(screen.getByText(t.date.unreadable)).toBeTruthy();
+    await user.clear(input);
+    await user.type(input, '11/26');
+    expect(onValue).toHaveBeenLastCalledWith(null);
+    // A day and a month without a year still read as this year.
+    await user.clear(input);
+    await user.type(input, '6.12');
+    expect(onValue).toHaveBeenLastCalledWith('2026-12-06');
+  });
+
   it('takes a day from the calendar of the device', async () => {
     const user = userEvent.setup();
     const onValue = vi.fn();
@@ -428,5 +489,24 @@ describe('the words of a day', () => {
     expect(nextDateText('6.', '6.1', false)).toEqual({ text: '6.1', autoFormatting: false });
     expect(nextDateText('6.1', '', false)).toEqual({ text: '', autoFormatting: true });
     expect(nextDateText('abc', 'ab', true)).toEqual({ text: 'ab', autoFormatting: false });
+  });
+
+  it('takes four digits that cannot be a day and a month for a year', () => {
+    expect(nextDateText('202', '2026', true)).toEqual({ text: '2026', autoFormatting: false });
+    expect(nextDateText('2026', '2026-', false)).toEqual({ text: '2026-', autoFormatting: false });
+    expect(nextDateText('201', '2011', true)).toEqual({ text: '20.11', autoFormatting: true });
+    expect(nextDateText('20.11', '20.11-', true)).toEqual({ text: '2011-', autoFormatting: false });
+    expect(nextDateText('6', '6-', false)).toEqual({ text: '6-', autoFormatting: false });
+  });
+
+  it('tells a month without a day from a day without a year', () => {
+    expect(isMonthOnly('11.2026')).toBe(true);
+    expect(isMonthOnly('11/26')).toBe(true);
+    expect(isMonthOnly('11.2026.')).toBe(true);
+    expect(isMonthOnly('6.11')).toBe(false);
+    expect(isMonthOnly('6.11.')).toBe(false);
+    expect(isMonthOnly('06.11.2026')).toBe(false);
+    expect(isMonthOnly('2026-11-20')).toBe(false);
+    expect(isMonthOnly('201126')).toBe(false);
   });
 });

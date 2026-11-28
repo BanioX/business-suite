@@ -1,5 +1,5 @@
 // Origin: BanioX/Randen apps/web/src/ui/Sheet.test.tsx @ e0f0907 — adapted: neutral words; texts from the catalogue of the kit; the deed of a dangerous question as an outline
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -219,6 +219,82 @@ describe('Sheet', () => {
     await user.click(screen.getByRole('button', { name: uiMessages.dialog.close }));
     expect(onClose).toHaveBeenCalledTimes(2);
     expect(screen.getByRole('dialog')).toBeTruthy();
+  });
+
+  it('is a modal dialog for assistive technology, also without the dialog of the browser', async () => {
+    render(<Page />);
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Einsatz verschieben' }));
+    expect(screen.getByRole('dialog').getAttribute('aria-modal')).toBe('true');
+  });
+
+  describe('with the modal dialog of the browser: Escape and the back gesture arrive as cancel', () => {
+    function nativeDialog() {
+      const showModal = vi.fn(function (this: HTMLDialogElement) {
+        this.setAttribute('open', '');
+      });
+      const close = vi.fn(function (this: HTMLDialogElement) {
+        this.removeAttribute('open');
+        this.dispatchEvent(new Event('close'));
+      });
+      Object.assign(HTMLDialogElement.prototype, { showModal, close });
+      return { showModal, close };
+    }
+
+    afterEach(() => {
+      // Unmount while the mock is there: the sheet closes the dialog of the browser on its way out.
+      cleanup();
+      Reflect.deleteProperty(HTMLDialogElement.prototype, 'showModal');
+      Reflect.deleteProperty(HTMLDialogElement.prototype, 'close');
+    });
+
+    it('leaves the key to the browser: a keydown of Escape alone does not ask the page', () => {
+      nativeDialog();
+      const onClose = vi.fn();
+      render(
+        <Sheet open onClose={onClose} title="Grund angeben">
+          <input aria-label="Grund" />
+        </Sheet>,
+      );
+      fireEvent.keyDown(screen.getByRole('textbox', { name: 'Grund' }), { key: 'Escape' });
+      expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it('keeps the dialog open when the page stays, and asks again at the next cancel', () => {
+      const { close } = nativeDialog();
+      const onClose = vi.fn();
+      render(
+        <Sheet open onClose={onClose} title="Ungesicherte Änderungen">
+          <p>Inhalt</p>
+        </Sheet>,
+      );
+      const dialog = screen.getByRole('dialog');
+      for (const round of [1, 2]) {
+        const cancel = new Event('cancel', { cancelable: true });
+        fireEvent(dialog, cancel);
+        // The browser would close the dialog itself; the sheet prevents it and asks the page.
+        expect(cancel.defaultPrevented).toBe(true);
+        expect(onClose).toHaveBeenCalledTimes(round);
+        expect(close).not.toHaveBeenCalled();
+        expect(dialog.hasAttribute('open')).toBe(true);
+      }
+    });
+
+    it('closes the dialog of the browser when the page closes the sheet, without asking again', () => {
+      const { close } = nativeDialog();
+      const onClose = vi.fn();
+      const { rerender } = render(
+        <Sheet open onClose={onClose} title="Grund angeben">
+          <p>Inhalt</p>
+        </Sheet>,
+      );
+      rerender(
+        <Sheet open={false} onClose={onClose} title="Grund angeben">
+          <p>Inhalt</p>
+        </Sheet>,
+      );
+      expect(close).toHaveBeenCalledTimes(1);
+      expect(onClose).not.toHaveBeenCalled();
+    });
   });
 
   it('starts on the element marked data-autofocus', () => {

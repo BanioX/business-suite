@@ -16,12 +16,14 @@ import {
   ListRow,
   MoneyField,
   NumberField,
+  QuantityField,
   Section,
   SegmentedControl,
   SelectField,
   Switch,
   TextArea,
   TextField,
+  TimeField,
   TOKENS,
   UiProvider,
 } from '../src/index';
@@ -258,6 +260,8 @@ function Panel() {
       <TextArea label="Notiz" value="" onChange={vi.fn()} />
       <NumberField label="Tage" value={null} onChange={vi.fn()} suffix="Tage" />
       <MoneyField label="Betrag" value={rappen(0)} onChange={vi.fn()} />
+      <QuantityField label="Dauer" unit="h" value={null} onChange={vi.fn()} />
+      <TimeField label="Beginn" value={null} onChange={vi.fn()} />
       <DateField
         label="Tag"
         value={null}

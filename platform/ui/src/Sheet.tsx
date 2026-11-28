@@ -1,4 +1,4 @@
-// Origin: BanioX/Randen apps/web/src/ui/Sheet.tsx @ e0f0907 — adapted: tokens of the theme, the veil behind the sheet derived from the theme; texts from the catalogue of UiProvider; the deed of a dangerous question as the outline of «falsch» instead of a fill
+// Origin: BanioX/Randen apps/web/src/ui/Sheet.tsx @ e0f0907 — adapted: tokens of the theme, the veil behind the sheet derived from the theme; texts from the catalogue of UiProvider; the deed of a dangerous question as the outline of «falsch» instead of a fill; the dialog spans the screen and holds the panel and an outlet for toasts; aria-modal
 import { X } from 'lucide-react';
 import {
   useEffect,
@@ -11,6 +11,7 @@ import {
 } from 'react';
 import { Button } from './Button';
 import { useUiTexts } from './context';
+import { ToastOutlet, useToastHost } from './Toast';
 
 export interface SheetProps {
   open: boolean;
@@ -35,7 +36,9 @@ const FOCUSABLE =
  * inside and makes the page behind it inert. The focus returns to what opened it.
  *
  * On open the focus goes to the element marked `data-autofocus`, else to the first one that can
- * take it. The content is only rendered while the sheet is open.
+ * take it. The content is only rendered while the sheet is open. The dialog spans the screen and
+ * holds the panel and an outlet for toasts: a toast raised while the sheet is open shows above it
+ * and is read out (the page behind a modal dialog is inert).
  */
 export function Sheet({
   open,
@@ -49,6 +52,7 @@ export function Sheet({
   const texts = useUiTexts();
   const titleId = useId();
   const bodyId = useId();
+  const toastHost = useToastHost(open);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const opener = useRef<Element | null>(null);
   /** True while the browser's own modal dialog is in use: it reports Escape as `cancel`. */
@@ -117,7 +121,7 @@ export function Sheet({
   }
 
   function onBackdropClick(event: MouseEvent<HTMLDialogElement>) {
-    // The panel fills the dialog: a click on the dialog itself landed beside it.
+    // The dialog spans the screen around the panel: a click on the dialog itself landed beside it.
     if (event.target === event.currentTarget && pressedBeside.current) {
       onClose();
     }
@@ -128,6 +132,7 @@ export function Sheet({
     <dialog
       ref={dialogRef}
       role={role}
+      aria-modal="true"
       aria-labelledby={titleId}
       aria-describedby={role === 'alertdialog' ? bodyId : undefined}
       tabIndex={-1}
@@ -136,43 +141,46 @@ export function Sheet({
       onKeyDown={onKeyDown}
       onMouseDown={onPress}
       onClick={onBackdropClick}
-      className="fixed inset-x-0 top-auto bottom-0 z-50 m-0 w-full max-w-none overflow-hidden rounded-t-3xl bg-surface p-0 text-fg shadow-float backdrop:bg-scrim open:starting:translate-y-8 motion-safe:transition-transform motion-safe:duration-200 motion-safe:ease-out md:inset-0 md:m-auto md:max-w-lg md:rounded-3xl"
+      className="fixed inset-0 z-50 m-0 h-dvh max-h-none w-full max-w-none items-end justify-center overflow-hidden border-0 bg-transparent p-0 text-fg backdrop:bg-scrim open:flex md:items-center md:p-6"
     >
       {open ? (
-        <div className="flex max-h-[85dvh] flex-col">
-          <div className="flex items-start justify-between gap-3 px-5 pt-4 pb-2">
-            <h2
-              id={titleId}
-              className="min-w-0 py-2 text-xl font-semibold break-words hyphens-calm"
-            >
-              {title}
-            </h2>
-            {hideClose ? null : (
-              <button
-                type="button"
-                onClick={onClose}
-                aria-label={texts.dialog.close}
-                title={texts.dialog.close}
-                className="-mr-2 flex size-11 shrink-0 items-center justify-center rounded-full text-muted hover:bg-surface-muted"
+        <>
+          <div className="flex max-h-[85dvh] w-full flex-col overflow-hidden rounded-t-3xl bg-surface shadow-float motion-safe:transition-transform motion-safe:duration-200 motion-safe:ease-out starting:translate-y-8 md:max-w-lg md:rounded-3xl">
+            <div className="flex items-start justify-between gap-3 px-5 pt-4 pb-2">
+              <h2
+                id={titleId}
+                className="min-w-0 py-2 text-xl font-semibold break-words hyphens-calm"
               >
-                <X size={22} aria-hidden="true" />
-              </button>
+                {title}
+              </h2>
+              {hideClose ? null : (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label={texts.dialog.close}
+                  title={texts.dialog.close}
+                  className="-mr-2 flex size-11 shrink-0 items-center justify-center rounded-full text-muted hover:bg-surface-muted"
+                >
+                  <X size={22} aria-hidden="true" />
+                </button>
+              )}
+            </div>
+            <div
+              id={bodyId}
+              className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-5"
+            >
+              {children}
+            </div>
+            {footer === undefined ? (
+              <div aria-hidden="true" className="h-[env(safe-area-inset-bottom)] md:hidden" />
+            ) : (
+              <div className="border-t border-line px-5 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:pb-4">
+                {footer}
+              </div>
             )}
           </div>
-          <div
-            id={bodyId}
-            className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-5"
-          >
-            {children}
-          </div>
-          {footer === undefined ? (
-            <div aria-hidden="true" className="h-[env(safe-area-inset-bottom)] md:hidden" />
-          ) : (
-            <div className="border-t border-line px-5 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:pb-4">
-              {footer}
-            </div>
-          )}
-        </div>
+          <ToastOutlet host={toastHost} />
+        </>
       ) : null}
     </dialog>
   );

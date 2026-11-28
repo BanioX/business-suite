@@ -69,7 +69,9 @@ Entscheide (klein, selbst getroffen):
 6. **Keine feste Farbe, kein Text, keine Nebenwirkung in einer Komponente**, je mit einem Test im Paket (`test/rules.test.tsx`), der an einem falschen Beispiel rot wird; dazu ein Wächter für die Farbwörter einer Marke unter `platform/` (`tools/src/words/brand-tones.ts`).
 7. **Ausgelassen:** die Bausteine der Gastronomie, alles mit Speicher oder Register, und vorerst Suchfeld, Tabelle, Diagramme, Auswahl mit Suche, Foto (TD-125). `ConfirmDialog` zeigt die gefährliche Tat als Umriss (TD-132).
 
-Prüfung: siehe den Bericht von Schritt 1; Schulden TD-125 bis TD-133, Lektionen L-S86 bis L-S89.
+Prüfung: siehe den Bericht von Schritt 1; Schulden TD-125 bis TD-133, Lektionen L-S86 bis L-S91.
+
+**Befunde der unabhängigen Prüfung von Schritt 1, behoben (28.11.2026):** Der Kontrast misst die Bedeutungsfarben als Schrift auf jedem Grund (auch auf der ruhigen Fläche der Kennzahlen) und ruhige Schrift auf jeder hellen Fläche eines Hinweises; beide Themen bestehen, keine Farbe geändert. Meldungen stehen in einer Reihe und gehen nicht verloren, eine Meldung über Falsches steht ihre ganze Zeit, und ein offenes Blatt zeigt die Meldung in sich (in Chromium gemessen, L-S90). `NumberField` liest «1.000» nicht als 1. Neu `QuantityField` (Tausendstel als ganze Zahl) und `TimeField` (`HH:MM`). Das Datumsfeld schaltet Schnellwahlen ausserhalb von `min` und `max` aus, behält ein ISO-Datum von der Tastatur und nimmt einen Monat ohne Tag nicht als Monatsende. `Sheet` trägt `aria-modal="true"`, und der Weg über `cancel` hat eigene Tests.
 
 Was die folgenden Schritte wissen müssen:
 
