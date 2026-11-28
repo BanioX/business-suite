@@ -30,7 +30,7 @@ describe('side effects of shipped code (docs/nebenwirkungen.md)', () => {
     const text = existsSync(target) ? readFileSync(target, 'utf8') : '';
     const rows = text.split('\n').filter((line) => /^\|\s*SE-/.test(line));
     expect(rows.length).toBeGreaterThan(0);
-    expect(rows.filter((line) => /`geolocation`/.test(line))).toEqual([]);
+    expect(rows.filter((line) => line.includes('`geolocation`'))).toEqual([]);
     const found = sideEffectGuardProblems({
       files: [
         {

@@ -713,11 +713,18 @@ describe('the real workspace', () => {
     expect(affected.map(({ name }) => name)).toContain('@onestrand-industry/muster');
   });
 
-  it('narrows a change of the kit to the kit, with its own Vitest project', () => {
-    // The kit (W0-03) is the first React package: jsdom and its own project, `ui`.
+  it('narrows a change of the kit to the kit and what builds on it, with its own Vitest project', () => {
+    // The kit (W0-03) is the first React package: jsdom and its own project, `ui`. The device
+    // (`@onestrand/web-device`) builds its visible parts with it, so a change of the kit checks it too.
     const plan = planCheck({ changedPaths: ['platform/ui/src/Button.tsx'], packages: workspace });
     expect(plan.scope).toBe('packages');
-    expect(plan.packages).toEqual(['@onestrand/ui']);
+    expect(plan.packages).toEqual(
+      withDependents(new Set(['@onestrand/ui']), workspace).map(({ name }) => name),
+    );
+    expect(plan.packages).toEqual(
+      expect.arrayContaining(['@onestrand/ui', '@onestrand/web-device']),
+    );
+    expect(plan.packages).not.toContain('@onestrand/core');
     const test = plan.steps.find((step) => step.step === 'test:coverage');
     expect(test).toMatchObject({ action: 'command' });
     expect(test?.action === 'command' ? test.args : []).toEqual(
